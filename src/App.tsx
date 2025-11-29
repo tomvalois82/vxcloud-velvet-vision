@@ -6,9 +6,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import Dashboard from "./pages/Dashboard";
-import VeiculosList from "./pages/veiculos/VeiculosList";
 import VeiculosEstoque from "./pages/veiculos/VeiculosEstoque";
-import VeiculosAgenciados from "./pages/veiculos/VeiculosAgenciados";
 import VeiculosRelatorios from "./pages/veiculos/VeiculosRelatorios";
 import PessoasList from "./pages/pessoas/PessoasList";
 import VendasList from "./pages/vendas/VendasList";
@@ -37,23 +35,21 @@ const App = () => (
                 <SidebarTrigger />
               </header>
               <main className="flex-1 p-6 overflow-auto">
-                <Routes>
-                  <Route path="/" element={<Dashboard />} />
-                  <Route path="/veiculos" element={<VeiculosList />} />
-                  <Route path="/veiculos/estoque" element={<VeiculosEstoque />} />
-                  <Route path="/veiculos/agenciados" element={<VeiculosAgenciados />} />
-                  <Route path="/veiculos/relatorios" element={<VeiculosRelatorios />} />
-                  <Route path="/pessoas" element={<PessoasList />} />
-                  <Route path="/vendas" element={<VendasList />} />
-                  <Route path="/vendas/relatorios" element={<VendasRelatorios />} />
-                  <Route path="/financeiro" element={<FinanceiroContas />} />
-                  <Route path="/financeiro/pagar" element={<FinanceiroPagar />} />
-                  <Route path="/financeiro/receber" element={<FinanceiroReceber />} />
-                  <Route path="/financeiro/transferencias" element={<FinanceiroTransferencias />} />
-                  <Route path="/financeiro/relatorios" element={<FinanceiroRelatorios />} />
-                  <Route path="/configuracoes" element={<Configuracoes />} />
-                  <Route path="*" element={<NotFound />} />
-                </Routes>
+        <Routes>
+          <Route path="/" element={<Dashboard />} />
+          <Route path="/veiculos/estoque" element={<VeiculosEstoque />} />
+          <Route path="/veiculos/relatorios" element={<VeiculosRelatorios />} />
+          <Route path="/pessoas" element={<PessoasList />} />
+          <Route path="/vendas" element={<VendasList />} />
+          <Route path="/vendas/relatorios" element={<VendasRelatorios />} />
+          <Route path="/financeiro" element={<FinanceiroContas />} />
+          <Route path="/financeiro/pagar" element={<FinanceiroPagar />} />
+          <Route path="/financeiro/receber" element={<FinanceiroReceber />} />
+          <Route path="/financeiro/transferencias" element={<FinanceiroTransferencias />} />
+          <Route path="/financeiro/relatorios" element={<FinanceiroRelatorios />} />
+          <Route path="/configuracoes" element={<Configuracoes />} />
+          <Route path="*" element={<NotFound />} />
+        </Routes>
               </main>
             </div>
           </div>
