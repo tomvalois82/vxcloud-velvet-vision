@@ -5,7 +5,10 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
+import { AuthProvider } from "@/contexts/AuthContext";
+import { ProtectedRoute } from "@/components/ProtectedRoute";
 import Dashboard from "./pages/Dashboard";
+import Login from "./pages/auth/Login";
 import VeiculosEstoque from "./pages/veiculos/VeiculosEstoque";
 import VeiculosRelatorios from "./pages/veiculos/VeiculosRelatorios";
 import PessoasList from "./pages/pessoas/PessoasList";
@@ -27,33 +30,45 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BrowserRouter>
-        <SidebarProvider>
-          <div className="flex min-h-screen w-full">
-            <AppSidebar />
-            <div className="flex-1 flex flex-col">
-              <header className="h-16 border-b border-border glass-strong flex items-center px-6 sticky top-0 z-10">
-                <SidebarTrigger />
-              </header>
-              <main className="flex-1 p-6 overflow-auto">
-        <Routes>
-          <Route path="/" element={<Dashboard />} />
-          <Route path="/veiculos/estoque" element={<VeiculosEstoque />} />
-          <Route path="/veiculos/relatorios" element={<VeiculosRelatorios />} />
-          <Route path="/pessoas" element={<PessoasList />} />
-          <Route path="/vendas" element={<VendasList />} />
-          <Route path="/vendas/relatorios" element={<VendasRelatorios />} />
-          <Route path="/financeiro" element={<FinanceiroContas />} />
-          <Route path="/financeiro/pagar" element={<FinanceiroPagar />} />
-          <Route path="/financeiro/receber" element={<FinanceiroReceber />} />
-          <Route path="/financeiro/transferencias" element={<FinanceiroTransferencias />} />
-          <Route path="/financeiro/relatorios" element={<FinanceiroRelatorios />} />
-          <Route path="/configuracoes" element={<Configuracoes />} />
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-              </main>
-            </div>
-          </div>
-        </SidebarProvider>
+        <AuthProvider>
+          <Routes>
+            <Route path="/login" element={<Login />} />
+            <Route
+              path="/*"
+              element={
+                <ProtectedRoute>
+                  <SidebarProvider>
+                    <div className="flex min-h-screen w-full">
+                      <AppSidebar />
+                      <div className="flex-1 flex flex-col">
+                        <header className="h-16 border-b border-border glass-strong flex items-center px-6 sticky top-0 z-10">
+                          <SidebarTrigger />
+                        </header>
+                        <main className="flex-1 p-6 overflow-auto">
+                          <Routes>
+                            <Route path="/" element={<Dashboard />} />
+                            <Route path="/veiculos/estoque" element={<VeiculosEstoque />} />
+                            <Route path="/veiculos/relatorios" element={<VeiculosRelatorios />} />
+                            <Route path="/pessoas" element={<PessoasList />} />
+                            <Route path="/vendas" element={<VendasList />} />
+                            <Route path="/vendas/relatorios" element={<VendasRelatorios />} />
+                            <Route path="/financeiro" element={<FinanceiroContas />} />
+                            <Route path="/financeiro/pagar" element={<FinanceiroPagar />} />
+                            <Route path="/financeiro/receber" element={<FinanceiroReceber />} />
+                            <Route path="/financeiro/transferencias" element={<FinanceiroTransferencias />} />
+                            <Route path="/financeiro/relatorios" element={<FinanceiroRelatorios />} />
+                            <Route path="/configuracoes" element={<Configuracoes />} />
+                            <Route path="*" element={<NotFound />} />
+                          </Routes>
+                        </main>
+                      </div>
+                    </div>
+                  </SidebarProvider>
+                </ProtectedRoute>
+              }
+            />
+          </Routes>
+        </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
