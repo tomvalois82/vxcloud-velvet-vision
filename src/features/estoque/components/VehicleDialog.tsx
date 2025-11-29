@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Info } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -27,16 +27,52 @@ import { PhotoManager } from './PhotoManager';
 import { supabase } from '@/integrations/supabase/client';
 import { StorageManager, PhotoMetadata } from '../utils/storageManager';
 import { toast } from '@/hooks/use-toast';
+import {
+  getFipeMarcas,
+  getFipeModelos,
+  getFipeAnos,
+  getFipeValor,
+  parseFipeValor,
+} from '../services/fipeService';
+import {
+  maskPlaca,
+  maskCurrency,
+  maskKm,
+  maskYear,
+  normalizePlaca,
+  unmaskCurrency,
+  unmaskKm,
+} from '../utils/masks';
+import {
+  validatePlacaDuplicada,
+  validateAnoModelo,
+  validateKm,
+  validateDataAquisicao,
+} from '../utils/validations';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 const vehicleSchema = z.object({
   modelo: z.string().min(1, 'Modelo é obrigatório'),
   fabricante: z.string().min(1, 'Fabricante é obrigatório'),
-  ano: z.string().min(4, 'Ano inválido'),
+  ano: z.string().min(4, 'Ano deve ter 4 dígitos'),
+  ano_fabricacao: z.string().min(4, 'Ano de fabricação deve ter 4 dígitos'),
   valor: z.string().min(1, 'Valor é obrigatório'),
   km: z.string().optional(),
   cor: z.string().optional(),
   placa: z.string().optional(),
   tipo_veiculo: z.string().optional(),
+  motor: z.string().optional(),
+  cambio: z.string().optional(),
+  tipo_aquisicao: z.string().optional(),
+  data_aquisicao: z.string().optional(),
+  adquirido_de: z.string().optional(),
   observacao: z.string().optional(),
 });
 
@@ -53,6 +89,15 @@ export function VehicleDialog({ open, onOpenChange, vehicleId, onSuccess }: Vehi
   const [loading, setLoading] = useState(false);
   const [photos, setPhotos] = useState<PhotoMetadata[]>([]);
   const [activeTab, setActiveTab] = useState('info');
+  const [loadingFipe, setLoadingFipe] = useState(false);
+  const [marcasFipe, setMarcasFipe] = useState<any[]>([]);
+  const [modelosFipe, setModelosFipe] = useState<any[]>([]);
+  const [anosFipe, setAnosFipe] = useState<any[]>([]);
+  const [fipeValorSugerido, setFipeValorSugerido] = useState<string | null>(null);
+  const [selectedMarcaCodigo, setSelectedMarcaCodigo] = useState<string>('');
+  const [selectedModeloCodigo, setSelectedModeloCodigo] = useState<string>('');
+  const [placaError, setPlacaError] = useState<string>('');
+  const [anoError, setAnoError] = useState<string>('');
   const isEditing = !!vehicleId;
 
   const form = useForm<VehicleFormData>({
@@ -61,14 +106,147 @@ export function VehicleDialog({ open, onOpenChange, vehicleId, onSuccess }: Vehi
       modelo: '',
       fabricante: '',
       ano: '',
+      ano_fabricacao: '',
       valor: '',
       km: '',
       cor: '',
       placa: '',
       tipo_veiculo: '',
+      motor: '',
+      cambio: '',
+      tipo_aquisicao: 'compra',
+      data_aquisicao: new Date().toISOString().split('T')[0],
+      adquirido_de: '',
       observacao: '',
     },
   });
+
+  // Carregar marcas FIPE ao abrir o diálogo
+  useEffect(() => {
+    if (open) {
+      loadMarcasFipe();
+    }
+  }, [open]);
+
+  const loadMarcasFipe = async () => {
+    try {
+      setLoadingFipe(true);
+      const marcas = await getFipeMarcas();
+      setMarcasFipe(marcas);
+    } catch (error) {
+      console.error('Erro ao carregar marcas FIPE:', error);
+    } finally {
+      setLoadingFipe(false);
+    }
+  };
+
+  const loadModelosFipe = async (marcaCodigo: string) => {
+    try {
+      setLoadingFipe(true);
+      const { modelos } = await getFipeModelos(marcaCodigo);
+      setModelosFipe(modelos);
+    } catch (error) {
+      console.error('Erro ao carregar modelos FIPE:', error);
+    } finally {
+      setLoadingFipe(false);
+    }
+  };
+
+  const loadAnosFipe = async (marcaCodigo: string, modeloCodigo: string) => {
+    try {
+      setLoadingFipe(true);
+      const anos = await getFipeAnos(marcaCodigo, modeloCodigo);
+      setAnosFipe(anos);
+    } catch (error) {
+      console.error('Erro ao carregar anos FIPE:', error);
+    } finally {
+      setLoadingFipe(false);
+    }
+  };
+
+  const loadValorFipe = async (marcaCodigo: string, modeloCodigo: string, anoCodigo: string) => {
+    try {
+      setLoadingFipe(true);
+      const valorData = await getFipeValor(marcaCodigo, modeloCodigo, anoCodigo);
+      const valor = parseFipeValor(valorData.Valor);
+      setFipeValorSugerido(maskCurrency(valor));
+      form.setValue('valor', maskCurrency(valor));
+    } catch (error) {
+      console.error('Erro ao carregar valor FIPE:', error);
+      setFipeValorSugerido(null);
+    } finally {
+      setLoadingFipe(false);
+    }
+  };
+
+  const handleMarcaChange = async (marcaNome: string) => {
+    form.setValue('fabricante', marcaNome);
+    const marca = marcasFipe.find((m) => m.nome === marcaNome);
+    if (marca) {
+      setSelectedMarcaCodigo(marca.codigo);
+      await loadModelosFipe(marca.codigo);
+      setModelosFipe([]);
+      setAnosFipe([]);
+      setFipeValorSugerido(null);
+      form.setValue('modelo', '');
+      form.setValue('ano', '');
+    }
+  };
+
+  const handleModeloChange = async (modeloNome: string) => {
+    form.setValue('modelo', modeloNome);
+    const modelo = modelosFipe.find((m) => m.nome === modeloNome);
+    if (modelo && selectedMarcaCodigo) {
+      setSelectedModeloCodigo(String(modelo.codigo));
+      await loadAnosFipe(selectedMarcaCodigo, String(modelo.codigo));
+      setFipeValorSugerido(null);
+      form.setValue('ano', '');
+    }
+  };
+
+  const handleAnoChange = async (ano: string) => {
+    form.setValue('ano', ano);
+    form.setValue('ano_fabricacao', String(parseInt(ano) - 1));
+    
+    const anoObj = anosFipe.find((a) => a.nome.includes(ano));
+    if (anoObj && selectedMarcaCodigo && selectedModeloCodigo) {
+      await loadValorFipe(selectedMarcaCodigo, selectedModeloCodigo, anoObj.codigo);
+    }
+  };
+
+  const handlePlacaBlur = async () => {
+    const placa = form.getValues('placa');
+    if (!placa) {
+      setPlacaError('');
+      return;
+    }
+
+    const validation = await validatePlacaDuplicada(placa, vehicleId);
+    if (!validation.valid) {
+      setPlacaError(validation.message || '');
+      form.setError('placa', { message: validation.message });
+    } else {
+      setPlacaError('');
+      form.clearErrors('placa');
+    }
+  };
+
+  const handleAnoModeloBlur = () => {
+    const anoModelo = form.getValues('ano');
+    const anoFabricacao = form.getValues('ano_fabricacao');
+    
+    if (anoModelo && anoFabricacao) {
+      const validation = validateAnoModelo(anoModelo, anoFabricacao);
+      if (!validation.valid) {
+        setAnoError(validation.message || '');
+        form.setError('ano', { message: validation.message });
+      } else {
+        setAnoError('');
+        form.clearErrors('ano');
+        form.clearErrors('ano_fabricacao');
+      }
+    }
+  };
 
   useEffect(() => {
     if (open && vehicleId) {
@@ -97,11 +275,17 @@ export function VehicleDialog({ open, onOpenChange, vehicleId, onSuccess }: Vehi
         modelo: data.modelo || '',
         fabricante: data.fabricante || '',
         ano: data.ano || '',
-        valor: data.valor || '',
-        km: data.km || '',
+        ano_fabricacao: data.ano_fabricacao || '',
+        valor: data.valor ? maskCurrency(data.valor) : '',
+        km: data.km ? maskKm(data.km) : '',
         cor: data.cor || '',
-        placa: data.placa || '',
+        placa: data.placa ? maskPlaca(data.placa) : '',
         tipo_veiculo: data.tipo_veiculo || '',
+        motor: data.motor || '',
+        cambio: data.cambio || '',
+        tipo_aquisicao: data.tipo_aquisicao || 'compra',
+        data_aquisicao: data.data_aquisicao || new Date().toISOString().split('T')[0],
+        adquirido_de: data.adquirido_de || '',
         observacao: data.observacao || '',
       });
 
@@ -169,13 +353,21 @@ export function VehicleDialog({ open, onOpenChange, vehicleId, onSuccess }: Vehi
       const mainPhoto = photos.find((p) => p.isMain);
       const photoUrls = photos.map((p) => p.url);
 
+      const valorNumerico = unmaskCurrency(data.valor);
+      const kmNumerico = data.km ? unmaskKm(data.km) : '';
+      const placaNormalizada = data.placa ? normalizePlaca(data.placa) : null;
+
       const vehicleData = {
         ...data,
         foto: mainPhoto?.url || null,
         fotos: photoUrls.length > 0 ? photoUrls : null,
-        data_aquisicao: new Date().toISOString().split('T')[0],
-        tipo_aquisicao: 'compra' as const,
-        valor_aquisicao: parseFloat(data.valor.replace(/[^\d,]/g, '').replace(',', '.')) || 0,
+        valor: String(valorNumerico),
+        km: kmNumerico,
+        placa: placaNormalizada,
+        data_aquisicao: data.data_aquisicao || new Date().toISOString().split('T')[0],
+        tipo_aquisicao: data.tipo_aquisicao || 'compra',
+        valor_aquisicao: valorNumerico,
+        adquirido_de: data.adquirido_de || null,
         id_empresa: (configData.empresa as any)?.id,
       };
 
@@ -249,138 +441,351 @@ export function VehicleDialog({ open, onOpenChange, vehicleId, onSuccess }: Vehi
 
           <TabsContent value="info" className="space-y-4 mt-4">
             <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="fabricante"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Fabricante *</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Ex: Volkswagen" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                {/* Seção: Dados Básicos */}
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold text-foreground border-b border-border pb-2">
+                    Dados Básicos
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="fabricante"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Fabricante *</FormLabel>
+                          <Select
+                            value={field.value}
+                            onValueChange={handleMarcaChange}
+                            disabled={loadingFipe}
+                          >
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Selecione a marca" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {marcasFipe.map((marca) => (
+                                <SelectItem key={marca.codigo} value={marca.nome}>
+                                  {marca.nome}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
 
-                  <FormField
-                    control={form.control}
-                    name="modelo"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Modelo *</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Ex: Gol" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                    <FormField
+                      control={form.control}
+                      name="modelo"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Modelo *</FormLabel>
+                          <Select
+                            value={field.value}
+                            onValueChange={handleModeloChange}
+                            disabled={!selectedMarcaCodigo || loadingFipe}
+                          >
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Selecione o modelo" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {modelosFipe.map((modelo) => (
+                                <SelectItem key={modelo.codigo} value={modelo.nome}>
+                                  {modelo.nome}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
 
-                  <FormField
-                    control={form.control}
-                    name="ano"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Ano *</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Ex: 2020" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                    <FormField
+                      control={form.control}
+                      name="ano"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Ano Modelo *</FormLabel>
+                          <Select
+                            value={field.value}
+                            onValueChange={handleAnoChange}
+                            disabled={!selectedModeloCodigo || loadingFipe}
+                          >
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Selecione o ano" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {anosFipe.map((ano) => (
+                                <SelectItem key={ano.codigo} value={ano.nome.split(' ')[0]}>
+                                  {ano.nome}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                          {anoError && (
+                            <p className="text-sm text-destructive">{anoError}</p>
+                          )}
+                        </FormItem>
+                      )}
+                    />
 
-                  <FormField
-                    control={form.control}
-                    name="valor"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Valor *</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Ex: 45000" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                    <FormField
+                      control={form.control}
+                      name="ano_fabricacao"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Ano Fabricação *</FormLabel>
+                          <FormControl>
+                            <Input
+                              placeholder="Ex: 2020"
+                              {...field}
+                              onChange={(e) => {
+                                field.onChange(maskYear(e.target.value));
+                                handleAnoModeloBlur();
+                              }}
+                              onBlur={handleAnoModeloBlur}
+                              maxLength={4}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
 
-                  <FormField
-                    control={form.control}
-                    name="km"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Quilometragem</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Ex: 50000" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                    <FormField
+                      control={form.control}
+                      name="placa"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Placa</FormLabel>
+                          <FormControl>
+                            <Input
+                              placeholder="Ex: ABC-1234"
+                              {...field}
+                              onChange={(e) => {
+                                field.onChange(maskPlaca(e.target.value));
+                                setPlacaError('');
+                              }}
+                              onBlur={handlePlacaBlur}
+                              maxLength={8}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                          {placaError && (
+                            <p className="text-sm text-destructive">{placaError}</p>
+                          )}
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                </div>
 
-                  <FormField
-                    control={form.control}
-                    name="cor"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Cor</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Ex: Preto" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                {/* Seção: Preço */}
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold text-foreground border-b border-border pb-2">
+                    Preço
+                  </h3>
+                  <div className="grid grid-cols-1 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="valor"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Valor de Venda *</FormLabel>
+                          <FormControl>
+                            <Input
+                              placeholder="Ex: R$ 45.000,00"
+                              {...field}
+                              onChange={(e) => {
+                                const maskedValue = maskCurrency(unmaskCurrency(e.target.value));
+                                field.onChange(maskedValue);
+                              }}
+                            />
+                          </FormControl>
+                          {fipeValorSugerido && (
+                            <Alert className="mt-2 bg-accent/10 border-accent">
+                              <Info className="h-4 w-4 text-accent" />
+                              <AlertDescription className="text-sm">
+                                Valor FIPE sugerido: <span className="font-semibold text-accent">{fipeValorSugerido}</span>
+                              </AlertDescription>
+                            </Alert>
+                          )}
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                </div>
 
-                  <FormField
-                    control={form.control}
-                    name="placa"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Placa</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Ex: ABC-1234" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                {/* Seção: Dados de Aquisição */}
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold text-foreground border-b border-border pb-2">
+                    Dados de Aquisição
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="tipo_aquisicao"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Tipo de Aquisição</FormLabel>
+                          <Select value={field.value} onValueChange={field.onChange}>
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Selecione" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="compra">Compra</SelectItem>
+                              <SelectItem value="troca">Troca</SelectItem>
+                              <SelectItem value="consignado">Consignado</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
 
+                    <FormField
+                      control={form.control}
+                      name="data_aquisicao"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Data de Aquisição</FormLabel>
+                          <FormControl>
+                            <Input type="date" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                </div>
+
+                {/* Seção: Especificações */}
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold text-foreground border-b border-border pb-2">
+                    Especificações
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="motor"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Motor</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Ex: 1.0" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="cambio"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Câmbio</FormLabel>
+                          <Select value={field.value} onValueChange={field.onChange}>
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Selecione" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="Manual">Manual</SelectItem>
+                              <SelectItem value="Automático">Automático</SelectItem>
+                              <SelectItem value="Automatizado">Automatizado</SelectItem>
+                              <SelectItem value="CVT">CVT</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="km"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Quilometragem</FormLabel>
+                          <FormControl>
+                            <Input
+                              placeholder="Ex: 50.000"
+                              {...field}
+                              onChange={(e) => field.onChange(maskKm(e.target.value))}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="cor"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Cor</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Ex: Preto" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="tipo_veiculo"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Tipo</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Ex: Sedan" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                </div>
+
+                {/* Seção: Observações */}
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold text-foreground border-b border-border pb-2">
+                    Observações
+                  </h3>
                   <FormField
                     control={form.control}
-                    name="tipo_veiculo"
+                    name="observacao"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Tipo</FormLabel>
+                        <FormLabel>Observações</FormLabel>
                         <FormControl>
-                          <Input placeholder="Ex: Sedan" {...field} />
+                          <Textarea
+                            placeholder="Informações adicionais sobre o veículo"
+                            className="min-h-[100px]"
+                            {...field}
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
                 </div>
-
-                <FormField
-                  control={form.control}
-                  name="observacao"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Observações</FormLabel>
-                      <FormControl>
-                        <Textarea
-                          placeholder="Informações adicionais sobre o veículo"
-                          className="min-h-[100px]"
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
 
                 <div className="flex justify-end gap-2">
                   <Button
