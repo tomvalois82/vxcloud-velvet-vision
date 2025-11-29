@@ -6,7 +6,6 @@ import {
   Wallet, 
   Settings,
   Package,
-  Handshake,
   BarChart3,
   ArrowDownCircle,
   ArrowUpCircle,
@@ -48,9 +47,7 @@ const menuItems: MenuItem[] = [
     title: "Veículos",
     icon: Car,
     items: [
-      { title: "Listagem", url: "/veiculos", icon: Car },
       { title: "Estoque", url: "/veiculos/estoque", icon: Package },
-      { title: "Agenciados", url: "/veiculos/agenciados", icon: Handshake },
       { title: "Relatórios", url: "/veiculos/relatorios", icon: BarChart3 },
     ],
   },

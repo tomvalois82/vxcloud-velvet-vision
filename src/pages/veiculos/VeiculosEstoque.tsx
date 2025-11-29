@@ -1,6 +1,7 @@
 import { PageHeader } from "@/components/PageHeader";
 import { EmptyState } from "@/components/EmptyState";
-import { Package } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Package, Plus } from "lucide-react";
 
 const VeiculosEstoque = () => {
   return (
@@ -8,6 +9,12 @@ const VeiculosEstoque = () => {
       <PageHeader
         title="Estoque"
         description="Controle de estoque de veículos"
+        action={
+          <Button className="bg-accent hover:bg-accent/90">
+            <Plus className="w-4 h-4 mr-2" />
+            Novo Veículo
+          </Button>
+        }
       />
 
       <div className="glass rounded-lg p-8">
