@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, Search, Car } from 'lucide-react';
+import { Plus, Search, Car, Trash2 } from 'lucide-react';
 import { PageHeader } from '@/components/PageHeader';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,6 +8,17 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { VehicleDialog } from '@/features/estoque/components/VehicleDialog';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { StorageManager } from '@/features/estoque/utils/storageManager';
 
 interface Vehicle {
   id: number;
@@ -27,6 +38,9 @@ const VeiculosEstoque = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedVehicleId, setSelectedVehicleId] = useState<number | undefined>();
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [vehicleToDelete, setVehicleToDelete] = useState<Vehicle | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     loadVehicles();
@@ -76,6 +90,50 @@ const VeiculosEstoque = () => {
   const handleDialogClose = () => {
     setDialogOpen(false);
     setSelectedVehicleId(undefined);
+  };
+
+  const handleDeleteClick = (e: React.MouseEvent, vehicle: Vehicle) => {
+    e.stopPropagation();
+    setVehicleToDelete(vehicle);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!vehicleToDelete) return;
+
+    setDeleting(true);
+    try {
+      // 1. Excluir todas as fotos do Storage
+      const storageManager = new StorageManager(vehicleToDelete.id);
+      await storageManager.deleteAllPhotos();
+
+      // 2. Excluir o registro do banco
+      const { error } = await supabase
+        .from('estoque')
+        .delete()
+        .eq('id', vehicleToDelete.id);
+
+      if (error) throw error;
+
+      // 3. Atualizar a UI
+      setVehicles((prev) => prev.filter((v) => v.id !== vehicleToDelete.id));
+
+      toast({
+        title: 'Veículo excluído',
+        description: 'O veículo foi removido com sucesso',
+      });
+    } catch (error) {
+      console.error('Error deleting vehicle:', error);
+      toast({
+        title: 'Erro',
+        description: 'Falha ao excluir veículo',
+        variant: 'destructive',
+      });
+    } finally {
+      setDeleting(false);
+      setDeleteDialogOpen(false);
+      setVehicleToDelete(null);
+    }
   };
 
   return (
@@ -158,6 +216,14 @@ const VeiculosEstoque = () => {
                         <Car className="w-16 h-16 text-muted-foreground" />
                       </div>
                     )}
+                    <Button
+                      variant="destructive"
+                      size="icon"
+                      className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity"
+                      onClick={(e) => handleDeleteClick(e, vehicle)}
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
                   </div>
                   <div className="p-4 space-y-2">
                     <h3 className="text-lg font-semibold text-foreground">
@@ -190,6 +256,31 @@ const VeiculosEstoque = () => {
         vehicleId={selectedVehicleId}
         onSuccess={loadVehicles}
       />
+
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir Veículo</AlertDialogTitle>
+            <AlertDialogDescription>
+              Deseja realmente excluir o veículo{' '}
+              <strong>
+                {vehicleToDelete?.fabricante} {vehicleToDelete?.modelo}
+              </strong>
+              ? Esta ação não pode ser desfeita e todas as fotos serão removidas permanentemente.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteConfirm}
+              disabled={deleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleting ? 'Excluindo...' : 'Excluir'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

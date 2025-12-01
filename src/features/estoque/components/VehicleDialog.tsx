@@ -291,7 +291,7 @@ export function VehicleDialog({ open, onOpenChange, vehicleId, onSuccess }: Vehi
         carroceria: data.tipo_veiculo || '',
         motor: data.motor || '',
         cambio: data.cambio || '',
-        tipo_aquisicao: data.tipo_aquisicao || 'compra',
+        tipo_aquisicao: data.tipo_aquisicao || 'Próprio',
         data_aquisicao: data.data_aquisicao || new Date().toISOString().split('T')[0],
         adquirido_de: data.adquirido_de || '',
         observacao: data.observacao || '',
@@ -392,7 +392,7 @@ export function VehicleDialog({ open, onOpenChange, vehicleId, onSuccess }: Vehi
         renavan: data.renavan ? parseInt(data.renavan) : null,
         chassi: data.chassi ? data.chassi.toUpperCase().trim() : null,
         data_aquisicao: data.data_aquisicao || new Date().toISOString().split('T')[0],
-        tipo_aquisicao: data.tipo_aquisicao || 'compra',
+        tipo_aquisicao: data.tipo_aquisicao || 'Próprio',
         valor_aquisicao: valorCompraNumerico,
         adquirido_de: data.adquirido_de || null,
         id_empresa: (configData.empresa as any)?.id,
@@ -764,9 +764,9 @@ export function VehicleDialog({ open, onOpenChange, vehicleId, onSuccess }: Vehi
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                              <SelectItem value="compra">Compra</SelectItem>
-                              <SelectItem value="troca">Troca</SelectItem>
-                              <SelectItem value="consignado">Consignado</SelectItem>
+                              <SelectItem value="Próprio">Próprio</SelectItem>
+                              <SelectItem value="Agenciado">Agenciado</SelectItem>
+                              <SelectItem value="Parceria">Parceria</SelectItem>
                             </SelectContent>
                           </Select>
                           <FormMessage />

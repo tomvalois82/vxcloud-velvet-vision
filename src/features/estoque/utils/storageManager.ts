@@ -90,24 +90,48 @@ export class StorageManager {
   }
 
   async deleteAllPhotos(): Promise<void> {
-    const { data: files, error: listError } = await supabase.storage
-      .from(BUCKET_NAME)
-      .list(this.basePath);
+    try {
+      // Listar e excluir arquivos na pasta principal
+      const { data: files, error: listError } = await supabase.storage
+        .from(BUCKET_NAME)
+        .list(this.basePath);
 
-    if (listError) {
-      console.error('List error:', listError);
-      return;
-    }
+      if (listError) {
+        console.error('List error:', listError);
+      }
 
-    if (!files || files.length === 0) return;
+      if (files && files.length > 0) {
+        const filePaths = files.map((file) => `${this.basePath}/${file.name}`);
+        const { error: deleteError } = await supabase.storage
+          .from(BUCKET_NAME)
+          .remove(filePaths);
 
-    const filePaths = files.map((file) => `${this.basePath}/${file.name}`);
-    const { error: deleteError } = await supabase.storage
-      .from(BUCKET_NAME)
-      .remove(filePaths);
+        if (deleteError) {
+          console.error('Batch delete error:', deleteError);
+        }
+      }
 
-    if (deleteError) {
-      console.error('Batch delete error:', deleteError);
+      // Listar e excluir arquivos na pasta thumbs
+      const { data: thumbFiles, error: thumbListError } = await supabase.storage
+        .from(BUCKET_NAME)
+        .list(`${this.basePath}/thumbs`);
+
+      if (thumbListError) {
+        console.error('Thumb list error:', thumbListError);
+      }
+
+      if (thumbFiles && thumbFiles.length > 0) {
+        const thumbPaths = thumbFiles.map((file) => `${this.basePath}/thumbs/${file.name}`);
+        const { error: thumbDeleteError } = await supabase.storage
+          .from(BUCKET_NAME)
+          .remove(thumbPaths);
+
+        if (thumbDeleteError) {
+          console.error('Thumb delete error:', thumbDeleteError);
+        }
+      }
+    } catch (error) {
+      console.error('Error deleting all photos:', error);
     }
   }
 
