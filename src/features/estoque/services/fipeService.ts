@@ -1,4 +1,6 @@
-const FIPE_BASE_URL = 'https://parallelum.com.br/fipe/api/v1/carros';
+const FIPE_BASE_URL = 'https://parallelum.com.br/fipe/api/v1';
+
+export type TipoVeiculo = 'carros' | 'motos' | 'caminhoes';
 
 interface FipeMarca {
   codigo: string;
@@ -49,12 +51,12 @@ function setCache(key: string, data: any): void {
   cache.set(key, { data, timestamp: Date.now() });
 }
 
-export async function getFipeMarcas(): Promise<FipeMarca[]> {
-  const cacheKey = 'marcas';
+export async function getFipeMarcas(tipoVeiculo: TipoVeiculo = 'carros'): Promise<FipeMarca[]> {
+  const cacheKey = `marcas-${tipoVeiculo}`;
   const cached = getCached<FipeMarca[]>(cacheKey, CACHE_DURATION.MARCAS);
   if (cached) return cached;
 
-  const response = await fetch(`${FIPE_BASE_URL}/marcas`);
+  const response = await fetch(`${FIPE_BASE_URL}/${tipoVeiculo}/marcas`);
   if (!response.ok) throw new Error('Erro ao buscar marcas FIPE');
   
   const data = await response.json();
@@ -62,12 +64,12 @@ export async function getFipeMarcas(): Promise<FipeMarca[]> {
   return data;
 }
 
-export async function getFipeModelos(marcaCodigo: string): Promise<{ modelos: FipeModelo[] }> {
-  const cacheKey = `modelos-${marcaCodigo}`;
+export async function getFipeModelos(marcaCodigo: string, tipoVeiculo: TipoVeiculo = 'carros'): Promise<{ modelos: FipeModelo[] }> {
+  const cacheKey = `modelos-${tipoVeiculo}-${marcaCodigo}`;
   const cached = getCached<{ modelos: FipeModelo[] }>(cacheKey, CACHE_DURATION.MODELOS);
   if (cached) return cached;
 
-  const response = await fetch(`${FIPE_BASE_URL}/marcas/${marcaCodigo}/modelos`);
+  const response = await fetch(`${FIPE_BASE_URL}/${tipoVeiculo}/marcas/${marcaCodigo}/modelos`);
   if (!response.ok) throw new Error('Erro ao buscar modelos FIPE');
   
   const data = await response.json();
@@ -75,12 +77,12 @@ export async function getFipeModelos(marcaCodigo: string): Promise<{ modelos: Fi
   return data;
 }
 
-export async function getFipeAnos(marcaCodigo: string, modeloCodigo: string): Promise<FipeAno[]> {
-  const cacheKey = `anos-${marcaCodigo}-${modeloCodigo}`;
+export async function getFipeAnos(marcaCodigo: string, modeloCodigo: string, tipoVeiculo: TipoVeiculo = 'carros'): Promise<FipeAno[]> {
+  const cacheKey = `anos-${tipoVeiculo}-${marcaCodigo}-${modeloCodigo}`;
   const cached = getCached<FipeAno[]>(cacheKey, CACHE_DURATION.ANOS);
   if (cached) return cached;
 
-  const response = await fetch(`${FIPE_BASE_URL}/marcas/${marcaCodigo}/modelos/${modeloCodigo}/anos`);
+  const response = await fetch(`${FIPE_BASE_URL}/${tipoVeiculo}/marcas/${marcaCodigo}/modelos/${modeloCodigo}/anos`);
   if (!response.ok) throw new Error('Erro ao buscar anos FIPE');
   
   const data = await response.json();
@@ -91,14 +93,15 @@ export async function getFipeAnos(marcaCodigo: string, modeloCodigo: string): Pr
 export async function getFipeValor(
   marcaCodigo: string,
   modeloCodigo: string,
-  anoCodigo: string
+  anoCodigo: string,
+  tipoVeiculo: TipoVeiculo = 'carros'
 ): Promise<FipeValor> {
-  const cacheKey = `valor-${marcaCodigo}-${modeloCodigo}-${anoCodigo}`;
+  const cacheKey = `valor-${tipoVeiculo}-${marcaCodigo}-${modeloCodigo}-${anoCodigo}`;
   const cached = getCached<FipeValor>(cacheKey, CACHE_DURATION.VALOR);
   if (cached) return cached;
 
   const response = await fetch(
-    `${FIPE_BASE_URL}/marcas/${marcaCodigo}/modelos/${modeloCodigo}/anos/${anoCodigo}`
+    `${FIPE_BASE_URL}/${tipoVeiculo}/marcas/${marcaCodigo}/modelos/${modeloCodigo}/anos/${anoCodigo}`
   );
   if (!response.ok) throw new Error('Erro ao buscar valor FIPE');
   

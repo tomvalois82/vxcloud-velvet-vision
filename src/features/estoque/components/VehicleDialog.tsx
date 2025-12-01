@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { Loader2, Info } from 'lucide-react';
+import { Loader2, Info, CalendarIcon } from 'lucide-react';
+import { format } from 'date-fns';
 import {
   Dialog,
   DialogContent,
@@ -33,6 +34,7 @@ import {
   getFipeAnos,
   getFipeValor,
   parseFipeValor,
+  TipoVeiculo,
 } from '../services/fipeService';
 import {
   maskPlaca,
@@ -57,9 +59,13 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
+import { cn } from '@/lib/utils';
 
 const vehicleSchema = z.object({
   placa: z.string().optional(),
+  tipo_veiculo_fipe: z.string().min(1, 'Tipo de veículo é obrigatório'),
   modelo: z.string().min(1, 'Modelo é obrigatório'),
   fabricante: z.string().min(1, 'Fabricante é obrigatório'),
   ano: z.string().min(4, 'Ano deve ter 4 dígitos'),
@@ -68,7 +74,7 @@ const vehicleSchema = z.object({
   valor_compra: z.string().optional(),
   km: z.string().optional(),
   cor: z.string().optional(),
-  tipo_veiculo: z.string().optional(),
+  carroceria: z.string().optional(),
   motor: z.string().optional(),
   cambio: z.string().optional(),
   tipo_aquisicao: z.string().optional(),
@@ -98,12 +104,14 @@ export function VehicleDialog({ open, onOpenChange, vehicleId, onSuccess }: Vehi
   const [anoError, setAnoError] = useState<string>('');
   const [anosDisponiveis, setAnosDisponiveis] = useState<number[]>([]);
   const [anosFabricacao, setAnosFabricacao] = useState<string[]>([]);
+  const [tipoVeiculoFipe, setTipoVeiculoFipe] = useState<TipoVeiculo>('carros');
   const isEditing = !!vehicleId;
 
   const form = useForm<VehicleFormData>({
     resolver: zodResolver(vehicleSchema),
     defaultValues: {
       placa: '',
+      tipo_veiculo_fipe: 'carros',
       modelo: '',
       fabricante: '',
       ano: '',
@@ -112,7 +120,7 @@ export function VehicleDialog({ open, onOpenChange, vehicleId, onSuccess }: Vehi
       valor_compra: '',
       km: '',
       cor: '',
-      tipo_veiculo: '',
+      carroceria: '',
       motor: '',
       cambio: '',
       tipo_aquisicao: 'compra',
@@ -139,16 +147,31 @@ export function VehicleDialog({ open, onOpenChange, vehicleId, onSuccess }: Vehi
     }
   }, [open]);
 
-  const loadMarcasFipe = async () => {
+  const loadMarcasFipe = async (tipo?: TipoVeiculo) => {
     try {
       setLoadingFipe(true);
-      const marcas = await getFipeMarcas();
+      const tipoToLoad = tipo || tipoVeiculoFipe;
+      const marcas = await getFipeMarcas(tipoToLoad);
       setMarcasFipe(marcas);
     } catch (error) {
       console.error('Erro ao carregar marcas FIPE:', error);
     } finally {
       setLoadingFipe(false);
     }
+  };
+
+  const handleTipoVeiculoChange = async (tipo: string) => {
+    const tipoFipe = tipo as TipoVeiculo;
+    setTipoVeiculoFipe(tipoFipe);
+    form.setValue('tipo_veiculo_fipe', tipo);
+    
+    // Limpar fabricante e modelo ao mudar tipo
+    form.setValue('fabricante', '');
+    form.setValue('modelo', '');
+    setSelectedMarcaCodigo('');
+    
+    // Carregar novas marcas
+    await loadMarcasFipe(tipoFipe);
   };
 
   // Atualizar anos de fabricação quando ano modelo mudar
@@ -229,6 +252,7 @@ export function VehicleDialog({ open, onOpenChange, vehicleId, onSuccess }: Vehi
 
       form.reset({
         placa: data.placa ? maskPlaca(data.placa) : '',
+        tipo_veiculo_fipe: 'carros', // Default, pode ser ajustado se tiver no banco
         modelo: data.modelo || '',
         fabricante: data.fabricante || '',
         ano: data.ano || '',
@@ -237,7 +261,7 @@ export function VehicleDialog({ open, onOpenChange, vehicleId, onSuccess }: Vehi
         valor_compra: data.valor_aquisicao ? maskCurrency(data.valor_aquisicao) : '',
         km: data.km ? maskKm(data.km) : '',
         cor: data.cor || '',
-        tipo_veiculo: data.tipo_veiculo || '',
+        carroceria: data.tipo_veiculo || '',
         motor: data.motor || '',
         cambio: data.cambio || '',
         tipo_aquisicao: data.tipo_aquisicao || 'compra',
@@ -324,7 +348,15 @@ export function VehicleDialog({ open, onOpenChange, vehicleId, onSuccess }: Vehi
       const placaNormalizada = data.placa ? normalizePlaca(data.placa) : null;
 
       const vehicleData = {
-        ...data,
+        modelo: data.modelo,
+        fabricante: data.fabricante,
+        ano: data.ano,
+        ano_fabricacao: data.ano_fabricacao,
+        cor: data.cor,
+        tipo_veiculo: data.carroceria, // Mapear carroceria para tipo_veiculo no banco
+        motor: data.motor,
+        cambio: data.cambio,
+        observacao: data.observacao,
         foto: mainPhoto?.url || null,
         fotos: photoUrls.length > 0 ? photoUrls : null,
         valor: String(valorNumerico),
@@ -442,6 +474,32 @@ export function VehicleDialog({ open, onOpenChange, vehicleId, onSuccess }: Vehi
 
                     <FormField
                       control={form.control}
+                      name="tipo_veiculo_fipe"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Tipo Veículo *</FormLabel>
+                          <Select
+                            value={field.value}
+                            onValueChange={handleTipoVeiculoChange}
+                          >
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Selecione o tipo" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="carros">Carros</SelectItem>
+                              <SelectItem value="motos">Motos</SelectItem>
+                              <SelectItem value="caminhoes">Caminhões</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
                       name="fabricante"
                       render={({ field }) => (
                         <FormItem>
@@ -457,11 +515,18 @@ export function VehicleDialog({ open, onOpenChange, vehicleId, onSuccess }: Vehi
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                              {marcasFipe.map((marca) => (
-                                <SelectItem key={marca.codigo} value={marca.nome}>
-                                  {marca.nome}
-                                </SelectItem>
-                              ))}
+                              {loadingFipe ? (
+                                <div className="flex items-center justify-center p-2">
+                                  <Loader2 className="h-4 w-4 animate-spin" />
+                                  <span className="ml-2">Carregando...</span>
+                                </div>
+                              ) : (
+                                marcasFipe.map((marca) => (
+                                  <SelectItem key={marca.codigo} value={marca.nome}>
+                                    {marca.nome}
+                                  </SelectItem>
+                                ))
+                              )}
                             </SelectContent>
                           </Select>
                           <FormMessage />
@@ -639,11 +704,40 @@ export function VehicleDialog({ open, onOpenChange, vehicleId, onSuccess }: Vehi
                       control={form.control}
                       name="data_aquisicao"
                       render={({ field }) => (
-                        <FormItem>
+                        <FormItem className="flex flex-col">
                           <FormLabel>Data de Aquisição</FormLabel>
-                          <FormControl>
-                            <Input type="date" {...field} />
-                          </FormControl>
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <FormControl>
+                                <Button
+                                  variant="outline"
+                                  className={cn(
+                                    'w-full pl-3 text-left font-normal',
+                                    !field.value && 'text-muted-foreground'
+                                  )}
+                                >
+                                  {field.value ? (
+                                    format(new Date(field.value), 'dd/MM/yyyy')
+                                  ) : (
+                                    <span>Selecione a data</span>
+                                  )}
+                                  <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                </Button>
+                              </FormControl>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0" align="start">
+                              <Calendar
+                                mode="single"
+                                selected={field.value ? new Date(field.value) : undefined}
+                                onSelect={(date) => {
+                                  field.onChange(date ? format(date, 'yyyy-MM-dd') : '');
+                                }}
+                                disabled={(date) => date > new Date()}
+                                initialFocus
+                                className="pointer-events-auto"
+                              />
+                            </PopoverContent>
+                          </Popover>
                           <FormMessage />
                         </FormItem>
                       )}
@@ -729,13 +823,28 @@ export function VehicleDialog({ open, onOpenChange, vehicleId, onSuccess }: Vehi
 
                     <FormField
                       control={form.control}
-                      name="tipo_veiculo"
+                      name="carroceria"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Tipo</FormLabel>
-                          <FormControl>
-                            <Input placeholder="Ex: Sedan" {...field} />
-                          </FormControl>
+                          <FormLabel>Carroceria</FormLabel>
+                          <Select value={field.value} onValueChange={field.onChange}>
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Selecione" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="Sedan">Sedan</SelectItem>
+                              <SelectItem value="Hatch">Hatch</SelectItem>
+                              <SelectItem value="Coupé">Coupé</SelectItem>
+                              <SelectItem value="Conversível">Conversível</SelectItem>
+                              <SelectItem value="SUV">SUV</SelectItem>
+                              <SelectItem value="Pickup">Pickup</SelectItem>
+                              <SelectItem value="Minivan">Minivan</SelectItem>
+                              <SelectItem value="Utilitário">Utilitário</SelectItem>
+                              <SelectItem value="Esportivo">Esportivo</SelectItem>
+                            </SelectContent>
+                          </Select>
                           <FormMessage />
                         </FormItem>
                       )}
