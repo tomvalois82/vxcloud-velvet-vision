@@ -310,6 +310,14 @@ export function VehicleDialog({ open, onOpenChange, vehicleId, onSuccess }: Vehi
 
       if (error) throw error;
 
+      // Atualizar anos de fabricação ANTES de resetar o formulário
+      if (data.ano) {
+        const anoNum = parseInt(data.ano);
+        if (!isNaN(anoNum)) {
+          setAnosFabricacao([String(anoNum), String(anoNum - 1)]);
+        }
+      }
+
       form.reset({
         placa: data.placa ? maskPlaca(data.placa) : '',
         renavan: data.renavan ? String(data.renavan) : '',
@@ -331,14 +339,6 @@ export function VehicleDialog({ open, onOpenChange, vehicleId, onSuccess }: Vehi
         adquirido_de: data.adquirido_de || '',
         observacao: data.observacao || '',
       });
-
-      // Atualizar anos de fabricação quando carregar veículo
-      if (data.ano) {
-        const anoNum = parseInt(data.ano);
-        if (!isNaN(anoNum)) {
-          setAnosFabricacao([String(anoNum), String(anoNum - 1)]);
-        }
-      }
 
       const storageManager = new StorageManager(vehicleId);
       const metadata = await storageManager.loadMetadata();
