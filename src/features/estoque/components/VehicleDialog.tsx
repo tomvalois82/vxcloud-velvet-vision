@@ -1045,7 +1045,7 @@ export function VehicleDialog({ open, onOpenChange, vehicleId, onSuccess }: Vehi
                   </div>
                 )}
 
-                {photos.length < 10 && vehicleId && (
+                {photos.length < 20 && vehicleId && (
                   <div className="space-y-4">
                     <h3 className="text-lg font-semibold">
                       {photos.length > 0 ? 'Adicionar Mais Fotos' : 'Adicionar Fotos'}
@@ -1055,7 +1055,7 @@ export function VehicleDialog({ open, onOpenChange, vehicleId, onSuccess }: Vehi
                       onUploadComplete={(newPhotos) => {
                         setPhotos((prev) => [...prev, ...newPhotos]);
                       }}
-                      maxFiles={10 - photos.length}
+                      maxFiles={20 - photos.length}
                     />
                   </div>
                 )}
