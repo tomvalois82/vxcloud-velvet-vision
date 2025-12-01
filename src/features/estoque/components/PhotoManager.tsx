@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   DndContext,
   closestCenter,
@@ -110,6 +110,11 @@ export function PhotoManager({ vehicleId, photos, onPhotosChange }: PhotoManager
   const [items, setItems] = useState<PhotoMetadata[]>(photos);
   const [carouselIndex, setCarouselIndex] = useState<number | null>(null);
   const [photoToRemove, setPhotoToRemove] = useState<PhotoMetadata | null>(null);
+
+  // Sync items with photos prop whenever vehicleId or photos change
+  useEffect(() => {
+    setItems(photos);
+  }, [vehicleId, photos]);
 
   const sensors = useSensors(
     useSensor(PointerSensor),

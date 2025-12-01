@@ -254,11 +254,16 @@ export function VehicleDialog({ open, onOpenChange, vehicleId, onSuccess }: Vehi
 
   useEffect(() => {
     if (open && vehicleId) {
+      // Clear photos before loading new vehicle to prevent showing old photos
+      setPhotos([]);
       loadVehicle();
     } else if (open && !vehicleId) {
       form.reset();
       setPhotos([]);
       setActiveTab('info');
+    } else if (!open) {
+      // Clear photos when dialog closes
+      setPhotos([]);
     }
   }, [open, vehicleId]);
 
