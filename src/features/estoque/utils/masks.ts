@@ -24,19 +24,40 @@ export function normalizePlaca(value: string): string {
 }
 
 export function maskCurrency(value: string | number): string {
-  const numValue = typeof value === 'string' ? parseFloat(value.replace(/\D/g, '')) / 100 : value;
+  // Se for número, apenas formatar
+  if (typeof value === 'number') {
+    return value.toLocaleString('pt-BR', {
+      style: 'currency',
+      currency: 'BRL',
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
+  }
   
-  if (isNaN(numValue)) return 'R$ 0,00';
+  // Remover tudo exceto dígitos
+  const digits = value.replace(/\D/g, '');
+  
+  if (!digits || digits === '0') return 'R$ 0,00';
+  
+  // Converter para centavos (últimos 2 dígitos são os centavos)
+  const numValue = parseInt(digits, 10) / 100;
   
   return numValue.toLocaleString('pt-BR', {
     style: 'currency',
     currency: 'BRL',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
   });
 }
 
 export function unmaskCurrency(value: string): number {
-  const clean = value.replace(/[^\d,]/g, '').replace(',', '.');
-  return parseFloat(clean) || 0;
+  // Remover tudo exceto dígitos
+  const digits = value.replace(/\D/g, '');
+  
+  if (!digits) return 0;
+  
+  // Converter de centavos para valor real
+  return parseInt(digits, 10) / 100;
 }
 
 export function maskKm(value: string | number): string {
