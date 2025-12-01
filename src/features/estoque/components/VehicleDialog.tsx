@@ -258,9 +258,39 @@ export function VehicleDialog({ open, onOpenChange, vehicleId, onSuccess }: Vehi
       setPhotos([]);
       loadVehicle();
     } else if (open && !vehicleId) {
-      form.reset();
+      // Resetar formulário com valores padrão explícitos
+      form.reset({
+        placa: '',
+        renavan: '',
+        chassi: '',
+        tipo_veiculo_fipe: 'carros',
+        modelo: '',
+        fabricante: '',
+        ano: '',
+        ano_fabricacao: '',
+        valor: '',
+        valor_compra: '',
+        adquirido_de: '',
+        data_aquisicao: new Date().toISOString().split('T')[0],
+        km: '',
+        cor: '',
+        carroceria: '',
+        motor: '',
+        cambio: '',
+        tipo_aquisicao: 'Próprio',
+        observacao: '',
+      });
+      
+      // Limpar todos os estados relacionados
       setPhotos([]);
       setActiveTab('info');
+      setSelectedMarcaCodigo('');
+      setPlacaError('');
+      setAnoError('');
+      setChassiError('');
+      setAnosFabricacao([]);
+      setFipeValorSugerido(null);
+      setTipoVeiculoFipe('carros');
     } else if (!open) {
       // Clear photos when dialog closes
       setPhotos([]);
