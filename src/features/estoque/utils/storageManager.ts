@@ -167,7 +167,20 @@ export class StorageManager {
     }
 
     const text = await data.text();
-    return JSON.parse(text);
+    try {
+      const metadata = JSON.parse(text) as VehicleMetadata;
+      if (metadata.vehicleId !== this.vehicleId) {
+        console.error('Metadata vehicleId mismatch:', {
+          expected: this.vehicleId,
+          received: metadata.vehicleId,
+        });
+        return null;
+      }
+      return metadata;
+    } catch (parseError) {
+      console.error('Metadata parse error:', parseError);
+      return null;
+    }
   }
 }
 
