@@ -21,7 +21,7 @@ interface UploadingFile {
   uploading: boolean;
 }
 
-export function ImageUploader({ vehicleId, onUploadComplete, maxFiles = 10 }: ImageUploaderProps) {
+export function ImageUploader({ vehicleId, onUploadComplete, maxFiles = 20 }: ImageUploaderProps) {
   const [uploadingFiles, setUploadingFiles] = useState<UploadingFile[]>([]);
   const [globalProgress, setGlobalProgress] = useState(0);
 

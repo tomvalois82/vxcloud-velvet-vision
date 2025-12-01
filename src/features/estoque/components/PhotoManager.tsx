@@ -84,9 +84,9 @@ function SortablePhoto({
       <div
         {...attributes}
         {...listeners}
-        className="absolute top-2 right-2 cursor-grab active:cursor-grabbing bg-background/80 backdrop-blur-sm rounded p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+        className="absolute top-2 right-2 cursor-grab active:cursor-grabbing bg-background/80 backdrop-blur-sm rounded p-1.5 transition-opacity"
       >
-        <GripVertical className="w-4 h-4 text-foreground" />
+        <GripVertical className="w-4 h-4 text-muted-foreground hover:text-foreground transition-colors" />
       </div>
 
       <div className="absolute inset-0 bg-background/80 backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
