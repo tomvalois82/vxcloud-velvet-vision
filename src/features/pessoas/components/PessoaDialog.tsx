@@ -101,6 +101,38 @@ export function PessoaDialog({ open, onOpenChange, pessoa, onSuccess }: PessoaDi
   const tipoCadastro = form.watch("tipo_cadastro");
   const cepValue = form.watch("cep");
 
+  // Resetar formulário quando pessoa mudar ou diálogo abrir
+  useEffect(() => {
+    if (open) {
+      form.reset({
+        nome: pessoa?.nome || "",
+        tipo_cadastro: pessoa?.tipo_cadastro || "Pessoa Física",
+        cpf_cnpj: pessoa?.cpf_cnpj 
+          ? (pessoa.cpf_cnpj.length === 11 ? maskCPF(pessoa.cpf_cnpj) : maskCNPJ(pessoa.cpf_cnpj)) 
+          : "",
+        telefone: pessoa?.telefone ? maskPhone(pessoa.telefone) : "",
+        email: pessoa?.email || "",
+        cep: pessoa?.cep ? maskCEP(pessoa.cep) : "",
+        logradouro: pessoa?.logradouro || "",
+        numero: pessoa?.numero || "",
+        complemento: pessoa?.complemento || "",
+        bairro: pessoa?.bairro || "",
+        municipio: pessoa?.municipio || "",
+        estado: pessoa?.estado || "",
+        ponto_referencia: pessoa?.ponto_referencia || "",
+        descricao: pessoa?.descricao || "",
+        eh_cliente: pessoa?.eh_cliente || false,
+        eh_fornecedor: pessoa?.eh_fornecedor || false,
+        eh_colaborador: pessoa?.eh_colaborador || false,
+      });
+      
+      // Resetar estados auxiliares
+      setCpfCnpjError("");
+      setCepError("");
+      setEnderecoEditavel(!!pessoa?.cep);
+    }
+  }, [open, pessoa, form]);
+
   useEffect(() => {
     const buscarCep = async () => {
       const cepDigits = cepValue?.replace(/\D/g, '') || '';
@@ -270,7 +302,7 @@ export function PessoaDialog({ open, onOpenChange, pessoa, onSuccess }: PessoaDi
                       <FormLabel>Tipo de Cadastro</FormLabel>
                       <Select
                         onValueChange={field.onChange}
-                        defaultValue={field.value}
+                        value={field.value}
                       >
                         <FormControl>
                           <SelectTrigger>
