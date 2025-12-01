@@ -364,6 +364,7 @@ export type Database = {
           caracteristicas: string | null
           categoria: string | null
           cautelar: string | null
+          chassi: string | null
           config: number | null
           cor: string | null
           created_at: string
@@ -383,6 +384,7 @@ export type Database = {
           motor: string | null
           observacao: string | null
           placa: string | null
+          renavan: number | null
           status: string | null
           tipo_aquisicao: string
           tipo_veiculo: string | null
@@ -400,6 +402,7 @@ export type Database = {
           caracteristicas?: string | null
           categoria?: string | null
           cautelar?: string | null
+          chassi?: string | null
           config?: number | null
           cor?: string | null
           created_at?: string
@@ -419,6 +422,7 @@ export type Database = {
           motor?: string | null
           observacao?: string | null
           placa?: string | null
+          renavan?: number | null
           status?: string | null
           tipo_aquisicao?: string
           tipo_veiculo?: string | null
@@ -436,6 +440,7 @@ export type Database = {
           caracteristicas?: string | null
           categoria?: string | null
           cautelar?: string | null
+          chassi?: string | null
           config?: number | null
           cor?: string | null
           created_at?: string
@@ -455,6 +460,7 @@ export type Database = {
           motor?: string | null
           observacao?: string | null
           placa?: string | null
+          renavan?: number | null
           status?: string | null
           tipo_aquisicao?: string
           tipo_veiculo?: string | null
