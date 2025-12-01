@@ -20,6 +20,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { StorageManager } from '@/features/estoque/utils/storageManager';
+import { maskCurrency } from '@/features/estoque/utils/masks';
 
 interface Vehicle {
   id: number;
@@ -90,7 +91,7 @@ function VehicleCard({
             <p className="text-sm text-muted-foreground">Placa: {vehicle.placa}</p>
           )}
           <p className="text-lg font-bold text-accent">
-            R$ {vehicle.valor || '0,00'}
+            {vehicle.valor ? maskCurrency(Number(vehicle.valor)) : 'R$ 0,00'}
           </p>
         </div>
       </CardContent>
