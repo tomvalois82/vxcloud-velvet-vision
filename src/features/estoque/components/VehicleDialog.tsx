@@ -702,9 +702,9 @@ export function VehicleDialog({ open, onOpenChange, vehicleId, onSuccess }: Vehi
                           <FormControl>
                             <Input
                               placeholder="Ex: R$ 40.000,00"
-                              {...field}
+                              value={field.value || ''}
                               onChange={(e) => {
-                                const maskedValue = maskCurrency(unmaskCurrency(e.target.value));
+                                const maskedValue = maskCurrency(e.target.value);
                                 field.onChange(maskedValue);
                               }}
                             />
@@ -723,9 +723,9 @@ export function VehicleDialog({ open, onOpenChange, vehicleId, onSuccess }: Vehi
                           <FormControl>
                             <Input
                               placeholder="Ex: R$ 45.000,00"
-                              {...field}
+                              value={field.value || ''}
                               onChange={(e) => {
-                                const maskedValue = maskCurrency(unmaskCurrency(e.target.value));
+                                const maskedValue = maskCurrency(e.target.value);
                                 field.onChange(maskedValue);
                               }}
                             />
