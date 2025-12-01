@@ -6,29 +6,33 @@ export function useVehicleMainPhoto(vehicleId: number, fallbackPhoto: string | n
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    let isMounted = true;
+    if (!vehicleId) return;
+
+    let cancelled = false;
 
     const loadMainPhoto = async () => {
+      setLoading(true);
+      // Reset to fallback immediately to avoid showing stale photos
+      setMainPhoto(fallbackPhoto ?? null);
+
       try {
-        setLoading(true);
         const storageManager = new StorageManager(vehicleId);
         const metadata = await storageManager.loadMetadata();
 
-        if (isMounted && metadata && metadata.photos.length > 0) {
-          // Find the main photo or use the first one
+        if (cancelled) return;
+
+        if (metadata && metadata.photos.length > 0 && metadata.vehicleId === vehicleId) {
           const main = metadata.photos.find((p) => p.isMain) || metadata.photos[0];
           setMainPhoto(main.url);
-        } else if (isMounted) {
-          // No metadata, use fallback
-          setMainPhoto(fallbackPhoto);
+        } else {
+          setMainPhoto(fallbackPhoto ?? null);
         }
       } catch (error) {
-        // Metadata doesn't exist, use fallback
-        if (isMounted) {
-          setMainPhoto(fallbackPhoto);
+        if (!cancelled) {
+          setMainPhoto(fallbackPhoto ?? null);
         }
       } finally {
-        if (isMounted) {
+        if (!cancelled) {
           setLoading(false);
         }
       }
@@ -37,7 +41,7 @@ export function useVehicleMainPhoto(vehicleId: number, fallbackPhoto: string | n
     loadMainPhoto();
 
     return () => {
-      isMounted = false;
+      cancelled = true;
     };
   }, [vehicleId, fallbackPhoto]);
 
