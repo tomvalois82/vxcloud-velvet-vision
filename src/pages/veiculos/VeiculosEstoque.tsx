@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Plus, Search, Car, Trash2 } from 'lucide-react';
+import { useVehicleMainPhoto } from '@/features/estoque/hooks/useVehicleMainPhoto';
 import { PageHeader } from '@/components/PageHeader';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -30,6 +31,71 @@ interface Vehicle {
   cor: string;
   foto: string | null;
   placa: string | null;
+}
+
+function VehicleCard({
+  vehicle,
+  onEdit,
+  onDelete,
+}: {
+  vehicle: Vehicle;
+  onEdit: (id: number) => void;
+  onDelete: (e: React.MouseEvent, vehicle: Vehicle) => void;
+}) {
+  const { mainPhoto, loading } = useVehicleMainPhoto(vehicle.id, vehicle.foto);
+
+  return (
+    <Card
+      className="glass hover:border-accent/50 transition-all cursor-pointer group"
+      onClick={() => onEdit(vehicle.id)}
+    >
+      <CardContent className="p-0">
+        <div className="relative h-48 overflow-hidden rounded-t-lg bg-muted">
+          {loading ? (
+            <div className="w-full h-full flex items-center justify-center">
+              <Car className="w-16 h-16 text-muted-foreground animate-pulse" />
+            </div>
+          ) : mainPhoto ? (
+            <img
+              src={mainPhoto}
+              alt={`${vehicle.fabricante} ${vehicle.modelo}`}
+              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+            />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center">
+              <Car className="w-16 h-16 text-muted-foreground" />
+            </div>
+          )}
+          <Button
+            variant="destructive"
+            size="icon"
+            className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity"
+            onClick={(e) => onDelete(e, vehicle)}
+          >
+            <Trash2 className="w-4 h-4" />
+          </Button>
+        </div>
+        <div className="p-4 space-y-2">
+          <h3 className="text-lg font-semibold text-foreground">
+            {vehicle.fabricante} {vehicle.modelo}
+          </h3>
+          <div className="flex items-center justify-between text-sm text-muted-foreground">
+            <span>Ano: {vehicle.ano}</span>
+            {vehicle.km && <span>{vehicle.km} km</span>}
+          </div>
+          {vehicle.cor && (
+            <p className="text-sm text-muted-foreground">Cor: {vehicle.cor}</p>
+          )}
+          {vehicle.placa && (
+            <p className="text-sm text-muted-foreground">Placa: {vehicle.placa}</p>
+          )}
+          <p className="text-lg font-bold text-accent">
+            R$ {vehicle.valor || '0,00'}
+          </p>
+        </div>
+      </CardContent>
+    </Card>
+  );
 }
 
 const VeiculosEstoque = () => {
@@ -198,53 +264,12 @@ const VeiculosEstoque = () => {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredVehicles.map((vehicle) => (
-              <Card
+              <VehicleCard
                 key={vehicle.id}
-                className="glass hover:border-accent/50 transition-all cursor-pointer group"
-                onClick={() => handleEdit(vehicle.id)}
-              >
-                <CardContent className="p-0">
-                  <div className="relative h-48 overflow-hidden rounded-t-lg bg-muted">
-                    {vehicle.foto ? (
-                      <img
-                        src={vehicle.foto}
-                        alt={`${vehicle.fabricante} ${vehicle.modelo}`}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center">
-                        <Car className="w-16 h-16 text-muted-foreground" />
-                      </div>
-                    )}
-                    <Button
-                      variant="destructive"
-                      size="icon"
-                      className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity"
-                      onClick={(e) => handleDeleteClick(e, vehicle)}
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
-                  </div>
-                  <div className="p-4 space-y-2">
-                    <h3 className="text-lg font-semibold text-foreground">
-                      {vehicle.fabricante} {vehicle.modelo}
-                    </h3>
-                    <div className="flex items-center justify-between text-sm text-muted-foreground">
-                      <span>Ano: {vehicle.ano}</span>
-                      {vehicle.km && <span>{vehicle.km} km</span>}
-                    </div>
-                    {vehicle.cor && (
-                      <p className="text-sm text-muted-foreground">Cor: {vehicle.cor}</p>
-                    )}
-                    {vehicle.placa && (
-                      <p className="text-sm text-muted-foreground">Placa: {vehicle.placa}</p>
-                    )}
-                    <p className="text-lg font-bold text-accent">
-                      R$ {vehicle.valor || '0,00'}
-                    </p>
-                  </div>
-                </CardContent>
-              </Card>
+                vehicle={vehicle}
+                onEdit={handleEdit}
+                onDelete={handleDeleteClick}
+              />
             ))}
           </div>
         )}
