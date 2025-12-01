@@ -1,9 +1,10 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { consultarCep } from "../services/viacepService";
 import {
   Dialog,
   DialogContent,
@@ -70,6 +71,9 @@ const ESTADOS = [
 export function PessoaDialog({ open, onOpenChange, pessoa, onSuccess }: PessoaDialogProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [cpfCnpjError, setCpfCnpjError] = useState<string>("");
+  const [loadingCep, setLoadingCep] = useState(false);
+  const [cepError, setCepError] = useState<string>("");
+  const [enderecoEditavel, setEnderecoEditavel] = useState(false);
 
   const form = useForm<PessoaFormData>({
     resolver: zodResolver(pessoaSchema),
@@ -95,6 +99,46 @@ export function PessoaDialog({ open, onOpenChange, pessoa, onSuccess }: PessoaDi
   });
 
   const tipoCadastro = form.watch("tipo_cadastro");
+  const cepValue = form.watch("cep");
+
+  useEffect(() => {
+    const buscarCep = async () => {
+      const cepDigits = cepValue?.replace(/\D/g, '') || '';
+      
+      if (cepDigits.length !== 8) {
+        setCepError("");
+        return;
+      }
+
+      setCepError("");
+      setLoadingCep(true);
+
+      try {
+        const data = await consultarCep(cepDigits);
+        
+        if (!data) {
+          setCepError("CEP não encontrado.");
+          setLoadingCep(false);
+          return;
+        }
+
+        // Preencher os campos automaticamente
+        form.setValue("logradouro", data.logradouro);
+        form.setValue("bairro", data.bairro);
+        form.setValue("municipio", data.localidade);
+        form.setValue("estado", data.uf);
+        setEnderecoEditavel(false);
+      } catch (error) {
+        setCepError("Erro ao consultar CEP.");
+      } finally {
+        setLoadingCep(false);
+      }
+    };
+
+    if (cepValue && !enderecoEditavel) {
+      buscarCep();
+    }
+  }, [cepValue, enderecoEditavel, form]);
 
   const handleCpfCnpjBlur = async () => {
     const value = form.getValues("cpf_cnpj");
@@ -387,15 +431,27 @@ export function PessoaDialog({ open, onOpenChange, pessoa, onSuccess }: PessoaDi
                     <FormItem>
                       <FormLabel>CEP</FormLabel>
                       <FormControl>
-                        <Input
-                          placeholder="00000-000"
-                          value={field.value || ""}
-                          onChange={(e) => {
-                            const masked = maskCEP(e.target.value);
-                            field.onChange(masked);
-                          }}
-                        />
+                        <div className="relative">
+                          <Input
+                            placeholder="00000-000"
+                            value={field.value || ""}
+                            onChange={(e) => {
+                              const masked = maskCEP(e.target.value);
+                              field.onChange(masked);
+                              setCepError("");
+                              if (masked.replace(/\D/g, '').length < 8) {
+                                setEnderecoEditavel(false);
+                              }
+                            }}
+                          />
+                          {loadingCep && (
+                            <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-accent" />
+                          )}
+                        </div>
                       </FormControl>
+                      {cepError && (
+                        <p className="text-sm text-destructive">{cepError}</p>
+                      )}
                       <FormMessage />
                     </FormItem>
                   )}
@@ -408,7 +464,11 @@ export function PessoaDialog({ open, onOpenChange, pessoa, onSuccess }: PessoaDi
                     <FormItem className="md:col-span-2">
                       <FormLabel>Logradouro</FormLabel>
                       <FormControl>
-                        <Input placeholder="Rua, Avenida..." {...field} />
+                        <Input
+                          placeholder="Rua, Avenida..."
+                          {...field}
+                          disabled={!enderecoEditavel && !!field.value && !loadingCep}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -450,7 +510,11 @@ export function PessoaDialog({ open, onOpenChange, pessoa, onSuccess }: PessoaDi
                     <FormItem>
                       <FormLabel>Bairro</FormLabel>
                       <FormControl>
-                        <Input placeholder="Bairro" {...field} />
+                        <Input
+                          placeholder="Bairro"
+                          {...field}
+                          disabled={!enderecoEditavel && !!field.value && !loadingCep}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -464,7 +528,11 @@ export function PessoaDialog({ open, onOpenChange, pessoa, onSuccess }: PessoaDi
                     <FormItem>
                       <FormLabel>Município</FormLabel>
                       <FormControl>
-                        <Input placeholder="Cidade" {...field} />
+                        <Input
+                          placeholder="Cidade"
+                          {...field}
+                          disabled={!enderecoEditavel && !!field.value && !loadingCep}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -479,7 +547,8 @@ export function PessoaDialog({ open, onOpenChange, pessoa, onSuccess }: PessoaDi
                       <FormLabel>Estado</FormLabel>
                       <Select
                         onValueChange={field.onChange}
-                        defaultValue={field.value}
+                        value={field.value}
+                        disabled={!enderecoEditavel && !!field.value && !loadingCep}
                       >
                         <FormControl>
                           <SelectTrigger>
@@ -513,6 +582,19 @@ export function PessoaDialog({ open, onOpenChange, pessoa, onSuccess }: PessoaDi
                   )}
                 />
               </div>
+
+              {/* Botão de edição manual */}
+              {!enderecoEditavel && (form.watch("logradouro") || form.watch("bairro") || form.watch("municipio") || form.watch("estado")) && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setEnderecoEditavel(true)}
+                  className="mt-2"
+                >
+                  Editar endereço manualmente
+                </Button>
+              )}
             </div>
 
             {/* Observações */}
