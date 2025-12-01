@@ -84,12 +84,12 @@ function SortablePhoto({
       <div
         {...attributes}
         {...listeners}
-        className="absolute top-2 right-2 cursor-grab active:cursor-grabbing bg-background/80 backdrop-blur-sm rounded p-1.5 transition-opacity"
+        className="absolute top-2 right-2 z-20 cursor-grab active:cursor-grabbing bg-background/80 backdrop-blur-sm rounded p-1.5 transition-opacity"
       >
         <GripVertical className="w-4 h-4 text-muted-foreground hover:text-foreground transition-colors" />
       </div>
 
-      <div className="absolute inset-0 bg-background/80 backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+      <div className="absolute inset-0 z-10 bg-background/80 backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
         <Button variant="secondary" size="sm" onClick={onView}>
           <Eye className="w-4 h-4" />
         </Button>
@@ -117,7 +117,11 @@ export function PhotoManager({ vehicleId, photos, onPhotosChange }: PhotoManager
   }, [vehicleId, photos]);
 
   const sensors = useSensors(
-    useSensor(PointerSensor),
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    }),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
     })
