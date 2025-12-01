@@ -48,6 +48,15 @@ export function unmaskKm(value: string): string {
   return value.replace(/\D/g, '');
 }
 
+export function maskRenavan(value: string): string {
+  const numbers = value.replace(/\D/g, '');
+  return numbers.slice(0, 11);
+}
+
+export function maskChassi(value: string): string {
+  return value.toUpperCase().replace(/[^A-HJ-NPR-Z0-9]/g, '').slice(0, 17);
+}
+
 export function maskYear(value: string): string {
   return value.replace(/\D/g, '').slice(0, 4);
 }

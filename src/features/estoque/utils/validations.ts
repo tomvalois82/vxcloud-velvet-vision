@@ -102,6 +102,32 @@ export function validateDataAquisicao(data: string): {
   return { valid: true };
 }
 
+export function validateChassi(chassi: string): {
+  valid: boolean;
+  message?: string;
+} {
+  if (!chassi) return { valid: true };
+
+  const chassiClean = chassi.trim().toUpperCase();
+  
+  // Se não tem 17 caracteres, aceitar como parcial
+  if (chassiClean.length !== 17) {
+    return { valid: true };
+  }
+
+  // Se tem 17 caracteres, validar formato completo
+  const chassiRegex = /^[A-HJ-NPR-Z0-9]{17}$/; // Exclui I, O, Q
+  
+  if (!chassiRegex.test(chassiClean)) {
+    return {
+      valid: false,
+      message: 'Chassi inválido. Deve conter apenas letras (exceto I, O, Q) e números',
+    };
+  }
+
+  return { valid: true };
+}
+
 export async function validatePessoa(pessoaId: string): Promise<{
   valid: boolean;
   message?: string;

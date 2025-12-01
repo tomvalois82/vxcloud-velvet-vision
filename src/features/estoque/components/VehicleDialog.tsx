@@ -44,12 +44,15 @@ import {
   normalizePlaca,
   unmaskCurrency,
   unmaskKm,
+  maskRenavan,
+  maskChassi,
 } from '../utils/masks';
 import {
   validatePlacaDuplicada,
   validateAnoModelo,
   validateKm,
   validateDataAquisicao,
+  validateChassi,
 } from '../utils/validations';
 import {
   Select,
@@ -65,6 +68,8 @@ import { cn } from '@/lib/utils';
 
 const vehicleSchema = z.object({
   placa: z.string().optional(),
+  renavan: z.string().optional(),
+  chassi: z.string().optional(),
   tipo_veiculo_fipe: z.string().min(1, 'Tipo de veículo é obrigatório'),
   modelo: z.string().min(1, 'Modelo é obrigatório'),
   fabricante: z.string().min(1, 'Fabricante é obrigatório'),
@@ -102,6 +107,7 @@ export function VehicleDialog({ open, onOpenChange, vehicleId, onSuccess }: Vehi
   const [selectedMarcaCodigo, setSelectedMarcaCodigo] = useState<string>('');
   const [placaError, setPlacaError] = useState<string>('');
   const [anoError, setAnoError] = useState<string>('');
+  const [chassiError, setChassiError] = useState<string>('');
   const [anosDisponiveis, setAnosDisponiveis] = useState<number[]>([]);
   const [anosFabricacao, setAnosFabricacao] = useState<string[]>([]);
   const [tipoVeiculoFipe, setTipoVeiculoFipe] = useState<TipoVeiculo>('carros');
@@ -111,6 +117,8 @@ export function VehicleDialog({ open, onOpenChange, vehicleId, onSuccess }: Vehi
     resolver: zodResolver(vehicleSchema),
     defaultValues: {
       placa: '',
+      renavan: '',
+      chassi: '',
       tipo_veiculo_fipe: 'carros',
       modelo: '',
       fabricante: '',
@@ -210,6 +218,23 @@ export function VehicleDialog({ open, onOpenChange, vehicleId, onSuccess }: Vehi
     }
   };
 
+  const handleChassiBlur = () => {
+    const chassi = form.getValues('chassi');
+    if (!chassi) {
+      setChassiError('');
+      return;
+    }
+
+    const validation = validateChassi(chassi);
+    if (!validation.valid) {
+      setChassiError(validation.message || '');
+      form.setError('chassi', { message: validation.message });
+    } else {
+      setChassiError('');
+      form.clearErrors('chassi');
+    }
+  };
+
   const handleAnoModeloBlur = () => {
     const anoModelo = form.getValues('ano');
     const anoFabricacao = form.getValues('ano_fabricacao');
@@ -252,6 +277,8 @@ export function VehicleDialog({ open, onOpenChange, vehicleId, onSuccess }: Vehi
 
       form.reset({
         placa: data.placa ? maskPlaca(data.placa) : '',
+        renavan: data.renavan ? String(data.renavan) : '',
+        chassi: data.chassi || '',
         tipo_veiculo_fipe: 'carros', // Default, pode ser ajustado se tiver no banco
         modelo: data.modelo || '',
         fabricante: data.fabricante || '',
@@ -362,6 +389,8 @@ export function VehicleDialog({ open, onOpenChange, vehicleId, onSuccess }: Vehi
         valor: String(valorNumerico),
         km: kmNumerico,
         placa: placaNormalizada,
+        renavan: data.renavan ? parseInt(data.renavan) : null,
+        chassi: data.chassi ? data.chassi.toUpperCase().trim() : null,
         data_aquisicao: data.data_aquisicao || new Date().toISOString().split('T')[0],
         tipo_aquisicao: data.tipo_aquisicao || 'compra',
         valor_aquisicao: valorCompraNumerico,
@@ -467,6 +496,51 @@ export function VehicleDialog({ open, onOpenChange, vehicleId, onSuccess }: Vehi
                           <FormMessage />
                           {placaError && (
                             <p className="text-sm text-destructive">{placaError}</p>
+                          )}
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="renavan"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Renavan</FormLabel>
+                          <FormControl>
+                            <Input
+                              placeholder="Ex: 12345678901"
+                              {...field}
+                              onChange={(e) => field.onChange(maskRenavan(e.target.value))}
+                              maxLength={11}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="chassi"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Chassi</FormLabel>
+                          <FormControl>
+                            <Input
+                              placeholder="Ex: 9BWZZZ377VT004251"
+                              {...field}
+                              onChange={(e) => {
+                                field.onChange(maskChassi(e.target.value));
+                                setChassiError('');
+                              }}
+                              onBlur={handleChassiBlur}
+                              maxLength={17}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                          {chassiError && (
+                            <p className="text-sm text-destructive">{chassiError}</p>
                           )}
                         </FormItem>
                       )}
@@ -813,9 +887,28 @@ export function VehicleDialog({ open, onOpenChange, vehicleId, onSuccess }: Vehi
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>Cor</FormLabel>
-                          <FormControl>
-                            <Input placeholder="Ex: Preto" {...field} />
-                          </FormControl>
+                          <Select value={field.value} onValueChange={field.onChange}>
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Selecione a cor" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="Preto">Preto</SelectItem>
+                              <SelectItem value="Branco">Branco</SelectItem>
+                              <SelectItem value="Prata">Prata</SelectItem>
+                              <SelectItem value="Cinza">Cinza</SelectItem>
+                              <SelectItem value="Vermelho">Vermelho</SelectItem>
+                              <SelectItem value="Azul">Azul</SelectItem>
+                              <SelectItem value="Verde">Verde</SelectItem>
+                              <SelectItem value="Marrom">Marrom</SelectItem>
+                              <SelectItem value="Bege">Bege</SelectItem>
+                              <SelectItem value="Amarelo">Amarelo</SelectItem>
+                              <SelectItem value="Laranja">Laranja</SelectItem>
+                              <SelectItem value="Roxo">Roxo</SelectItem>
+                              <SelectItem value="Outro">Outro</SelectItem>
+                            </SelectContent>
+                          </Select>
                           <FormMessage />
                         </FormItem>
                       )}
