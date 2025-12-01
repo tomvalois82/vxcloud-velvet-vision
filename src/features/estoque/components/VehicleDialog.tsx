@@ -289,7 +289,7 @@ export function VehicleDialog({ open, onOpenChange, vehicleId, onSuccess }: Vehi
         fabricante: data.fabricante || '',
         ano: data.ano || '',
         ano_fabricacao: data.ano_fabricacao || '',
-        valor: data.valor ? maskCurrency(data.valor) : '',
+        valor: data.valor ? maskCurrency(Number(data.valor)) : '',
         valor_compra: data.valor_aquisicao ? maskCurrency(data.valor_aquisicao) : '',
         km: data.km ? maskKm(data.km) : '',
         cor: data.cor || '',
