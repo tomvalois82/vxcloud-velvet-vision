@@ -194,10 +194,17 @@ export function PhotoManager({ vehicleId, photos, onPhotosChange }: PhotoManager
 
     const storageManager = new StorageManager(vehicleId);
     try {
+      // Delete main photo
       await storageManager.deletePhoto(photoToRemove.key);
+      
+      // Delete thumbnail if it exists
       if (photoToRemove.thumbUrl) {
-        const thumbKey = photoToRemove.thumbUrl.split('/').slice(-2).join('/');
-        await storageManager.deletePhoto(`veiculos/${vehicleId}/thumbs/${thumbKey.split('/')[1]}`);
+        // Extract filename from the main photo key (e.g., "veiculos/123/photo.jpg" -> "photo.jpg")
+        const fileName = photoToRemove.key.split('/').pop();
+        if (fileName) {
+          const thumbPath = `veiculos/${vehicleId}/thumbs/${fileName}`;
+          await storageManager.deletePhoto(thumbPath);
+        }
       }
 
       const newItems = items.filter((photo) => photo.key !== photoToRemove.key);
