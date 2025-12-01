@@ -59,14 +59,15 @@ import {
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
 const vehicleSchema = z.object({
+  placa: z.string().optional(),
   modelo: z.string().min(1, 'Modelo é obrigatório'),
   fabricante: z.string().min(1, 'Fabricante é obrigatório'),
   ano: z.string().min(4, 'Ano deve ter 4 dígitos'),
   ano_fabricacao: z.string().min(4, 'Ano de fabricação deve ter 4 dígitos'),
-  valor: z.string().min(1, 'Valor é obrigatório'),
+  valor: z.string().min(1, 'Valor de venda é obrigatório'),
+  valor_compra: z.string().optional(),
   km: z.string().optional(),
   cor: z.string().optional(),
-  placa: z.string().optional(),
   tipo_veiculo: z.string().optional(),
   motor: z.string().optional(),
   cambio: z.string().optional(),
@@ -91,26 +92,26 @@ export function VehicleDialog({ open, onOpenChange, vehicleId, onSuccess }: Vehi
   const [activeTab, setActiveTab] = useState('info');
   const [loadingFipe, setLoadingFipe] = useState(false);
   const [marcasFipe, setMarcasFipe] = useState<any[]>([]);
-  const [modelosFipe, setModelosFipe] = useState<any[]>([]);
-  const [anosFipe, setAnosFipe] = useState<any[]>([]);
   const [fipeValorSugerido, setFipeValorSugerido] = useState<string | null>(null);
   const [selectedMarcaCodigo, setSelectedMarcaCodigo] = useState<string>('');
-  const [selectedModeloCodigo, setSelectedModeloCodigo] = useState<string>('');
   const [placaError, setPlacaError] = useState<string>('');
   const [anoError, setAnoError] = useState<string>('');
+  const [anosDisponiveis, setAnosDisponiveis] = useState<number[]>([]);
+  const [anosFabricacao, setAnosFabricacao] = useState<string[]>([]);
   const isEditing = !!vehicleId;
 
   const form = useForm<VehicleFormData>({
     resolver: zodResolver(vehicleSchema),
     defaultValues: {
+      placa: '',
       modelo: '',
       fabricante: '',
       ano: '',
       ano_fabricacao: '',
       valor: '',
+      valor_compra: '',
       km: '',
       cor: '',
-      placa: '',
       tipo_veiculo: '',
       motor: '',
       cambio: '',
@@ -120,6 +121,16 @@ export function VehicleDialog({ open, onOpenChange, vehicleId, onSuccess }: Vehi
       observacao: '',
     },
   });
+
+  // Gerar lista de anos (1950 até ano atual + 1)
+  useEffect(() => {
+    const currentYear = new Date().getFullYear();
+    const years = [];
+    for (let year = currentYear + 1; year >= 1950; year--) {
+      years.push(year);
+    }
+    setAnosDisponiveis(years);
+  }, []);
 
   // Carregar marcas FIPE ao abrir o diálogo
   useEffect(() => {
@@ -140,42 +151,14 @@ export function VehicleDialog({ open, onOpenChange, vehicleId, onSuccess }: Vehi
     }
   };
 
-  const loadModelosFipe = async (marcaCodigo: string) => {
-    try {
-      setLoadingFipe(true);
-      const { modelos } = await getFipeModelos(marcaCodigo);
-      setModelosFipe(modelos);
-    } catch (error) {
-      console.error('Erro ao carregar modelos FIPE:', error);
-    } finally {
-      setLoadingFipe(false);
-    }
-  };
-
-  const loadAnosFipe = async (marcaCodigo: string, modeloCodigo: string) => {
-    try {
-      setLoadingFipe(true);
-      const anos = await getFipeAnos(marcaCodigo, modeloCodigo);
-      setAnosFipe(anos);
-    } catch (error) {
-      console.error('Erro ao carregar anos FIPE:', error);
-    } finally {
-      setLoadingFipe(false);
-    }
-  };
-
-  const loadValorFipe = async (marcaCodigo: string, modeloCodigo: string, anoCodigo: string) => {
-    try {
-      setLoadingFipe(true);
-      const valorData = await getFipeValor(marcaCodigo, modeloCodigo, anoCodigo);
-      const valor = parseFipeValor(valorData.Valor);
-      setFipeValorSugerido(maskCurrency(valor));
-      form.setValue('valor', maskCurrency(valor));
-    } catch (error) {
-      console.error('Erro ao carregar valor FIPE:', error);
-      setFipeValorSugerido(null);
-    } finally {
-      setLoadingFipe(false);
+  // Atualizar anos de fabricação quando ano modelo mudar
+  const handleAnoModeloChange = (ano: string) => {
+    form.setValue('ano', ano);
+    const anoNum = parseInt(ano);
+    if (!isNaN(anoNum)) {
+      setAnosFabricacao([String(anoNum), String(anoNum - 1)]);
+      // Auto-selecionar o mesmo ano como fabricação
+      form.setValue('ano_fabricacao', String(anoNum));
     }
   };
 
@@ -184,33 +167,6 @@ export function VehicleDialog({ open, onOpenChange, vehicleId, onSuccess }: Vehi
     const marca = marcasFipe.find((m) => m.nome === marcaNome);
     if (marca) {
       setSelectedMarcaCodigo(marca.codigo);
-      await loadModelosFipe(marca.codigo);
-      setModelosFipe([]);
-      setAnosFipe([]);
-      setFipeValorSugerido(null);
-      form.setValue('modelo', '');
-      form.setValue('ano', '');
-    }
-  };
-
-  const handleModeloChange = async (modeloNome: string) => {
-    form.setValue('modelo', modeloNome);
-    const modelo = modelosFipe.find((m) => m.nome === modeloNome);
-    if (modelo && selectedMarcaCodigo) {
-      setSelectedModeloCodigo(String(modelo.codigo));
-      await loadAnosFipe(selectedMarcaCodigo, String(modelo.codigo));
-      setFipeValorSugerido(null);
-      form.setValue('ano', '');
-    }
-  };
-
-  const handleAnoChange = async (ano: string) => {
-    form.setValue('ano', ano);
-    form.setValue('ano_fabricacao', String(parseInt(ano) - 1));
-    
-    const anoObj = anosFipe.find((a) => a.nome.includes(ano));
-    if (anoObj && selectedMarcaCodigo && selectedModeloCodigo) {
-      await loadValorFipe(selectedMarcaCodigo, selectedModeloCodigo, anoObj.codigo);
     }
   };
 
@@ -272,14 +228,15 @@ export function VehicleDialog({ open, onOpenChange, vehicleId, onSuccess }: Vehi
       if (error) throw error;
 
       form.reset({
+        placa: data.placa ? maskPlaca(data.placa) : '',
         modelo: data.modelo || '',
         fabricante: data.fabricante || '',
         ano: data.ano || '',
         ano_fabricacao: data.ano_fabricacao || '',
         valor: data.valor ? maskCurrency(data.valor) : '',
+        valor_compra: data.valor_aquisicao ? maskCurrency(data.valor_aquisicao) : '',
         km: data.km ? maskKm(data.km) : '',
         cor: data.cor || '',
-        placa: data.placa ? maskPlaca(data.placa) : '',
         tipo_veiculo: data.tipo_veiculo || '',
         motor: data.motor || '',
         cambio: data.cambio || '',
@@ -288,6 +245,14 @@ export function VehicleDialog({ open, onOpenChange, vehicleId, onSuccess }: Vehi
         adquirido_de: data.adquirido_de || '',
         observacao: data.observacao || '',
       });
+
+      // Atualizar anos de fabricação quando carregar veículo
+      if (data.ano) {
+        const anoNum = parseInt(data.ano);
+        if (!isNaN(anoNum)) {
+          setAnosFabricacao([String(anoNum), String(anoNum - 1)]);
+        }
+      }
 
       const storageManager = new StorageManager(vehicleId);
       const metadata = await storageManager.loadMetadata();
@@ -354,6 +319,7 @@ export function VehicleDialog({ open, onOpenChange, vehicleId, onSuccess }: Vehi
       const photoUrls = photos.map((p) => p.url);
 
       const valorNumerico = unmaskCurrency(data.valor);
+      const valorCompraNumerico = data.valor_compra ? unmaskCurrency(data.valor_compra) : 0;
       const kmNumerico = data.km ? unmaskKm(data.km) : '';
       const placaNormalizada = data.placa ? normalizePlaca(data.placa) : null;
 
@@ -366,7 +332,7 @@ export function VehicleDialog({ open, onOpenChange, vehicleId, onSuccess }: Vehi
         placa: placaNormalizada,
         data_aquisicao: data.data_aquisicao || new Date().toISOString().split('T')[0],
         tipo_aquisicao: data.tipo_aquisicao || 'compra',
-        valor_aquisicao: valorNumerico,
+        valor_aquisicao: valorCompraNumerico,
         adquirido_de: data.adquirido_de || null,
         id_empresa: (configData.empresa as any)?.id,
       };
@@ -450,6 +416,32 @@ export function VehicleDialog({ open, onOpenChange, vehicleId, onSuccess }: Vehi
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <FormField
                       control={form.control}
+                      name="placa"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Placa</FormLabel>
+                          <FormControl>
+                            <Input
+                              placeholder="Ex: ABC-1D23"
+                              {...field}
+                              onChange={(e) => {
+                                field.onChange(maskPlaca(e.target.value));
+                                setPlacaError('');
+                              }}
+                              onBlur={handlePlacaBlur}
+                              maxLength={8}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                          {placaError && (
+                            <p className="text-sm text-destructive">{placaError}</p>
+                          )}
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
                       name="fabricante"
                       render={({ field }) => (
                         <FormItem>
@@ -483,24 +475,12 @@ export function VehicleDialog({ open, onOpenChange, vehicleId, onSuccess }: Vehi
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>Modelo *</FormLabel>
-                          <Select
-                            value={field.value}
-                            onValueChange={handleModeloChange}
-                            disabled={!selectedMarcaCodigo || loadingFipe}
-                          >
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Selecione o modelo" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {modelosFipe.map((modelo) => (
-                                <SelectItem key={modelo.codigo} value={modelo.nome}>
-                                  {modelo.nome}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                          <FormControl>
+                            <Input
+                              placeholder="Ex: Civic EX"
+                              {...field}
+                            />
+                          </FormControl>
                           <FormMessage />
                         </FormItem>
                       )}
@@ -514,8 +494,7 @@ export function VehicleDialog({ open, onOpenChange, vehicleId, onSuccess }: Vehi
                           <FormLabel>Ano Modelo *</FormLabel>
                           <Select
                             value={field.value}
-                            onValueChange={handleAnoChange}
-                            disabled={!selectedModeloCodigo || loadingFipe}
+                            onValueChange={handleAnoModeloChange}
                           >
                             <FormControl>
                               <SelectTrigger>
@@ -523,9 +502,9 @@ export function VehicleDialog({ open, onOpenChange, vehicleId, onSuccess }: Vehi
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                              {anosFipe.map((ano) => (
-                                <SelectItem key={ano.codigo} value={ano.nome.split(' ')[0]}>
-                                  {ano.nome}
+                              {anosDisponiveis.map((ano) => (
+                                <SelectItem key={ano} value={String(ano)}>
+                                  {ano}
                                 </SelectItem>
                               ))}
                             </SelectContent>
@@ -544,45 +523,25 @@ export function VehicleDialog({ open, onOpenChange, vehicleId, onSuccess }: Vehi
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>Ano Fabricação *</FormLabel>
-                          <FormControl>
-                            <Input
-                              placeholder="Ex: 2020"
-                              {...field}
-                              onChange={(e) => {
-                                field.onChange(maskYear(e.target.value));
-                                handleAnoModeloBlur();
-                              }}
-                              onBlur={handleAnoModeloBlur}
-                              maxLength={4}
-                            />
-                          </FormControl>
+                          <Select
+                            value={field.value}
+                            onValueChange={field.onChange}
+                            disabled={anosFabricacao.length === 0}
+                          >
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Selecione o ano de fabricação" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {anosFabricacao.map((ano) => (
+                                <SelectItem key={ano} value={ano}>
+                                  {ano}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
                           <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="placa"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Placa</FormLabel>
-                          <FormControl>
-                            <Input
-                              placeholder="Ex: ABC-1234"
-                              {...field}
-                              onChange={(e) => {
-                                field.onChange(maskPlaca(e.target.value));
-                                setPlacaError('');
-                              }}
-                              onBlur={handlePlacaBlur}
-                              maxLength={8}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                          {placaError && (
-                            <p className="text-sm text-destructive">{placaError}</p>
-                          )}
                         </FormItem>
                       )}
                     />
@@ -594,7 +553,28 @@ export function VehicleDialog({ open, onOpenChange, vehicleId, onSuccess }: Vehi
                   <h3 className="text-lg font-semibold text-foreground border-b border-border pb-2">
                     Preço
                   </h3>
-                  <div className="grid grid-cols-1 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="valor_compra"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Preço de Compra</FormLabel>
+                          <FormControl>
+                            <Input
+                              placeholder="Ex: R$ 40.000,00"
+                              {...field}
+                              onChange={(e) => {
+                                const maskedValue = maskCurrency(unmaskCurrency(e.target.value));
+                                field.onChange(maskedValue);
+                              }}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
                     <FormField
                       control={form.control}
                       name="valor"
