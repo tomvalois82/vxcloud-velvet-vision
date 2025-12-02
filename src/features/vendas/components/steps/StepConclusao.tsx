@@ -15,7 +15,9 @@ import {
   TrendingUp,
   TrendingDown,
   Minus,
-  Clock
+  Clock,
+  Package,
+  Plus
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -34,6 +36,7 @@ interface StepConclusaoProps {
   totals: {
     valorVeiculo: number;
     totalTrocas: number;
+    totalServicosProdutos: number;
     valorAReceber: number;
     totalPagamentos: number;
     totalRecebimentos: number;
@@ -55,8 +58,8 @@ export function StepConclusao({
 }: StepConclusaoProps) {
   const canSave = saleData.id_cliente && saleData.id_vendedor && saleData.veiculo;
 
-  // Calcular diferença a receber (valor veículo - trocas)
-  const diferencaAReceber = totals.valorVeiculo - totals.totalTrocas;
+  // Calcular diferença a receber (valor veículo + produtos/serviços - trocas)
+  const diferencaAReceber = totals.valorVeiculo + totals.totalServicosProdutos - totals.totalTrocas;
   
   // Total recebido = recebimentos + financiamento - pagamentos saída
   const totalRecebido = totals.totalRecebimentos + totals.totalFinanciamento - totals.totalPagamentosSaida;
@@ -141,6 +144,19 @@ export function StepConclusao({
               {maskCurrency(totals.totalTrocas)}
             </p>
           </div>
+
+          {/* Products/Services */}
+          {saleData.servicosProdutos && saleData.servicosProdutos.length > 0 && (
+            <div className="space-y-2">
+              <div className="flex items-center gap-2 text-muted-foreground">
+                <Package className="w-4 h-4" />
+                <span className="text-sm">Produtos/Serviços ({saleData.servicosProdutos.length})</span>
+              </div>
+              <p className="font-semibold text-accent">
+                {maskCurrency(totals.totalServicosProdutos)}
+              </p>
+            </div>
+          )}
         </div>
       </div>
 
@@ -166,6 +182,17 @@ export function StepConclusao({
             </span>
             <span className="font-semibold text-orange-500">- {maskCurrency(totals.totalTrocas)}</span>
           </div>
+
+          {/* Total em Produtos/Serviços */}
+          {totals.totalServicosProdutos > 0 && (
+            <div className="flex justify-between items-center py-2">
+              <span className="text-muted-foreground flex items-center gap-2">
+                <Plus className="w-4 h-4 text-accent" />
+                Produtos e Serviços
+              </span>
+              <span className="font-semibold text-accent">+ {maskCurrency(totals.totalServicosProdutos)}</span>
+            </div>
+          )}
 
           {/* Divider */}
           <div className="border-t border-border my-2" />
@@ -273,6 +300,26 @@ export function StepConclusao({
               {saleData.financiamento.numero_prestacao && saleData.financiamento.valor_prestacao && (
                 <p className="text-sm"><span className="text-muted-foreground">Parcelas:</span> <span className="font-medium">{saleData.financiamento.numero_prestacao}x de {maskCurrency(saleData.financiamento.valor_prestacao)}</span></p>
               )}
+            </div>
+          </div>
+        )}
+
+        {/* Products/Services Details */}
+        {saleData.servicosProdutos && saleData.servicosProdutos.length > 0 && (
+          <div className="mt-4 pt-4 border-t border-border">
+            <p className="text-xs text-muted-foreground uppercase tracking-wider mb-2">Produtos e Serviços</p>
+            <div className="space-y-2">
+              {saleData.servicosProdutos.map((item) => (
+                <div key={item.id} className="glass rounded-lg p-3 flex justify-between items-center">
+                  <div>
+                    <p className="text-sm font-medium">{item.descricao}</p>
+                    {item.categoria_nome && (
+                      <p className="text-xs text-muted-foreground">{item.categoria_nome}</p>
+                    )}
+                  </div>
+                  <span className="font-semibold text-accent">{maskCurrency(item.valor)}</span>
+                </div>
+              ))}
             </div>
           </div>
         )}
