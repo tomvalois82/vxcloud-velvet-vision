@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { 
@@ -17,7 +18,8 @@ import {
   Minus,
   Clock,
   Package,
-  Plus
+  Plus,
+  Lock
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -25,6 +27,16 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { maskCurrency } from '@/features/estoque/utils/masks';
 import type { SaleData } from '../../types';
 import { cn } from '@/lib/utils';
@@ -56,6 +68,8 @@ export function StepConclusao({
   onSave,
   onSaveAndClose,
 }: StepConclusaoProps) {
+  const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
+  
   const canSave = saleData.id_cliente && saleData.id_vendedor && saleData.veiculo;
 
   // Calcular diferença a receber (valor veículo + produtos/serviços - trocas)
@@ -395,6 +409,20 @@ export function StepConclusao({
         </div>
       </div>
 
+      {/* Validation Warning for Non-Zero Balance */}
+      {canSave && Math.abs(saldoFinal) > 0.01 && (
+        <div className="p-4 rounded-lg bg-yellow-500/10 border border-yellow-500/50 flex items-start gap-3">
+          <Lock className="w-5 h-5 text-yellow-500 shrink-0 mt-0.5" />
+          <div>
+            <p className="font-medium text-yellow-500">Saldo pendente detectado</p>
+            <p className="text-sm text-muted-foreground mt-1">
+              Não é possível fechar a venda enquanto o saldo final for diferente de zero. 
+              Ajuste os pagamentos, trocas ou valores para que o saldo fique zerado.
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Action Buttons */}
       <div className="flex flex-col sm:flex-row gap-4">
         <Button
@@ -412,8 +440,8 @@ export function StepConclusao({
         </Button>
 
         <Button
-          onClick={onSaveAndClose}
-          disabled={!canSave || saving}
+          onClick={() => setConfirmDialogOpen(true)}
+          disabled={!canSave || saving || Math.abs(saldoFinal) > 0.01}
           className="flex-1 bg-accent hover:bg-accent/90"
         >
           {saving ? (
@@ -432,6 +460,45 @@ export function StepConclusao({
           </p>
         </div>
       )}
+
+      {/* Confirmation Dialog */}
+      <AlertDialog open={confirmDialogOpen} onOpenChange={setConfirmDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <Lock className="w-5 h-5 text-accent" />
+              Confirmar fechamento da venda?
+            </AlertDialogTitle>
+            <AlertDialogDescription className="space-y-2">
+              <p>
+                Ao fechar a venda, os lançamentos financeiros serão criados automaticamente e 
+                o veículo será marcado como vendido.
+              </p>
+              <p className="font-medium text-foreground">
+                Após fechar, a venda não poderá mais ser editada.
+              </p>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={saving}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={() => {
+                setConfirmDialogOpen(false);
+                onSaveAndClose();
+              }}
+              disabled={saving}
+              className="bg-accent hover:bg-accent/90"
+            >
+              {saving ? (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              ) : (
+                <CheckCircle className="w-4 h-4 mr-2" />
+              )}
+              Confirmar e Fechar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

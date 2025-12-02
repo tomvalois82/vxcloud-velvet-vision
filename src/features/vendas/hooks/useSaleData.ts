@@ -274,24 +274,52 @@ export function useSaleData(vehicleId: number | null) {
       return null;
     }
 
+    // Se for fechar, validar saldo zero
+    if (fecharVenda) {
+      const totalTrocasCalc = saleData.trocas.reduce((sum, t) => sum + t.valor_troca, 0);
+      const totalServicosProdutosCalc = saleData.servicosProdutos.reduce((sum, s) => sum + s.valor, 0);
+      const totalRecebimentosCalc = saleData.pagamentos
+        .filter(p => p.valor > 0)
+        .reduce((sum, p) => sum + p.valor, 0);
+      const totalPagamentosSaidaCalc = saleData.pagamentos
+        .filter(p => p.valor < 0)
+        .reduce((sum, p) => sum + Math.abs(p.valor), 0);
+      const totalFinanciamentoCalc = saleData.financiamento?.valor || 0;
+      
+      const diferencaAReceber = saleData.valor_venda + totalServicosProdutosCalc - totalTrocasCalc;
+      const totalRecebido = totalRecebimentosCalc + totalFinanciamentoCalc - totalPagamentosSaidaCalc;
+      const saldoFinal = diferencaAReceber - totalRecebido;
+
+      if (Math.abs(saldoFinal) > 0.01) {
+        toast({
+          title: 'Erro ao fechar venda',
+          description: 'Não é possível fechar a venda. O saldo final deve ser zero.',
+          variant: 'destructive',
+        });
+        return null;
+      }
+    }
+
     setSaving(true);
     try {
-      // Get empresa id (using first one for now)
-      const { data: empresaData } = await supabase
-        .from('empresa')
-        .select('id')
-        .limit(1)
+      // Get empresa id from vehicle
+      const { data: veiculoData } = await supabase
+        .from('estoque')
+        .select('id_empresa')
+        .eq('id', saleData.veiculo.id)
         .single();
 
-      if (!empresaData) {
+      if (!veiculoData?.id_empresa) {
         throw new Error('Empresa não encontrada');
       }
+
+      const idEmpresa = veiculoData.id_empresa;
 
       // Create sale record
       const { data: vendaData, error: vendaError } = await supabase
         .from('vx_vendas')
         .insert({
-          id_empresa: empresaData.id,
+          id_empresa: idEmpresa,
           id_cliente: saleData.id_cliente,
           id_veiculo_vendido: saleData.veiculo.id,
           valor_total_venda: saleData.valor_venda,
@@ -381,14 +409,23 @@ export function useSaleData(vehicleId: number | null) {
         if (servicosError) throw servicosError;
       }
 
-      // Update vehicle status if closing sale
+      // Se for fechar a venda, criar lançamentos financeiros
       if (fecharVenda) {
-        const { error: updateError } = await supabase
-          .from('estoque')
-          .update({ status: 'Vendido' })
-          .eq('id', saleData.veiculo.id);
-
-        if (updateError) throw updateError;
+        const closureResult = await performNewSaleClosure(saleData, vendaData.id, idEmpresa);
+        if (!closureResult.success) {
+          // Reverter o fechamento
+          await supabase
+            .from('vx_vendas')
+            .update({ fechada: false })
+            .eq('id', vendaData.id);
+          
+          toast({
+            title: 'Erro ao fechar venda',
+            description: closureResult.error,
+            variant: 'destructive',
+          });
+          return null;
+        }
       }
 
       toast({
@@ -409,6 +446,122 @@ export function useSaleData(vehicleId: number | null) {
       setSaving(false);
     }
   }, [saleData]);
+
+  // Função auxiliar para realizar o fechamento da venda (lançamentos financeiros)
+  const performNewSaleClosure = async (
+    currentSaleData: SaleData, 
+    saleId: string, 
+    idEmpresa: string
+  ): Promise<{ success: boolean; error?: string }> => {
+    // Buscar categorias padrão para vendas
+    const { data: categoriasData } = await supabase
+      .from('vx_fin_categoria')
+      .select('id, categoria, operacao')
+      .eq('ativo', true);
+
+    const categoriaReceber = categoriasData?.find(c => 
+      c.operacao === 'Receber' && c.categoria.toUpperCase().includes('VENDAS')
+    ) || categoriasData?.find(c => 
+      c.operacao === 'Receber' && c.categoria.toUpperCase().includes('OUTRAS RECEITAS')
+    ) || categoriasData?.find(c => c.operacao === 'Receber');
+
+    const categoriaPagar = categoriasData?.find(c => 
+      c.operacao === 'Pagar' && c.categoria.toUpperCase().includes('OUTRAS DESPESAS')
+    ) || categoriasData?.find(c => c.operacao === 'Pagar');
+
+    if (!categoriaReceber || !categoriaPagar) {
+      return { success: false, error: 'Erro: Categorias financeiras não encontradas.' };
+    }
+
+    const movimentosParaInserir: Array<{
+      tipo_movimento: string;
+      id_empresa: string;
+      status: string;
+      id_conta: string;
+      id_categoria: string;
+      descricao: string;
+      valor_bruto: number;
+      valor_liquido: number;
+      data_vencimento: string;
+      data_pagamento: string | null;
+      id_pessoa: string | null;
+      id_estoque: number | null;
+      observacoes: string | null;
+    }> = [];
+
+    const veiculoDesc = `${currentSaleData.veiculo?.fabricante || ''} ${currentSaleData.veiculo?.modelo || ''}`.trim();
+    
+    // Lançamentos de pagamentos do acerto
+    for (const pagamento of currentSaleData.pagamentos) {
+      const isRecebimento = pagamento.valor > 0;
+      const valorAbsoluto = Math.abs(pagamento.valor);
+      const status = pagamento.data_pagamento ? 'Pago' : 'Pendente';
+
+      movimentosParaInserir.push({
+        tipo_movimento: isRecebimento ? 'Receber' : 'Pagar',
+        id_empresa: idEmpresa,
+        status,
+        id_conta: pagamento.id_conta,
+        id_categoria: isRecebimento ? categoriaReceber.id : categoriaPagar.id,
+        descricao: `Venda ${veiculoDesc} - ${pagamento.forma_descricao || 'Pagamento'} ${pagamento.numero}`,
+        valor_bruto: valorAbsoluto,
+        valor_liquido: valorAbsoluto,
+        data_vencimento: pagamento.data_lancamento,
+        data_pagamento: pagamento.data_pagamento,
+        id_pessoa: currentSaleData.id_cliente,
+        id_estoque: currentSaleData.veiculo!.id,
+        observacoes: pagamento.observacao,
+      });
+    }
+
+    // Lançamento de financiamento
+    if (currentSaleData.financiamento && currentSaleData.financiamento.valor > 0) {
+      movimentosParaInserir.push({
+        tipo_movimento: 'Receber',
+        id_empresa: idEmpresa,
+        status: 'Pendente',
+        id_conta: currentSaleData.financiamento.id_conta_destino,
+        id_categoria: categoriaReceber.id,
+        descricao: `Venda ${veiculoDesc} - Financiamento ${currentSaleData.financiamento.financeira_nome || ''}`,
+        valor_bruto: currentSaleData.financiamento.valor,
+        valor_liquido: currentSaleData.financiamento.valor,
+        data_vencimento: currentSaleData.financiamento.data_vencimento_inicial || currentSaleData.data_venda.toISOString().split('T')[0],
+        data_pagamento: null,
+        id_pessoa: currentSaleData.id_cliente,
+        id_estoque: currentSaleData.veiculo!.id,
+        observacoes: currentSaleData.financiamento.numero_contrato 
+          ? `Contrato: ${currentSaleData.financiamento.numero_contrato}` 
+          : null,
+      });
+    }
+
+    // Inserir movimentos financeiros
+    if (movimentosParaInserir.length > 0) {
+      const { error: movimentoError } = await supabase
+        .from('vx_fin_movimento')
+        .insert(movimentosParaInserir);
+
+      if (movimentoError) {
+        console.error('Erro ao criar lançamentos financeiros:', movimentoError);
+        return { 
+          success: false, 
+          error: 'Erro ao fechar a venda. Nenhum lançamento financeiro foi registrado.' 
+        };
+      }
+    }
+
+    // Atualizar status do veículo para 'Vendido'
+    const { error: updateError } = await supabase
+      .from('estoque')
+      .update({ status: 'Vendido' })
+      .eq('id', currentSaleData.veiculo!.id);
+
+    if (updateError) {
+      console.error('Erro ao atualizar status do veículo:', updateError);
+    }
+
+    return { success: true };
+  };
 
   // Calculate totals
   const totalTrocas = saleData.trocas.reduce((sum, t) => sum + t.valor_troca, 0);
