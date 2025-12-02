@@ -4,7 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { CalendarIcon, Loader2 } from "lucide-react";
+import { CalendarIcon, Loader2, Car } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -35,6 +35,8 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -65,6 +67,14 @@ interface Categoria {
   operacao: string;
 }
 
+interface Veiculo {
+  id: number;
+  fabricante: string | null;
+  modelo: string | null;
+  placa: string | null;
+  ano: string | null;
+}
+
 interface Movimento {
   id: string;
   tipo_movimento: string;
@@ -78,6 +88,7 @@ interface Movimento {
   id_empresa: string;
   observacoes: string | null;
   status: string;
+  id_estoque: number | null;
 }
 
 interface MovimentoDialogProps {
@@ -99,7 +110,10 @@ export function MovimentoDialog({
   const [saving, setSaving] = useState(false);
   const [contas, setContas] = useState<Conta[]>([]);
   const [categorias, setCategorias] = useState<Categoria[]>([]);
+  const [veiculos, setVeiculos] = useState<Veiculo[]>([]);
   const [loadingData, setLoadingData] = useState(true);
+  const [vincularVeiculo, setVincularVeiculo] = useState(false);
+  const [veiculoSelecionado, setVeiculoSelecionado] = useState<string>("");
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -117,21 +131,29 @@ export function MovimentoDialog({
 
   const tipoMovimento = form.watch("tipo_movimento");
 
-  // Fetch contas e categorias
+  // Fetch contas, categorias e veículos
   useEffect(() => {
     const fetchData = async () => {
       setLoadingData(true);
       try {
-        const [contasRes, categoriasRes] = await Promise.all([
+        const [contasRes, categoriasRes, veiculosRes] = await Promise.all([
           supabase.from("vx_fin_conta").select("*").order("banco"),
           supabase.from("vx_fin_categoria").select("*").eq("ativo", true).order("categoria"),
+          supabase
+            .from("estoque")
+            .select("id, fabricante, modelo, placa, ano")
+            .neq("status", "Vendido")
+            .order("fabricante")
+            .order("modelo"),
         ]);
 
         if (contasRes.error) throw contasRes.error;
         if (categoriasRes.error) throw categoriasRes.error;
+        if (veiculosRes.error) throw veiculosRes.error;
 
         setContas(contasRes.data || []);
         setCategorias(categoriasRes.data || []);
+        setVeiculos(veiculosRes.data || []);
       } catch (error: any) {
         toast({
           title: "Erro ao carregar dados",
@@ -162,6 +184,14 @@ export function MovimentoDialog({
           observacoes: movimento.observacoes || "",
           status: movimento.status,
         });
+        // Set vehicle link state
+        if (movimento.id_estoque) {
+          setVincularVeiculo(true);
+          setVeiculoSelecionado(movimento.id_estoque.toString());
+        } else {
+          setVincularVeiculo(false);
+          setVeiculoSelecionado("");
+        }
       } else {
         form.reset({
           tipo_movimento: defaultTipo,
@@ -173,6 +203,8 @@ export function MovimentoDialog({
           observacoes: "",
           status: "Pendente",
         });
+        setVincularVeiculo(false);
+        setVeiculoSelecionado("");
       }
     }
   }, [open, movimento, defaultTipo, form]);
@@ -188,6 +220,12 @@ export function MovimentoDialog({
 
   const getContaDisplayName = (conta: Conta) => {
     return conta.descricao ? `${conta.banco} - ${conta.descricao}` : conta.banco;
+  };
+
+  const getVeiculoDisplayName = (veiculo: Veiculo) => {
+    const parts = [veiculo.fabricante, veiculo.modelo, veiculo.ano].filter(Boolean);
+    const base = parts.join(" ") || "Veículo sem nome";
+    return veiculo.placa ? `${base} - ${veiculo.placa}` : base;
   };
 
   const onSubmit = async (data: FormData) => {
@@ -228,6 +266,9 @@ export function MovimentoDialog({
         id_empresa: empresaData.id,
         observacoes: data.observacoes || null,
         status: data.status,
+        id_estoque: vincularVeiculo && veiculoSelecionado
+          ? parseInt(veiculoSelecionado)
+          : null,
       };
 
       if (movimento) {
@@ -459,6 +500,48 @@ export function MovimentoDialog({
                   </FormItem>
                 )}
               />
+
+              {/* Vincular a Veículo */}
+              <div className="space-y-3">
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="vincular-veiculo"
+                    checked={vincularVeiculo}
+                    onCheckedChange={(checked) => {
+                      setVincularVeiculo(checked as boolean);
+                      if (!checked) setVeiculoSelecionado("");
+                    }}
+                  />
+                  <Label htmlFor="vincular-veiculo" className="cursor-pointer flex items-center gap-2">
+                    <Car className="w-4 h-4" />
+                    Atrelar Título a Veículo
+                  </Label>
+                </div>
+
+                {vincularVeiculo && (
+                  <Select
+                    value={veiculoSelecionado}
+                    onValueChange={setVeiculoSelecionado}
+                  >
+                    <SelectTrigger className="bg-background/50 border-border/50">
+                      <SelectValue placeholder="Selecione o veículo" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {veiculos.length === 0 ? (
+                        <div className="px-2 py-4 text-center text-muted-foreground text-sm">
+                          Nenhum veículo disponível
+                        </div>
+                      ) : (
+                        veiculos.map((v) => (
+                          <SelectItem key={v.id} value={v.id.toString()}>
+                            {getVeiculoDisplayName(v)}
+                          </SelectItem>
+                        ))
+                      )}
+                    </SelectContent>
+                  </Select>
+                )}
+              </div>
 
               <FormField
                 control={form.control}
