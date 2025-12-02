@@ -21,6 +21,7 @@ import FinanceiroReceber from "./pages/financeiro/FinanceiroReceber";
 import FinanceiroTransferencias from "./pages/financeiro/FinanceiroTransferencias";
 import FinanceiroRelatorios from "./pages/financeiro/FinanceiroRelatorios";
 import Configuracoes from "./pages/configuracoes/Configuracoes";
+import FormasPagamento from "./pages/configuracoes/FormasPagamento";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -60,6 +61,7 @@ const App = () => (
                             <Route path="/financeiro/transferencias" element={<FinanceiroTransferencias />} />
                             <Route path="/financeiro/relatorios" element={<FinanceiroRelatorios />} />
                             <Route path="/configuracoes" element={<Configuracoes />} />
+                            <Route path="/configuracoes/formas-pagamento" element={<FormasPagamento />} />
                             <Route path="*" element={<NotFound />} />
                           </Routes>
                         </main>
