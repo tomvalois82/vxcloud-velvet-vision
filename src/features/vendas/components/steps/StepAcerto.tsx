@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Plus, Trash2, CreditCard, Wallet, Calendar } from 'lucide-react';
+import { Plus, Trash2, CreditCard, Wallet, Calendar, Landmark, Edit2 } from 'lucide-react';
 import { format, addDays } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Button } from '@/components/ui/button';
@@ -20,6 +20,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
+  DialogDescription,
 } from '@/components/ui/dialog';
 import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -60,7 +61,8 @@ export function StepAcerto({
   totals,
 }: StepAcertoProps) {
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [paymentType, setPaymentType] = useState<'recebimento' | 'parcelamento' | 'financiamento' | 'pagamento'>('recebimento');
+  const [financiamentoDialogOpen, setFinanciamentoDialogOpen] = useState(false);
+  const [paymentType, setPaymentType] = useState<'recebimento' | 'parcelamento' | 'pagamento'>('recebimento');
   
   // Estados para recebimento/pagamento simples
   const [valor, setValor] = useState('');
@@ -106,7 +108,9 @@ export function StepAcerto({
     setIntervaloDias('30');
     setValorParcela('');
     setDataInicioParcelamento(new Date());
-    // Reset financiamento
+  };
+
+  const resetFinanciamentoForm = () => {
     setIdFinanceira('');
     setIdContaDestino('');
     setValorFinanciado('');
@@ -119,6 +123,25 @@ export function StepAcerto({
     setValorPrestacao('');
     setDadosFinanciamento('');
     setDataVencimentoInicial(new Date());
+  };
+
+  // Preencher form de financiamento para edição
+  const loadFinanciamentoForEdit = () => {
+    if (saleData.financiamento) {
+      const fin = saleData.financiamento;
+      setIdFinanceira(fin.id_financeira || '');
+      setIdContaDestino(fin.id_conta_destino || '');
+      setValorFinanciado(maskCurrency(fin.valor || 0));
+      setValorR(fin.valor_r ? maskCurrency(fin.valor_r) : '');
+      setPlus(fin.plus ? maskCurrency(fin.plus) : '');
+      setTac(fin.tac ? String(fin.tac) : '');
+      setValorTac(fin.valor_tac ? maskCurrency(fin.valor_tac) : '');
+      setNumeroContrato(fin.numero_contrato || '');
+      setNumeroPrestacao(fin.numero_prestacao ? String(fin.numero_prestacao) : '');
+      setValorPrestacao(fin.valor_prestacao ? maskCurrency(fin.valor_prestacao) : '');
+      setDadosFinanciamento(fin.dados_financiamento || '');
+      setDataVencimentoInicial(fin.data_vencimento_inicial ? new Date(fin.data_vencimento_inicial) : new Date());
+    }
   };
 
   const handleAddFinanciamento = () => {
@@ -160,8 +183,18 @@ export function StepAcerto({
     console.log('setFinanciamento foi chamado');
 
     toast.success('Financiamento adicionado com sucesso');
-    resetForm();
-    setDialogOpen(false);
+    resetFinanciamentoForm();
+    setFinanciamentoDialogOpen(false);
+  };
+
+  const handleRemoveFinanciamento = () => {
+    removeFinanciamento();
+    toast.success('Financiamento removido');
+  };
+
+  const handleEditFinanciamento = () => {
+    loadFinanciamentoForEdit();
+    setFinanciamentoDialogOpen(true);
   };
 
   const handleRecebidoChange = (checked: boolean) => {
@@ -275,6 +308,15 @@ export function StepAcerto({
             </span>
           </div>
 
+          {totals.totalFinanciamento > 0 && (
+            <div className="flex items-center justify-between py-2 border-b border-border">
+              <span className="text-muted-foreground">Financiamento</span>
+              <span className="text-accent font-medium">
+                {maskCurrency(totals.totalFinanciamento)}
+              </span>
+            </div>
+          )}
+
           <div className={cn(
             "flex items-center justify-between py-3 px-4 rounded-lg",
             totals.valorAReceber >= 0 ? "bg-green-500/10 border border-green-500/30" : "bg-destructive/10 border border-destructive/30"
@@ -346,21 +388,144 @@ export function StepAcerto({
             ))}
           </div>
         )}
+      </div>
 
-        {/* Balance Status */}
-        <div className={cn(
-          "rounded-lg p-4 text-center",
-          totals.saldoPendente === 0 
-            ? "bg-accent text-accent-foreground" 
-            : "bg-muted"
-        )}>
-          <p className={cn("font-bold text-lg", getSaldoColor())}>
-            {totals.saldoPendente === 0 
-              ? 'Financeiro OK' 
-              : `Saldo Pendente: ${maskCurrency(Math.abs(totals.saldoPendente))}`
-            }
-          </p>
+      {/* Financiamento Section - NOVO */}
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h4 className="font-semibold flex items-center gap-2">
+            <Landmark className="w-4 h-4 text-accent" />
+            FINANCIAMENTO
+          </h4>
+          {!saleData.financiamento && (
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={() => {
+                resetFinanciamentoForm();
+                setFinanciamentoDialogOpen(true);
+              }}
+              className="border-accent text-accent hover:bg-accent hover:text-accent-foreground"
+            >
+              <Plus className="w-4 h-4 mr-1" />
+              Adicionar Financiamento
+            </Button>
+          )}
         </div>
+
+        {!saleData.financiamento ? (
+          <div className="glass rounded-lg p-8 text-center border border-dashed border-accent/30">
+            <Landmark className="w-10 h-10 text-accent/50 mx-auto mb-3" />
+            <p className="text-muted-foreground">
+              Nenhum financiamento adicionado
+            </p>
+            <p className="text-xs text-muted-foreground mt-1">
+              Clique em "Adicionar Financiamento" para incluir
+            </p>
+          </div>
+        ) : (
+          <div className="glass rounded-lg p-4 border border-accent/30 animate-fade-in">
+            <div className="flex items-start justify-between">
+              <div className="flex-1">
+                <div className="flex items-center gap-2 mb-2">
+                  <Landmark className="w-5 h-5 text-accent" />
+                  <span className="font-semibold text-accent">
+                    {saleData.financiamento.financeira_nome || 'Financiamento'}
+                  </span>
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                  <div>
+                    <p className="text-muted-foreground">Valor Financiado</p>
+                    <p className="font-bold text-lg text-accent">{maskCurrency(saleData.financiamento.valor)}</p>
+                  </div>
+                  {saleData.financiamento.numero_prestacao && (
+                    <div>
+                      <p className="text-muted-foreground">Parcelas</p>
+                      <p className="font-medium">{saleData.financiamento.numero_prestacao}x</p>
+                    </div>
+                  )}
+                  {saleData.financiamento.valor_prestacao && (
+                    <div>
+                      <p className="text-muted-foreground">Valor Parcela</p>
+                      <p className="font-medium">{maskCurrency(saleData.financiamento.valor_prestacao)}</p>
+                    </div>
+                  )}
+                  {saleData.financiamento.data_vencimento_inicial && (
+                    <div>
+                      <p className="text-muted-foreground">1º Vencimento</p>
+                      <p className="font-medium">{format(new Date(saleData.financiamento.data_vencimento_inicial), 'dd/MM/yyyy')}</p>
+                    </div>
+                  )}
+                </div>
+                {(saleData.financiamento.plus || saleData.financiamento.valor_r || saleData.financiamento.valor_tac) && (
+                  <div className="mt-3 pt-3 border-t border-border flex flex-wrap gap-4 text-sm">
+                    {saleData.financiamento.valor_r && (
+                      <div>
+                        <span className="text-muted-foreground">Valor R: </span>
+                        <span className="font-medium">{maskCurrency(saleData.financiamento.valor_r)}</span>
+                      </div>
+                    )}
+                    {saleData.financiamento.plus && (
+                      <div>
+                        <span className="text-muted-foreground">Plus: </span>
+                        <span className="font-medium">{maskCurrency(saleData.financiamento.plus)}</span>
+                      </div>
+                    )}
+                    {saleData.financiamento.valor_tac && (
+                      <div>
+                        <span className="text-muted-foreground">TAC: </span>
+                        <span className="font-medium">{maskCurrency(saleData.financiamento.valor_tac)}</span>
+                      </div>
+                    )}
+                  </div>
+                )}
+                {saleData.financiamento.numero_contrato && (
+                  <p className="text-xs text-muted-foreground mt-2">
+                    Contrato: {saleData.financiamento.numero_contrato}
+                  </p>
+                )}
+                {saleData.financiamento.conta_descricao && (
+                  <p className="text-xs text-muted-foreground">
+                    Conta: {saleData.financiamento.conta_descricao}
+                  </p>
+                )}
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={handleEditFinanciamento}
+                  className="text-accent hover:text-accent"
+                >
+                  <Edit2 className="w-4 h-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={handleRemoveFinanciamento}
+                  className="text-destructive hover:text-destructive"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Balance Status */}
+      <div className={cn(
+        "rounded-lg p-4 text-center",
+        totals.saldoPendente === 0 
+          ? "bg-accent text-accent-foreground" 
+          : "bg-muted"
+      )}>
+        <p className={cn("font-bold text-lg", getSaldoColor())}>
+          {totals.saldoPendente === 0 
+            ? 'Financeiro OK' 
+            : `Saldo Pendente: ${maskCurrency(Math.abs(totals.saldoPendente))}`
+          }
+        </p>
       </div>
 
       {/* Add Payment Dialog */}
@@ -368,6 +533,9 @@ export function StepAcerto({
         <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle>Adicionar Pagamento</DialogTitle>
+            <DialogDescription>
+              Adicione recebimentos, parcelamentos ou pagamentos à venda
+            </DialogDescription>
           </DialogHeader>
 
           {/* Summary in Dialog */}
@@ -400,12 +568,11 @@ export function StepAcerto({
             </div>
           </div>
 
-          {/* Payment Type Tabs */}
+          {/* Payment Type Tabs - SEM financiamento */}
           <Tabs value={paymentType} onValueChange={(v) => setPaymentType(v as typeof paymentType)}>
-            <TabsList className="grid grid-cols-4">
+            <TabsList className="grid grid-cols-3">
               <TabsTrigger value="recebimento">Recebimento</TabsTrigger>
               <TabsTrigger value="parcelamento">Parcelamento</TabsTrigger>
-              <TabsTrigger value="financiamento">Financiamento</TabsTrigger>
               <TabsTrigger value="pagamento">Pagamento</TabsTrigger>
             </TabsList>
 
@@ -672,105 +839,6 @@ export function StepAcerto({
             )}
           </Tabs>
 
-            {/* Tab Financiamento */}
-            {paymentType === 'financiamento' && (
-              <div className="space-y-4 mt-4">
-                <div className="glass rounded-lg p-4 border border-accent/30 animate-fade-in">
-                  <h4 className="text-sm font-medium text-accent mb-4">Dados do Financiamento</h4>
-                  
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label>Financeira</Label>
-                      <Select value={idFinanceira} onValueChange={setIdFinanceira}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecione a financeira" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {financeiras.map(fin => (
-                            <SelectItem key={fin.id} value={fin.id}>{fin.nome}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Conta Destino *</Label>
-                      <Select value={idContaDestino} onValueChange={setIdContaDestino}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecione a conta" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {contas.map(conta => (
-                            <SelectItem key={conta.id} value={conta.id}>{getContaDisplayName(conta)}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4 mt-4">
-                    <div className="space-y-2">
-                      <Label>Valor Financiado *</Label>
-                      <Input value={valorFinanciado} onChange={(e) => setValorFinanciado(maskCurrency(unmaskCurrency(e.target.value)))} placeholder="R$ 0,00" />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Valor R</Label>
-                      <Input value={valorR} onChange={(e) => setValorR(maskCurrency(unmaskCurrency(e.target.value)))} placeholder="R$ 0,00" />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-3 gap-4 mt-4">
-                    <div className="space-y-2">
-                      <Label>Plus</Label>
-                      <Input value={plus} onChange={(e) => setPlus(maskCurrency(unmaskCurrency(e.target.value)))} placeholder="R$ 0,00" />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>TAC (%)</Label>
-                      <Input type="number" value={tac} onChange={(e) => setTac(e.target.value)} placeholder="0" />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Valor TAC</Label>
-                      <Input value={valorTac} onChange={(e) => setValorTac(maskCurrency(unmaskCurrency(e.target.value)))} placeholder="R$ 0,00" />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-3 gap-4 mt-4">
-                    <div className="space-y-2">
-                      <Label>Nº Contrato</Label>
-                      <Input value={numeroContrato} onChange={(e) => setNumeroContrato(e.target.value)} placeholder="Número" />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Nº Prestações</Label>
-                      <Input type="number" value={numeroPrestacao} onChange={(e) => setNumeroPrestacao(e.target.value)} placeholder="Ex: 48" />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Valor Prestação</Label>
-                      <Input value={valorPrestacao} onChange={(e) => setValorPrestacao(maskCurrency(unmaskCurrency(e.target.value)))} placeholder="R$ 0,00" />
-                    </div>
-                  </div>
-
-                  <div className="space-y-2 mt-4">
-                    <Label>1º Vencimento</Label>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <Button variant="outline" className="w-full justify-start">
-                          <Calendar className="w-4 h-4 mr-2" />
-                          {format(dataVencimentoInicial, 'dd/MM/yyyy')}
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <CalendarComponent mode="single" selected={dataVencimentoInicial} onSelect={(date) => date && setDataVencimentoInicial(date)} locale={ptBR} className="pointer-events-auto" />
-                      </PopoverContent>
-                    </Popover>
-                  </div>
-
-                  <div className="space-y-2 mt-4">
-                    <Label>Observações</Label>
-                    <Textarea value={dadosFinanciamento} onChange={(e) => setDadosFinanciamento(e.target.value)} placeholder="Dados adicionais do financiamento..." rows={2} />
-                  </div>
-                </div>
-              </div>
-            )}
-
           <DialogFooter>
             <Button variant="outline" onClick={() => setDialogOpen(false)}>
               Cancelar
@@ -783,14 +851,6 @@ export function StepAcerto({
               >
                 Adicionar Parcelas
               </Button>
-            ) : paymentType === 'financiamento' ? (
-              <Button 
-                onClick={handleAddFinanciamento}
-                disabled={!valorFinanciado || !idContaDestino}
-                className="bg-accent hover:bg-accent/90"
-              >
-                Adicionar Financiamento
-              </Button>
             ) : (
               <Button 
                 onClick={handleAddPayment}
@@ -800,6 +860,130 @@ export function StepAcerto({
                 Adicionar
               </Button>
             )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Financiamento Dialog - EXCLUSIVO */}
+      <Dialog open={financiamentoDialogOpen} onOpenChange={setFinanciamentoDialogOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Landmark className="w-5 h-5 text-accent" />
+              {saleData.financiamento ? 'Editar Financiamento' : 'Adicionar Financiamento'}
+            </DialogTitle>
+            <DialogDescription>
+              Preencha os dados do financiamento do veículo
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div className="glass rounded-lg p-4 border border-accent/30">
+              <h4 className="text-sm font-medium text-accent mb-4">Dados do Financiamento</h4>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Financeira</Label>
+                  <Select value={idFinanceira} onValueChange={setIdFinanceira}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione a financeira" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {financeiras.map(fin => (
+                        <SelectItem key={fin.id} value={fin.id}>{fin.nome}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Conta Destino *</Label>
+                  <Select value={idContaDestino} onValueChange={setIdContaDestino}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione a conta" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {contas.map(conta => (
+                        <SelectItem key={conta.id} value={conta.id}>{getContaDisplayName(conta)}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4 mt-4">
+                <div className="space-y-2">
+                  <Label>Valor Financiado *</Label>
+                  <Input value={valorFinanciado} onChange={(e) => setValorFinanciado(maskCurrency(unmaskCurrency(e.target.value)))} placeholder="R$ 0,00" />
+                </div>
+                <div className="space-y-2">
+                  <Label>Valor R</Label>
+                  <Input value={valorR} onChange={(e) => setValorR(maskCurrency(unmaskCurrency(e.target.value)))} placeholder="R$ 0,00" />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-3 gap-4 mt-4">
+                <div className="space-y-2">
+                  <Label>Plus</Label>
+                  <Input value={plus} onChange={(e) => setPlus(maskCurrency(unmaskCurrency(e.target.value)))} placeholder="R$ 0,00" />
+                </div>
+                <div className="space-y-2">
+                  <Label>TAC (%)</Label>
+                  <Input type="number" value={tac} onChange={(e) => setTac(e.target.value)} placeholder="0" />
+                </div>
+                <div className="space-y-2">
+                  <Label>Valor TAC</Label>
+                  <Input value={valorTac} onChange={(e) => setValorTac(maskCurrency(unmaskCurrency(e.target.value)))} placeholder="R$ 0,00" />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-3 gap-4 mt-4">
+                <div className="space-y-2">
+                  <Label>Nº Contrato</Label>
+                  <Input value={numeroContrato} onChange={(e) => setNumeroContrato(e.target.value)} placeholder="Número" />
+                </div>
+                <div className="space-y-2">
+                  <Label>Nº Prestações</Label>
+                  <Input type="number" value={numeroPrestacao} onChange={(e) => setNumeroPrestacao(e.target.value)} placeholder="Ex: 48" />
+                </div>
+                <div className="space-y-2">
+                  <Label>Valor Prestação</Label>
+                  <Input value={valorPrestacao} onChange={(e) => setValorPrestacao(maskCurrency(unmaskCurrency(e.target.value)))} placeholder="R$ 0,00" />
+                </div>
+              </div>
+
+              <div className="space-y-2 mt-4">
+                <Label>1º Vencimento</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" className="w-full justify-start">
+                      <Calendar className="w-4 h-4 mr-2" />
+                      {format(dataVencimentoInicial, 'dd/MM/yyyy')}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <CalendarComponent mode="single" selected={dataVencimentoInicial} onSelect={(date) => date && setDataVencimentoInicial(date)} locale={ptBR} className="pointer-events-auto" />
+                  </PopoverContent>
+                </Popover>
+              </div>
+
+              <div className="space-y-2 mt-4">
+                <Label>Observações</Label>
+                <Textarea value={dadosFinanciamento} onChange={(e) => setDadosFinanciamento(e.target.value)} placeholder="Dados adicionais do financiamento..." rows={2} />
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setFinanciamentoDialogOpen(false)}>
+              Cancelar
+            </Button>
+            <Button 
+              onClick={handleAddFinanciamento}
+              disabled={!valorFinanciado || !idContaDestino}
+              className="bg-accent hover:bg-accent/90"
+            >
+              {saleData.financiamento ? 'Atualizar Financiamento' : 'Adicionar Financiamento'}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
