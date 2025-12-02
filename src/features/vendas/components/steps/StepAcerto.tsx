@@ -122,8 +122,14 @@ export function StepAcerto({
   };
 
   const handleAddFinanciamento = () => {
+    console.log('=== handleAddFinanciamento CHAMADO ===');
     const valorNum = unmaskCurrency(valorFinanciado);
+    console.log('valorFinanciado raw:', valorFinanciado);
+    console.log('valorNum (parsed):', valorNum);
+    console.log('idContaDestino:', idContaDestino);
+    
     if (!valorNum || !idContaDestino) {
+      console.log('VALIDAÇÃO FALHOU - valor ou conta destino vazio');
       toast.error('Preencha valor e conta destino');
       return;
     }
@@ -131,7 +137,7 @@ export function StepAcerto({
     const financeira = financeiras.find(f => f.id === idFinanceira);
     const conta = contas.find(c => c.id === idContaDestino);
 
-    setFinanciamento({
+    const financiamentoData = {
       id_financeira: idFinanceira || null,
       id_conta_destino: idContaDestino,
       valor: valorNum,
@@ -146,7 +152,12 @@ export function StepAcerto({
       data_vencimento_inicial: format(dataVencimentoInicial, 'yyyy-MM-dd'),
       financeira_nome: financeira?.nome,
       conta_descricao: conta ? getContaDisplayName(conta) : undefined,
-    });
+    };
+    
+    console.log('Dados do financiamento a enviar:', financiamentoData);
+    
+    setFinanciamento(financiamentoData);
+    console.log('setFinanciamento foi chamado');
 
     toast.success('Financiamento adicionado com sucesso');
     resetForm();

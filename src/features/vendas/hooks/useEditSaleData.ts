@@ -341,15 +341,24 @@ export function useEditSaleData(saleId: string | null) {
   }, []);
 
   const setFinanciamento = useCallback((financiamento: Omit<FinanciamentoEntry, 'id'> | null) => {
+    console.log('=== setFinanciamento no HOOK chamado ===');
+    console.log('Dados recebidos:', financiamento);
+    
     if (financiamento) {
       const newFinanciamento: FinanciamentoEntry = {
         ...financiamento,
         id: crypto.randomUUID(),
       };
-      setSaleData(prev => ({
-        ...prev,
-        financiamento: newFinanciamento,
-      }));
+      console.log('Novo financiamento criado com ID:', newFinanciamento);
+      setSaleData(prev => {
+        console.log('Estado anterior do financiamento:', prev.financiamento);
+        const newState = {
+          ...prev,
+          financiamento: newFinanciamento,
+        };
+        console.log('Novo estado do financiamento:', newState.financiamento);
+        return newState;
+      });
     } else {
       setSaleData(prev => ({
         ...prev,
@@ -359,6 +368,7 @@ export function useEditSaleData(saleId: string | null) {
   }, []);
 
   const removeFinanciamento = useCallback(() => {
+    console.log('=== removeFinanciamento chamado ===');
     setSaleData(prev => ({
       ...prev,
       financiamento: null,
@@ -438,32 +448,50 @@ export function useEditSaleData(saleId: string | null) {
       }
 
       // Delete existing financiamento and recreate
-      await supabase
+      console.log('=== SALVANDO FINANCIAMENTO ===');
+      console.log('saleData.financiamento atual:', saleData.financiamento);
+      
+      const { error: deleteFinError } = await supabase
         .from('vx_vendas_financiamento')
         .delete()
         .eq('id_venda', saleId);
+      
+      console.log('Financiamento anterior deletado, erro:', deleteFinError);
 
       if (saleData.financiamento) {
-        const { error: financiamentoError } = await supabase
+        const financiamentoInsert = {
+          id_venda: saleId,
+          id_veiculo: saleData.veiculo!.id,
+          id_financeira: saleData.financiamento.id_financeira,
+          id_conta_destino: saleData.financiamento.id_conta_destino,
+          valor: saleData.financiamento.valor,
+          valor_r: saleData.financiamento.valor_r,
+          plus: saleData.financiamento.plus,
+          tac: saleData.financiamento.tac,
+          valor_tac: saleData.financiamento.valor_tac,
+          numero_contrato: saleData.financiamento.numero_contrato,
+          numero_prestacao: saleData.financiamento.numero_prestacao,
+          valor_prestacao: saleData.financiamento.valor_prestacao,
+          dados_financiamento: saleData.financiamento.dados_financiamento,
+          data_vencimento_inicial: saleData.financiamento.data_vencimento_inicial,
+        };
+        
+        console.log('Inserindo financiamento:', financiamentoInsert);
+        
+        const { data: insertedData, error: financiamentoError } = await supabase
           .from('vx_vendas_financiamento')
-          .insert({
-            id_venda: saleId,
-            id_veiculo: saleData.veiculo!.id,
-            id_financeira: saleData.financiamento.id_financeira,
-            id_conta_destino: saleData.financiamento.id_conta_destino,
-            valor: saleData.financiamento.valor,
-            valor_r: saleData.financiamento.valor_r,
-            plus: saleData.financiamento.plus,
-            tac: saleData.financiamento.tac,
-            valor_tac: saleData.financiamento.valor_tac,
-            numero_contrato: saleData.financiamento.numero_contrato,
-            numero_prestacao: saleData.financiamento.numero_prestacao,
-            valor_prestacao: saleData.financiamento.valor_prestacao,
-            dados_financiamento: saleData.financiamento.dados_financiamento,
-            data_vencimento_inicial: saleData.financiamento.data_vencimento_inicial,
-          });
+          .insert(financiamentoInsert)
+          .select();
 
-        if (financiamentoError) throw financiamentoError;
+        console.log('Resultado da inserção:', { insertedData, financiamentoError });
+        
+        if (financiamentoError) {
+          console.error('ERRO ao inserir financiamento:', financiamentoError);
+          throw financiamentoError;
+        }
+        console.log('Financiamento inserido com sucesso!');
+      } else {
+        console.log('Nenhum financiamento para inserir');
       }
 
       // Update vehicle status if closing sale
