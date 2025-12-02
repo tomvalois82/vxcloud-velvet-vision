@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Plus, Search, Car, Trash2 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Plus, Search, Car, Trash2, Handshake } from 'lucide-react';
 import { useVehicleMainPhoto } from '@/features/estoque/hooks/useVehicleMainPhoto';
 import { PageHeader } from '@/components/PageHeader';
 import { Button } from '@/components/ui/button';
@@ -38,10 +39,12 @@ function VehicleCard({
   vehicle,
   onEdit,
   onDelete,
+  onSell,
 }: {
   vehicle: Vehicle;
   onEdit: (id: number) => void;
   onDelete: (e: React.MouseEvent, vehicle: Vehicle) => void;
+  onSell: (e: React.MouseEvent, vehicleId: number) => void;
 }) {
   const { mainPhoto, loading } = useVehicleMainPhoto(vehicle.id, vehicle.foto);
 
@@ -90,9 +93,19 @@ function VehicleCard({
           {vehicle.placa && (
             <p className="text-sm text-muted-foreground">Placa: {vehicle.placa}</p>
           )}
-          <p className="text-lg font-bold text-accent">
-            {vehicle.valor ? maskCurrency(Number(vehicle.valor)) : 'R$ 0,00'}
-          </p>
+          <div className="flex items-center justify-between">
+            <p className="text-lg font-bold text-accent">
+              {vehicle.valor ? maskCurrency(Number(vehicle.valor)) : 'R$ 0,00'}
+            </p>
+            <Button
+              size="sm"
+              onClick={(e) => onSell(e, vehicle.id)}
+              className="bg-accent hover:bg-accent/90"
+            >
+              <Handshake className="w-4 h-4 mr-1" />
+              Vender
+            </Button>
+          </div>
         </div>
       </CardContent>
     </Card>
@@ -100,6 +113,7 @@ function VehicleCard({
 }
 
 const VeiculosEstoque = () => {
+  const navigate = useNavigate();
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -163,6 +177,11 @@ const VeiculosEstoque = () => {
     e.stopPropagation();
     setVehicleToDelete(vehicle);
     setDeleteDialogOpen(true);
+  };
+
+  const handleSellClick = (e: React.MouseEvent, vehicleId: number) => {
+    e.stopPropagation();
+    navigate(`/vendas/nova?veiculoId=${vehicleId}`);
   };
 
   const handleDeleteConfirm = async () => {
@@ -270,6 +289,7 @@ const VeiculosEstoque = () => {
                 vehicle={vehicle}
                 onEdit={handleEdit}
                 onDelete={handleDeleteClick}
+                onSell={handleSellClick}
               />
             ))}
           </div>
