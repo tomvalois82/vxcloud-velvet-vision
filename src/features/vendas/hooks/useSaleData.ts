@@ -355,8 +355,10 @@ export function useSaleData(vehicleId: number | null) {
   const totalTrocas = saleData.trocas.reduce((sum, t) => sum + t.valor_troca, 0);
   const totalPagamentos = saleData.pagamentos.reduce((sum, p) => sum + p.valor, 0);
   const totalFinanciamento = saleData.financiamento?.valor || 0;
-  const valorAReceber = saleData.valor_venda - totalTrocas;
-  const saldoPendente = valorAReceber - totalPagamentos - totalFinanciamento;
+  // Total a receber do cliente = valor do veículo - trocas - financiamento
+  const valorAReceber = saleData.valor_venda - totalTrocas - totalFinanciamento;
+  // Saldo pendente = o que falta receber em pagamentos diretos
+  const saldoPendente = valorAReceber - totalPagamentos;
 
   return {
     saleData,

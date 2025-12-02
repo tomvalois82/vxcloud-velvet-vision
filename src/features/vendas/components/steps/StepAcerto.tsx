@@ -302,17 +302,17 @@ export function StepAcerto({
           </div>
 
           <div className="flex items-center justify-between py-2 border-b border-border">
-            <span className="text-muted-foreground">Total líquido em troca(s)</span>
+            <span className="text-muted-foreground">(-) Total líquido em troca(s)</span>
             <span className="text-foreground font-medium">
-              {maskCurrency(totals.totalTrocas)}
+              - {maskCurrency(totals.totalTrocas)}
             </span>
           </div>
 
           {totals.totalFinanciamento > 0 && (
             <div className="flex items-center justify-between py-2 border-b border-border">
-              <span className="text-muted-foreground">Financiamento</span>
+              <span className="text-muted-foreground">(-) Financiamento</span>
               <span className="text-accent font-medium">
-                {maskCurrency(totals.totalFinanciamento)}
+                - {maskCurrency(totals.totalFinanciamento)}
               </span>
             </div>
           )}
