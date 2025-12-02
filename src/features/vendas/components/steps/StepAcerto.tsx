@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Plus, Trash2, CreditCard, Wallet, Calendar, Landmark, Edit2, ArrowDownCircle, ArrowUpCircle } from 'lucide-react';
+import { Plus, Trash2, CreditCard, Wallet, Calendar, Landmark, Edit2, ArrowDownCircle, ArrowUpCircle, Package } from 'lucide-react';
 import { format, addDays } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Button } from '@/components/ui/button';
@@ -28,20 +28,26 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { cn } from '@/lib/utils';
 import { maskCurrency, unmaskCurrency } from '@/features/estoque/utils/masks';
 import { toast } from 'sonner';
-import type { SaleData, PaymentEntry, FormaPagamento, ContaFinanceira, Financeira, FinanciamentoEntry } from '../../types';
+import type { SaleData, PaymentEntry, FormaPagamento, ContaFinanceira, Financeira, FinanciamentoEntry, ServicoProdutoEntry, CategoriaFinanceira } from '../../types';
+import { ServicoProdutoDialog } from '../ServicoProdutoDialog';
 
 interface StepAcertoProps {
   saleData: SaleData;
   formasPagamento: FormaPagamento[];
   contas: ContaFinanceira[];
   financeiras: Financeira[];
+  categorias: CategoriaFinanceira[];
   addPayment: (payment: Omit<PaymentEntry, 'id'>) => void;
   removePayment: (id: string) => void;
   setFinanciamento: (financiamento: Omit<FinanciamentoEntry, 'id'> | null) => void;
   removeFinanciamento: () => void;
+  addServicoProduto: (item: Omit<ServicoProdutoEntry, 'id'>) => void;
+  removeServicoProduto: (id: string) => void;
+  updateServicoProduto: (id: string, item: Omit<ServicoProdutoEntry, 'id'>) => void;
   totals: {
     valorVeiculo: number;
     totalTrocas: number;
+    totalServicosProdutos: number;
     valorAReceber: number;
     totalPagamentos: number;
     totalRecebimentos: number;
@@ -56,14 +62,20 @@ export function StepAcerto({
   formasPagamento,
   contas,
   financeiras,
+  categorias,
   addPayment,
   removePayment,
   setFinanciamento,
   removeFinanciamento,
+  addServicoProduto,
+  removeServicoProduto,
+  updateServicoProduto,
   totals,
 }: StepAcertoProps) {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [financiamentoDialogOpen, setFinanciamentoDialogOpen] = useState(false);
+  const [servicoProdutoDialogOpen, setServicoProdutoDialogOpen] = useState(false);
+  const [editingServicoProduto, setEditingServicoProduto] = useState<ServicoProdutoEntry | null>(null);
   const [paymentType, setPaymentType] = useState<'recebimento' | 'parcelamento' | 'pagamento'>('recebimento');
   
   // Estados para recebimento/pagamento simples
@@ -320,6 +332,18 @@ export function StepAcerto({
             </span>
           </div>
 
+          {totals.totalServicosProdutos > 0 && (
+            <div className="flex items-center justify-between py-2 border-b border-border">
+              <span className="text-accent flex items-center gap-2">
+                <Package className="w-4 h-4" />
+                (+) Produtos e Serviços
+              </span>
+              <span className="text-accent font-medium">
+                + {maskCurrency(totals.totalServicosProdutos)}
+              </span>
+            </div>
+          )}
+
           {totals.totalFinanciamento > 0 && (
             <div className="flex items-center justify-between py-2 border-b border-border">
               <span className="text-muted-foreground">(-) Financiamento</span>
@@ -573,6 +597,84 @@ export function StepAcerto({
                 </Button>
               </div>
             </div>
+          </div>
+        )}
+      </div>
+
+      {/* Produtos e Serviços Section */}
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h4 className="font-semibold flex items-center gap-2">
+            <Package className="w-4 h-4 text-accent" />
+            PRODUTOS E SERVIÇOS
+          </h4>
+          <Button 
+            variant="outline" 
+            size="sm"
+            onClick={() => {
+              setEditingServicoProduto(null);
+              setServicoProdutoDialogOpen(true);
+            }}
+          >
+            <Plus className="w-4 h-4 mr-1" />
+            adicionar
+          </Button>
+        </div>
+
+        {saleData.servicosProdutos.length === 0 ? (
+          <div className="glass rounded-lg p-8 text-center border border-dashed border-border">
+            <Package className="w-10 h-10 text-muted-foreground/50 mx-auto mb-3" />
+            <p className="text-muted-foreground">
+              Nenhum produto ou serviço adicionado
+            </p>
+            <p className="text-xs text-muted-foreground mt-1">
+              Clique em "adicionar" para incluir taxas, acessórios, etc.
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {saleData.servicosProdutos.map(item => (
+              <div
+                key={item.id}
+                className="glass rounded-lg p-4 flex items-center justify-between border border-accent/20"
+              >
+                <div className="flex items-center gap-3">
+                  <Package className="w-5 h-5 text-accent" />
+                  <div>
+                    <p className="font-medium text-foreground">
+                      {item.descricao}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      {item.categoria_nome || 'Sem categoria'}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-4">
+                  <span className="font-bold text-accent">
+                    {maskCurrency(item.valor)}
+                  </span>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => {
+                      setEditingServicoProduto(item);
+                      setServicoProdutoDialogOpen(true);
+                    }}
+                    className="text-muted-foreground hover:text-foreground"
+                  >
+                    <Edit2 className="w-4 h-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => removeServicoProduto(item.id)}
+                    className="text-destructive hover:text-destructive"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
+                </div>
+              </div>
+            ))}
           </div>
         )}
       </div>
@@ -1068,6 +1170,16 @@ export function StepAcerto({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Produto/Serviço Dialog */}
+      <ServicoProdutoDialog
+        open={servicoProdutoDialogOpen}
+        onOpenChange={setServicoProdutoDialogOpen}
+        categorias={categorias}
+        onAdd={addServicoProduto}
+        onEdit={updateServicoProduto}
+        editItem={editingServicoProduto}
+      />
     </div>
   );
 }
