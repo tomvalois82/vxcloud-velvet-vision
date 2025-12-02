@@ -69,6 +69,7 @@ export function StepAcerto({
   const [numeroParcelas, setNumeroParcelas] = useState('');
   const [intervaloDias, setIntervaloDias] = useState('30');
   const [valorParcela, setValorParcela] = useState('');
+  const [dataInicioParcelamento, setDataInicioParcelamento] = useState<Date>(new Date());
 
   const resetForm = () => {
     setValor('');
@@ -83,6 +84,7 @@ export function StepAcerto({
     setNumeroParcelas('');
     setIntervaloDias('30');
     setValorParcela('');
+    setDataInicioParcelamento(new Date());
   };
 
   const handleRecebidoChange = (checked: boolean) => {
@@ -140,11 +142,10 @@ export function StepAcerto({
 
     const forma = formasPagamento.find(f => f.id === idFormaPagamento);
     const conta = contas.find(c => c.id === idConta);
-    const hoje = new Date();
 
-    // Gerar cada parcela
+    // Gerar cada parcela a partir da data selecionada
     for (let i = 0; i < parcelas; i++) {
-      const dataVencimento = addDays(hoje, intervalo * i);
+      const dataVencimento = addDays(dataInicioParcelamento, intervalo * i);
       
       addPayment({
         id_forma_pagamento: idFormaPagamento,
@@ -484,6 +485,27 @@ export function StepAcerto({
                     </div>
                   </div>
 
+                  <div className="space-y-2 mt-4">
+                    <Label>A partir de:</Label>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button variant="outline" className="w-full justify-start">
+                          <Calendar className="w-4 h-4 mr-2" />
+                          {format(dataInicioParcelamento, 'dd/MM/yyyy')}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <CalendarComponent
+                          mode="single"
+                          selected={dataInicioParcelamento}
+                          onSelect={(date) => date && setDataInicioParcelamento(date)}
+                          locale={ptBR}
+                          className="pointer-events-auto"
+                        />
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+
                   <div className="grid grid-cols-2 gap-4 mt-4">
                     <div className="space-y-2">
                       <Label>Valor da Parcela</Label>
@@ -514,7 +536,7 @@ export function StepAcerto({
                       <div className="flex flex-wrap gap-2">
                         {Array.from({ length: Math.min(parseInt(numeroParcelas) || 0, 6) }).map((_, i) => (
                           <span key={i} className="text-xs px-2 py-1 rounded bg-accent/10 text-accent">
-                            {i + 1}ª - {format(addDays(new Date(), (parseInt(intervaloDias) || 0) * i), 'dd/MM/yy')}
+                            {i + 1}ª - {format(addDays(dataInicioParcelamento, (parseInt(intervaloDias) || 0) * i), 'dd/MM/yy')}
                           </span>
                         ))}
                         {(parseInt(numeroParcelas) || 0) > 6 && (
