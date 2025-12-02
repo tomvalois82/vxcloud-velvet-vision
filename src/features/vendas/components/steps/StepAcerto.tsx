@@ -27,19 +27,23 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { cn } from '@/lib/utils';
 import { maskCurrency, unmaskCurrency } from '@/features/estoque/utils/masks';
 import { toast } from 'sonner';
-import type { SaleData, PaymentEntry, FormaPagamento, ContaFinanceira } from '../../types';
+import type { SaleData, PaymentEntry, FormaPagamento, ContaFinanceira, Financeira, FinanciamentoEntry } from '../../types';
 
 interface StepAcertoProps {
   saleData: SaleData;
   formasPagamento: FormaPagamento[];
   contas: ContaFinanceira[];
+  financeiras: Financeira[];
   addPayment: (payment: Omit<PaymentEntry, 'id'>) => void;
   removePayment: (id: string) => void;
+  setFinanciamento: (financiamento: Omit<FinanciamentoEntry, 'id'> | null) => void;
+  removeFinanciamento: () => void;
   totals: {
     valorVeiculo: number;
     totalTrocas: number;
     valorAReceber: number;
     totalPagamentos: number;
+    totalFinanciamento: number;
     saldoPendente: number;
   };
 }
@@ -48,12 +52,15 @@ export function StepAcerto({
   saleData,
   formasPagamento,
   contas,
+  financeiras,
   addPayment,
   removePayment,
+  setFinanciamento,
+  removeFinanciamento,
   totals,
 }: StepAcertoProps) {
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [paymentType, setPaymentType] = useState<'recebimento' | 'parcelamento' | 'pagamento'>('recebimento');
+  const [paymentType, setPaymentType] = useState<'recebimento' | 'parcelamento' | 'financiamento' | 'pagamento'>('recebimento');
   
   // Estados para recebimento/pagamento simples
   const [valor, setValor] = useState('');
@@ -71,6 +78,20 @@ export function StepAcerto({
   const [valorParcela, setValorParcela] = useState('');
   const [dataInicioParcelamento, setDataInicioParcelamento] = useState<Date>(new Date());
 
+  // Estados para financiamento
+  const [idFinanceira, setIdFinanceira] = useState('');
+  const [idContaDestino, setIdContaDestino] = useState('');
+  const [valorFinanciado, setValorFinanciado] = useState('');
+  const [valorR, setValorR] = useState('');
+  const [plus, setPlus] = useState('');
+  const [tac, setTac] = useState('');
+  const [valorTac, setValorTac] = useState('');
+  const [numeroContrato, setNumeroContrato] = useState('');
+  const [numeroPrestacao, setNumeroPrestacao] = useState('');
+  const [valorPrestacao, setValorPrestacao] = useState('');
+  const [dadosFinanciamento, setDadosFinanciamento] = useState('');
+  const [dataVencimentoInicial, setDataVencimentoInicial] = useState<Date>(new Date());
+
   const resetForm = () => {
     setValor('');
     setIdFormaPagamento('');
@@ -85,6 +106,51 @@ export function StepAcerto({
     setIntervaloDias('30');
     setValorParcela('');
     setDataInicioParcelamento(new Date());
+    // Reset financiamento
+    setIdFinanceira('');
+    setIdContaDestino('');
+    setValorFinanciado('');
+    setValorR('');
+    setPlus('');
+    setTac('');
+    setValorTac('');
+    setNumeroContrato('');
+    setNumeroPrestacao('');
+    setValorPrestacao('');
+    setDadosFinanciamento('');
+    setDataVencimentoInicial(new Date());
+  };
+
+  const handleAddFinanciamento = () => {
+    const valorNum = unmaskCurrency(valorFinanciado);
+    if (!valorNum || !idContaDestino) {
+      toast.error('Preencha valor e conta destino');
+      return;
+    }
+
+    const financeira = financeiras.find(f => f.id === idFinanceira);
+    const conta = contas.find(c => c.id === idContaDestino);
+
+    setFinanciamento({
+      id_financeira: idFinanceira || null,
+      id_conta_destino: idContaDestino,
+      valor: valorNum,
+      valor_r: valorR ? unmaskCurrency(valorR) : null,
+      plus: plus ? unmaskCurrency(plus) : null,
+      tac: tac ? Number(tac) : null,
+      valor_tac: valorTac ? unmaskCurrency(valorTac) : null,
+      numero_contrato: numeroContrato || null,
+      numero_prestacao: numeroPrestacao ? Number(numeroPrestacao) : null,
+      valor_prestacao: valorPrestacao ? unmaskCurrency(valorPrestacao) : null,
+      dados_financiamento: dadosFinanciamento || null,
+      data_vencimento_inicial: format(dataVencimentoInicial, 'yyyy-MM-dd'),
+      financeira_nome: financeira?.nome,
+      conta_descricao: conta ? getContaDisplayName(conta) : undefined,
+    });
+
+    toast.success('Financiamento adicionado com sucesso');
+    resetForm();
+    setDialogOpen(false);
   };
 
   const handleRecebidoChange = (checked: boolean) => {
@@ -325,9 +391,10 @@ export function StepAcerto({
 
           {/* Payment Type Tabs */}
           <Tabs value={paymentType} onValueChange={(v) => setPaymentType(v as typeof paymentType)}>
-            <TabsList className="grid grid-cols-3">
+            <TabsList className="grid grid-cols-4">
               <TabsTrigger value="recebimento">Recebimento</TabsTrigger>
               <TabsTrigger value="parcelamento">Parcelamento</TabsTrigger>
+              <TabsTrigger value="financiamento">Financiamento</TabsTrigger>
               <TabsTrigger value="pagamento">Pagamento</TabsTrigger>
             </TabsList>
 
@@ -594,6 +661,105 @@ export function StepAcerto({
             )}
           </Tabs>
 
+            {/* Tab Financiamento */}
+            {paymentType === 'financiamento' && (
+              <div className="space-y-4 mt-4">
+                <div className="glass rounded-lg p-4 border border-accent/30 animate-fade-in">
+                  <h4 className="text-sm font-medium text-accent mb-4">Dados do Financiamento</h4>
+                  
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Financeira</Label>
+                      <Select value={idFinanceira} onValueChange={setIdFinanceira}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione a financeira" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {financeiras.map(fin => (
+                            <SelectItem key={fin.id} value={fin.id}>{fin.nome}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Conta Destino *</Label>
+                      <Select value={idContaDestino} onValueChange={setIdContaDestino}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione a conta" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {contas.map(conta => (
+                            <SelectItem key={conta.id} value={conta.id}>{getContaDisplayName(conta)}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4 mt-4">
+                    <div className="space-y-2">
+                      <Label>Valor Financiado *</Label>
+                      <Input value={valorFinanciado} onChange={(e) => setValorFinanciado(maskCurrency(unmaskCurrency(e.target.value)))} placeholder="R$ 0,00" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Valor R</Label>
+                      <Input value={valorR} onChange={(e) => setValorR(maskCurrency(unmaskCurrency(e.target.value)))} placeholder="R$ 0,00" />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-4 mt-4">
+                    <div className="space-y-2">
+                      <Label>Plus</Label>
+                      <Input value={plus} onChange={(e) => setPlus(maskCurrency(unmaskCurrency(e.target.value)))} placeholder="R$ 0,00" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>TAC (%)</Label>
+                      <Input type="number" value={tac} onChange={(e) => setTac(e.target.value)} placeholder="0" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Valor TAC</Label>
+                      <Input value={valorTac} onChange={(e) => setValorTac(maskCurrency(unmaskCurrency(e.target.value)))} placeholder="R$ 0,00" />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-4 mt-4">
+                    <div className="space-y-2">
+                      <Label>Nº Contrato</Label>
+                      <Input value={numeroContrato} onChange={(e) => setNumeroContrato(e.target.value)} placeholder="Número" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Nº Prestações</Label>
+                      <Input type="number" value={numeroPrestacao} onChange={(e) => setNumeroPrestacao(e.target.value)} placeholder="Ex: 48" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Valor Prestação</Label>
+                      <Input value={valorPrestacao} onChange={(e) => setValorPrestacao(maskCurrency(unmaskCurrency(e.target.value)))} placeholder="R$ 0,00" />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2 mt-4">
+                    <Label>1º Vencimento</Label>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button variant="outline" className="w-full justify-start">
+                          <Calendar className="w-4 h-4 mr-2" />
+                          {format(dataVencimentoInicial, 'dd/MM/yyyy')}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <CalendarComponent mode="single" selected={dataVencimentoInicial} onSelect={(date) => date && setDataVencimentoInicial(date)} locale={ptBR} className="pointer-events-auto" />
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+
+                  <div className="space-y-2 mt-4">
+                    <Label>Observações</Label>
+                    <Textarea value={dadosFinanciamento} onChange={(e) => setDadosFinanciamento(e.target.value)} placeholder="Dados adicionais do financiamento..." rows={2} />
+                  </div>
+                </div>
+              </div>
+            )}
+
           <DialogFooter>
             <Button variant="outline" onClick={() => setDialogOpen(false)}>
               Cancelar
@@ -605,6 +771,14 @@ export function StepAcerto({
                 className="bg-accent hover:bg-accent/90"
               >
                 Adicionar Parcelas
+              </Button>
+            ) : paymentType === 'financiamento' ? (
+              <Button 
+                onClick={handleAddFinanciamento}
+                disabled={!valorFinanciado || !idContaDestino}
+                className="bg-accent hover:bg-accent/90"
+              >
+                Adicionar Financiamento
               </Button>
             ) : (
               <Button 

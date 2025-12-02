@@ -7,8 +7,10 @@ import type {
   SalePerson, 
   TradeInVehicle, 
   PaymentEntry,
+  FinanciamentoEntry,
   FormaPagamento,
-  ContaFinanceira
+  ContaFinanceira,
+  Financeira
 } from '../types';
 
 const initialSaleData: SaleData = {
@@ -22,6 +24,7 @@ const initialSaleData: SaleData = {
   observacoes_veiculo: '',
   trocas: [],
   pagamentos: [],
+  financiamento: null,
   data_venda: new Date(),
   observacoes: '',
 };
@@ -35,6 +38,7 @@ export function useEditSaleData(saleId: string | null) {
   const [veiculosEstoque, setVeiculosEstoque] = useState<SaleVehicle[]>([]);
   const [formasPagamento, setFormasPagamento] = useState<FormaPagamento[]>([]);
   const [contas, setContas] = useState<ContaFinanceira[]>([]);
+  const [financeiras, setFinanceiras] = useState<Financeira[]>([]);
   const [originalVehicleId, setOriginalVehicleId] = useState<number | null>(null);
 
   // Load existing sale data
@@ -155,9 +159,52 @@ export function useEditSaleData(saleId: string | null) {
           observacoes_veiculo: '',
           trocas,
           pagamentos,
+          financiamento: null, // Será carregado separadamente
           data_venda: new Date(vendaData.data_venda),
           observacoes: vendaData.observacoes || '',
         });
+
+        // Load financiamento existente
+        const { data: financiamentoData } = await supabase
+          .from('vx_vendas_financiamento')
+          .select('*')
+          .eq('id_venda', saleId)
+          .maybeSingle();
+
+        if (financiamentoData) {
+          const { data: financeiraData } = await supabase
+            .from('vx_financeiras')
+            .select('nome')
+            .eq('id', financiamentoData.id_financeira || '')
+            .maybeSingle();
+
+          const { data: contaDestinoData } = await supabase
+            .from('vx_fin_conta')
+            .select('banco, descricao')
+            .eq('id', financiamentoData.id_conta_destino)
+            .maybeSingle();
+
+          setSaleData(prev => ({
+            ...prev,
+            financiamento: {
+              id: financiamentoData.id,
+              id_financeira: financiamentoData.id_financeira,
+              id_conta_destino: financiamentoData.id_conta_destino,
+              valor: Number(financiamentoData.valor),
+              valor_r: financiamentoData.valor_r ? Number(financiamentoData.valor_r) : null,
+              plus: financiamentoData.plus ? Number(financiamentoData.plus) : null,
+              tac: financiamentoData.tac ? Number(financiamentoData.tac) : null,
+              valor_tac: financiamentoData.valor_tac ? Number(financiamentoData.valor_tac) : null,
+              numero_contrato: financiamentoData.numero_contrato,
+              numero_prestacao: financiamentoData.numero_prestacao,
+              valor_prestacao: financiamentoData.valor_prestacao ? Number(financiamentoData.valor_prestacao) : null,
+              dados_financiamento: financiamentoData.dados_financiamento,
+              data_vencimento_inicial: financiamentoData.data_vencimento_inicial,
+              financeira_nome: financeiraData?.nome,
+              conta_descricao: contaDestinoData ? (contaDestinoData.descricao ? `${contaDestinoData.banco} - ${contaDestinoData.descricao}` : contaDestinoData.banco) : undefined,
+            }
+          }));
+        }
 
         // Load clientes
         const { data: clientesData } = await supabase
@@ -202,6 +249,15 @@ export function useEditSaleData(saleId: string | null) {
           .order('banco');
         
         setContas(contasData || []);
+
+        // Load financeiras
+        const { data: financeirasData } = await supabase
+          .from('vx_financeiras')
+          .select('*')
+          .eq('ativa', true)
+          .order('nome');
+        
+        setFinanceiras(financeirasData || []);
 
       } catch (error) {
         console.error('Error loading sale data:', error);
@@ -284,6 +340,31 @@ export function useEditSaleData(saleId: string | null) {
     }));
   }, []);
 
+  const setFinanciamento = useCallback((financiamento: Omit<FinanciamentoEntry, 'id'> | null) => {
+    if (financiamento) {
+      const newFinanciamento: FinanciamentoEntry = {
+        ...financiamento,
+        id: crypto.randomUUID(),
+      };
+      setSaleData(prev => ({
+        ...prev,
+        financiamento: newFinanciamento,
+      }));
+    } else {
+      setSaleData(prev => ({
+        ...prev,
+        financiamento: null,
+      }));
+    }
+  }, []);
+
+  const removeFinanciamento = useCallback(() => {
+    setSaleData(prev => ({
+      ...prev,
+      financiamento: null,
+    }));
+  }, []);
+
   const saveSale = useCallback(async (fecharVenda: boolean = false) => {
     if (!saleId || !saleData.veiculo || !saleData.id_cliente) {
       toast({
@@ -356,6 +437,35 @@ export function useEditSaleData(saleId: string | null) {
         if (pagamentosError) throw pagamentosError;
       }
 
+      // Delete existing financiamento and recreate
+      await supabase
+        .from('vx_vendas_financiamento')
+        .delete()
+        .eq('id_venda', saleId);
+
+      if (saleData.financiamento) {
+        const { error: financiamentoError } = await supabase
+          .from('vx_vendas_financiamento')
+          .insert({
+            id_venda: saleId,
+            id_veiculo: saleData.veiculo!.id,
+            id_financeira: saleData.financiamento.id_financeira,
+            id_conta_destino: saleData.financiamento.id_conta_destino,
+            valor: saleData.financiamento.valor,
+            valor_r: saleData.financiamento.valor_r,
+            plus: saleData.financiamento.plus,
+            tac: saleData.financiamento.tac,
+            valor_tac: saleData.financiamento.valor_tac,
+            numero_contrato: saleData.financiamento.numero_contrato,
+            numero_prestacao: saleData.financiamento.numero_prestacao,
+            valor_prestacao: saleData.financiamento.valor_prestacao,
+            dados_financiamento: saleData.financiamento.dados_financiamento,
+            data_vencimento_inicial: saleData.financiamento.data_vencimento_inicial,
+          });
+
+        if (financiamentoError) throw financiamentoError;
+      }
+
       // Update vehicle status if closing sale
       if (fecharVenda && originalVehicleId) {
         const { error: updateError } = await supabase
@@ -388,8 +498,9 @@ export function useEditSaleData(saleId: string | null) {
   // Calculate totals
   const totalTrocas = saleData.trocas.reduce((sum, t) => sum + t.valor_troca, 0);
   const totalPagamentos = saleData.pagamentos.reduce((sum, p) => sum + p.valor, 0);
+  const totalFinanciamento = saleData.financiamento?.valor || 0;
   const valorAReceber = saleData.valor_venda - totalTrocas;
-  const saldoPendente = valorAReceber - totalPagamentos;
+  const saldoPendente = valorAReceber - totalPagamentos - totalFinanciamento;
 
   return {
     saleData,
@@ -400,6 +511,7 @@ export function useEditSaleData(saleId: string | null) {
     veiculosEstoque,
     formasPagamento,
     contas,
+    financeiras,
     updateSaleData,
     setCliente,
     setVendedor,
@@ -408,12 +520,15 @@ export function useEditSaleData(saleId: string | null) {
     updateTradeInValue,
     addPayment,
     removePayment,
+    setFinanciamento,
+    removeFinanciamento,
     saveSale,
     totals: {
       valorVeiculo: saleData.valor_venda,
       totalTrocas,
       valorAReceber,
       totalPagamentos,
+      totalFinanciamento,
       saldoPendente,
     },
   };
