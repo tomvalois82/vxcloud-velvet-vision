@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Plus, Trash2, CreditCard, Wallet, Calendar } from 'lucide-react';
-import { format } from 'date-fns';
+import { format, addDays } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -26,6 +26,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { cn } from '@/lib/utils';
 import { maskCurrency, unmaskCurrency } from '@/features/estoque/utils/masks';
+import { toast } from 'sonner';
 import type { SaleData, PaymentEntry, FormaPagamento, ContaFinanceira } from '../../types';
 
 interface StepAcertoProps {
@@ -53,6 +54,8 @@ export function StepAcerto({
 }: StepAcertoProps) {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [paymentType, setPaymentType] = useState<'recebimento' | 'parcelamento' | 'pagamento'>('recebimento');
+  
+  // Estados para recebimento/pagamento simples
   const [valor, setValor] = useState('');
   const [idFormaPagamento, setIdFormaPagamento] = useState('');
   const [idConta, setIdConta] = useState('');
@@ -61,6 +64,11 @@ export function StepAcerto({
   const [observacao, setObservacao] = useState('');
   const [recebido, setRecebido] = useState(false);
   const [dataPagamento, setDataPagamento] = useState<Date>(new Date());
+
+  // Estados para parcelamento
+  const [numeroParcelas, setNumeroParcelas] = useState('');
+  const [intervaloDias, setIntervaloDias] = useState('30');
+  const [valorParcela, setValorParcela] = useState('');
 
   const resetForm = () => {
     setValor('');
@@ -71,6 +79,10 @@ export function StepAcerto({
     setObservacao('');
     setRecebido(false);
     setDataPagamento(new Date());
+    // Reset parcelamento
+    setNumeroParcelas('');
+    setIntervaloDias('30');
+    setValorParcela('');
   };
 
   const handleRecebidoChange = (checked: boolean) => {
@@ -86,6 +98,13 @@ export function StepAcerto({
     }
     return conta.banco;
   };
+
+  // Cálculo do total de parcelamento
+  const totalParcelamento = (() => {
+    const parcelas = parseInt(numeroParcelas) || 0;
+    const valorNum = unmaskCurrency(valorParcela);
+    return parcelas * valorNum;
+  })();
 
   const handleAddPayment = () => {
     if (!valor || !idFormaPagamento || !idConta) return;
@@ -105,6 +124,42 @@ export function StepAcerto({
       conta_descricao: conta ? getContaDisplayName(conta) : undefined,
     });
 
+    resetForm();
+    setDialogOpen(false);
+  };
+
+  const handleAddParcelamento = () => {
+    const parcelas = parseInt(numeroParcelas);
+    const intervalo = parseInt(intervaloDias);
+    const valorNum = unmaskCurrency(valorParcela);
+
+    if (!parcelas || parcelas < 1 || !intervalo || !valorNum || !idFormaPagamento || !idConta) {
+      toast.error('Preencha todos os campos do parcelamento');
+      return;
+    }
+
+    const forma = formasPagamento.find(f => f.id === idFormaPagamento);
+    const conta = contas.find(c => c.id === idConta);
+    const hoje = new Date();
+
+    // Gerar cada parcela
+    for (let i = 0; i < parcelas; i++) {
+      const dataVencimento = addDays(hoje, intervalo * i);
+      
+      addPayment({
+        id_forma_pagamento: idFormaPagamento,
+        id_conta: idConta,
+        valor: valorNum,
+        data_lancamento: format(dataVencimento, 'yyyy-MM-dd'),
+        data_pagamento: null,
+        numero: `${i + 1}/${parcelas}`,
+        observacao: observacao || null,
+        forma_descricao: forma?.descricao,
+        conta_descricao: conta ? getContaDisplayName(conta) : undefined,
+      });
+    }
+
+    toast.success(`Parcelamento adicionado com sucesso (${parcelas}x de ${maskCurrency(valorNum)})`);
     resetForm();
     setDialogOpen(false);
   };
@@ -275,139 +330,269 @@ export function StepAcerto({
               <TabsTrigger value="pagamento">Pagamento</TabsTrigger>
             </TabsList>
 
-            <TabsContent value={paymentType} className="space-y-4 mt-4">
-              <div className="space-y-2">
-                <Label>Valor</Label>
-                <Input
-                  value={valor}
-                  onChange={(e) => setValor(maskCurrency(unmaskCurrency(e.target.value)))}
-                  placeholder="R$ 0,00"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label>Conta</Label>
-                <Select value={idConta} onValueChange={setIdConta}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione a conta" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {contas.map(conta => (
-                      <SelectItem key={conta.id} value={conta.id}>
-                        {getContaDisplayName(conta)}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Forma</Label>
-                <Select value={idFormaPagamento} onValueChange={setIdFormaPagamento}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione a forma" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {formasPagamento.map(forma => (
-                      <SelectItem key={forma.id} value={forma.id}>
-                        {forma.descricao}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
+            {/* Tab Recebimento e Pagamento - mesmo formulário */}
+            {(paymentType === 'recebimento' || paymentType === 'pagamento') && (
+              <div className="space-y-4 mt-4">
                 <div className="space-y-2">
-                  <Label>Número</Label>
+                  <Label>Valor</Label>
                   <Input
-                    value={numero}
-                    onChange={(e) => setNumero(e.target.value)}
-                    placeholder="1"
+                    value={valor}
+                    onChange={(e) => setValor(maskCurrency(unmaskCurrency(e.target.value)))}
+                    placeholder="R$ 0,00"
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Previsão</Label>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button variant="outline" className="w-full justify-start">
-                        <Calendar className="w-4 h-4 mr-2" />
-                        {format(dataLancamento, 'dd/MM/yyyy')}
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <CalendarComponent
-                        mode="single"
-                        selected={dataLancamento}
-                        onSelect={(date) => date && setDataLancamento(date)}
-                        locale={ptBR}
-                        className="pointer-events-auto"
-                      />
-                    </PopoverContent>
-                  </Popover>
+                  <Label>Conta</Label>
+                  <Select value={idConta} onValueChange={setIdConta}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione a conta" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {contas.map(conta => (
+                        <SelectItem key={conta.id} value={conta.id}>
+                          {getContaDisplayName(conta)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
-              </div>
 
-              {/* Checkbox Recebido */}
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="recebido"
-                  checked={recebido}
-                  onCheckedChange={handleRecebidoChange}
-                />
-                <Label htmlFor="recebido" className="cursor-pointer">
-                  Recebido
-                </Label>
-              </div>
-
-              {/* Date Picker para Data de Pagamento - só aparece quando recebido=true */}
-              {recebido && (
                 <div className="space-y-2">
-                  <Label>Data do Pagamento</Label>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button variant="outline" className="w-full justify-start">
-                        <Calendar className="w-4 h-4 mr-2" />
-                        {format(dataPagamento, 'dd/MM/yyyy')}
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <CalendarComponent
-                        mode="single"
-                        selected={dataPagamento}
-                        onSelect={(date) => date && setDataPagamento(date)}
-                        locale={ptBR}
-                        className="pointer-events-auto"
-                      />
-                    </PopoverContent>
-                  </Popover>
+                  <Label>Forma</Label>
+                  <Select value={idFormaPagamento} onValueChange={setIdFormaPagamento}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione a forma" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {formasPagamento.map(forma => (
+                        <SelectItem key={forma.id} value={forma.id}>
+                          {forma.descricao}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
-              )}
 
-              <div className="space-y-2">
-                <Label>Descrição da forma</Label>
-                <Textarea
-                  value={observacao}
-                  onChange={(e) => setObservacao(e.target.value)}
-                  placeholder="Observações..."
-                  rows={2}
-                />
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Número</Label>
+                    <Input
+                      value={numero}
+                      onChange={(e) => setNumero(e.target.value)}
+                      placeholder="1"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Previsão</Label>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button variant="outline" className="w-full justify-start">
+                          <Calendar className="w-4 h-4 mr-2" />
+                          {format(dataLancamento, 'dd/MM/yyyy')}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <CalendarComponent
+                          mode="single"
+                          selected={dataLancamento}
+                          onSelect={(date) => date && setDataLancamento(date)}
+                          locale={ptBR}
+                          className="pointer-events-auto"
+                        />
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+                </div>
+
+                {/* Checkbox Recebido */}
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="recebido"
+                    checked={recebido}
+                    onCheckedChange={handleRecebidoChange}
+                  />
+                  <Label htmlFor="recebido" className="cursor-pointer">
+                    Recebido
+                  </Label>
+                </div>
+
+                {/* Date Picker para Data de Pagamento - só aparece quando recebido=true */}
+                {recebido && (
+                  <div className="space-y-2">
+                    <Label>Data do Pagamento</Label>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button variant="outline" className="w-full justify-start">
+                          <Calendar className="w-4 h-4 mr-2" />
+                          {format(dataPagamento, 'dd/MM/yyyy')}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <CalendarComponent
+                          mode="single"
+                          selected={dataPagamento}
+                          onSelect={(date) => date && setDataPagamento(date)}
+                          locale={ptBR}
+                          className="pointer-events-auto"
+                        />
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+                )}
+
+                <div className="space-y-2">
+                  <Label>Descrição da forma</Label>
+                  <Textarea
+                    value={observacao}
+                    onChange={(e) => setObservacao(e.target.value)}
+                    placeholder="Observações..."
+                    rows={2}
+                  />
+                </div>
               </div>
-            </TabsContent>
+            )}
+
+            {/* Tab Parcelamento - formulário específico */}
+            {paymentType === 'parcelamento' && (
+              <div className="space-y-4 mt-4">
+                <div className="glass rounded-lg p-4 border border-accent/30 animate-fade-in">
+                  <h4 className="text-sm font-medium text-accent mb-4">Configuração do Parcelamento</h4>
+                  
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Nº de Parcelas</Label>
+                      <Input
+                        type="number"
+                        min="1"
+                        value={numeroParcelas}
+                        onChange={(e) => setNumeroParcelas(e.target.value)}
+                        placeholder="Ex: 12"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Intervalo (dias)</Label>
+                      <Input
+                        type="number"
+                        min="1"
+                        value={intervaloDias}
+                        onChange={(e) => setIntervaloDias(e.target.value)}
+                        placeholder="Ex: 30"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4 mt-4">
+                    <div className="space-y-2">
+                      <Label>Valor da Parcela</Label>
+                      <Input
+                        value={valorParcela}
+                        onChange={(e) => setValorParcela(maskCurrency(unmaskCurrency(e.target.value)))}
+                        placeholder="R$ 0,00"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Total Calculado</Label>
+                      <div className="h-10 px-3 py-2 rounded-md border border-input bg-muted/50 flex items-center">
+                        <span className={cn(
+                          "font-medium",
+                          totalParcelamento > 0 ? "text-accent" : "text-muted-foreground"
+                        )}>
+                          {maskCurrency(totalParcelamento)}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Preview das parcelas */}
+                  {parseInt(numeroParcelas) > 0 && parseInt(intervaloDias) > 0 && (
+                    <div className="mt-4 pt-4 border-t border-border">
+                      <p className="text-xs text-muted-foreground mb-2">Prévia das datas:</p>
+                      <div className="flex flex-wrap gap-2">
+                        {Array.from({ length: Math.min(parseInt(numeroParcelas) || 0, 6) }).map((_, i) => (
+                          <span key={i} className="text-xs px-2 py-1 rounded bg-accent/10 text-accent">
+                            {i + 1}ª - {format(addDays(new Date(), (parseInt(intervaloDias) || 0) * i), 'dd/MM/yy')}
+                          </span>
+                        ))}
+                        {(parseInt(numeroParcelas) || 0) > 6 && (
+                          <span className="text-xs px-2 py-1 text-muted-foreground">
+                            +{(parseInt(numeroParcelas) || 0) - 6} parcelas...
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Conta</Label>
+                  <Select value={idConta} onValueChange={setIdConta}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione a conta" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {contas.map(conta => (
+                        <SelectItem key={conta.id} value={conta.id}>
+                          {getContaDisplayName(conta)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Forma de Pagamento</Label>
+                  <Select value={idFormaPagamento} onValueChange={setIdFormaPagamento}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione a forma" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {formasPagamento.map(forma => (
+                        <SelectItem key={forma.id} value={forma.id}>
+                          {forma.descricao}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Observações</Label>
+                  <Textarea
+                    value={observacao}
+                    onChange={(e) => setObservacao(e.target.value)}
+                    placeholder="Observações para todas as parcelas..."
+                    rows={2}
+                  />
+                </div>
+              </div>
+            )}
           </Tabs>
 
           <DialogFooter>
             <Button variant="outline" onClick={() => setDialogOpen(false)}>
               Cancelar
             </Button>
-            <Button 
-              onClick={handleAddPayment}
-              disabled={!valor || !idFormaPagamento || !idConta}
-              className="bg-accent hover:bg-accent/90"
-            >
-              Adicionar
-            </Button>
+            {paymentType === 'parcelamento' ? (
+              <Button 
+                onClick={handleAddParcelamento}
+                disabled={!numeroParcelas || !intervaloDias || !valorParcela || !idFormaPagamento || !idConta}
+                className="bg-accent hover:bg-accent/90"
+              >
+                Adicionar Parcelas
+              </Button>
+            ) : (
+              <Button 
+                onClick={handleAddPayment}
+                disabled={!valor || !idFormaPagamento || !idConta}
+                className="bg-accent hover:bg-accent/90"
+              >
+                Adicionar
+              </Button>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>
