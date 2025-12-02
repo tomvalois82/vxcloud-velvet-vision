@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Plus, Trash2, CreditCard, Wallet, Calendar, Landmark, Edit2 } from 'lucide-react';
+import { Plus, Trash2, CreditCard, Wallet, Calendar, Landmark, Edit2, ArrowDownCircle, ArrowUpCircle } from 'lucide-react';
 import { format, addDays } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Button } from '@/components/ui/button';
@@ -44,6 +44,8 @@ interface StepAcertoProps {
     totalTrocas: number;
     valorAReceber: number;
     totalPagamentos: number;
+    totalRecebimentos: number;
+    totalPagamentosSaida: number;
     totalFinanciamento: number;
     saldoPendente: number;
   };
@@ -223,19 +225,28 @@ export function StepAcerto({
 
     const forma = formasPagamento.find(f => f.id === idFormaPagamento);
     const conta = contas.find(c => c.id === idConta);
+    
+    // Se tipo é "pagamento", valor é negativo (loja paga ao cliente)
+    const valorNum = unmaskCurrency(valor);
+    const valorFinal = paymentType === 'pagamento' ? -Math.abs(valorNum) : Math.abs(valorNum);
 
     addPayment({
       id_forma_pagamento: idFormaPagamento,
       id_conta: idConta,
-      valor: unmaskCurrency(valor),
+      valor: valorFinal,
       data_lancamento: format(dataLancamento, 'yyyy-MM-dd'),
       data_pagamento: recebido ? format(dataPagamento, 'yyyy-MM-dd') : null,
       numero: numero || '1',
       observacao: observacao || null,
       forma_descricao: forma?.descricao,
       conta_descricao: conta ? getContaDisplayName(conta) : undefined,
+      tipo_lancamento: paymentType === 'pagamento' ? 'pagamento' : 'recebimento',
     });
 
+    toast.success(paymentType === 'pagamento' 
+      ? 'Pagamento (saída) adicionado com sucesso' 
+      : 'Recebimento adicionado com sucesso'
+    );
     resetForm();
     setDialogOpen(false);
   };
@@ -260,13 +271,14 @@ export function StepAcerto({
       addPayment({
         id_forma_pagamento: idFormaPagamento,
         id_conta: idConta,
-        valor: valorNum,
+        valor: valorNum, // Parcelamento é sempre recebimento (positivo)
         data_lancamento: format(dataVencimento, 'yyyy-MM-dd'),
         data_pagamento: null,
         numero: `${i + 1}/${parcelas}`,
         observacao: observacao || null,
         forma_descricao: forma?.descricao,
         conta_descricao: conta ? getContaDisplayName(conta) : undefined,
+        tipo_lancamento: 'recebimento',
       });
     }
 
@@ -322,7 +334,7 @@ export function StepAcerto({
             totals.valorAReceber >= 0 ? "bg-green-500/10 border border-green-500/30" : "bg-destructive/10 border border-destructive/30"
           )}>
             <span className={totals.valorAReceber >= 0 ? "text-green-500" : "text-destructive"}>
-              Total a receber do cliente
+              {totals.valorAReceber >= 0 ? "Total a receber do cliente" : "Total a pagar ao cliente"}
             </span>
             <span className={cn(
               "font-bold text-lg",
@@ -331,6 +343,32 @@ export function StepAcerto({
               {maskCurrency(Math.abs(totals.valorAReceber))}
             </span>
           </div>
+
+          {/* Recebimentos */}
+          {totals.totalRecebimentos > 0 && (
+            <div className="flex items-center justify-between py-2 border-b border-border">
+              <span className="text-green-500 flex items-center gap-2">
+                <ArrowUpCircle className="w-4 h-4" />
+                (+) Recebimentos (entradas)
+              </span>
+              <span className="text-green-500 font-medium">
+                + {maskCurrency(totals.totalRecebimentos)}
+              </span>
+            </div>
+          )}
+
+          {/* Pagamentos (Saídas) */}
+          {totals.totalPagamentosSaida > 0 && (
+            <div className="flex items-center justify-between py-2 border-b border-border">
+              <span className="text-destructive flex items-center gap-2">
+                <ArrowDownCircle className="w-4 h-4" />
+                (-) Pagamentos (saídas)
+              </span>
+              <span className="text-destructive font-medium">
+                - {maskCurrency(totals.totalPagamentosSaida)}
+              </span>
+            </div>
+          )}
         </div>
       </div>
 
@@ -358,34 +396,60 @@ export function StepAcerto({
           </div>
         ) : (
           <div className="space-y-2">
-            {saleData.pagamentos.map(payment => (
-              <div
-                key={payment.id}
-                className="glass rounded-lg p-4 flex items-center justify-between"
-              >
-                <div>
-                  <p className="font-medium text-foreground">
-                    {payment.forma_descricao || 'Pagamento'}
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    {payment.conta_descricao} • {format(new Date(payment.data_lancamento), 'dd/MM/yyyy')}
-                  </p>
+            {saleData.pagamentos.map(payment => {
+              const isPagamento = payment.tipo_lancamento === 'pagamento' || payment.valor < 0;
+              return (
+                <div
+                  key={payment.id}
+                  className={cn(
+                    "glass rounded-lg p-4 flex items-center justify-between",
+                    isPagamento ? "border border-destructive/30" : "border border-green-500/30"
+                  )}
+                >
+                  <div className="flex items-center gap-3">
+                    {isPagamento ? (
+                      <ArrowDownCircle className="w-5 h-5 text-destructive" />
+                    ) : (
+                      <ArrowUpCircle className="w-5 h-5 text-green-500" />
+                    )}
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <p className="font-medium text-foreground">
+                          {payment.forma_descricao || 'Pagamento'}
+                        </p>
+                        <span className={cn(
+                          "text-xs px-2 py-0.5 rounded-full",
+                          isPagamento 
+                            ? "bg-destructive/10 text-destructive" 
+                            : "bg-green-500/10 text-green-500"
+                        )}>
+                          {isPagamento ? 'Saída' : 'Entrada'}
+                        </span>
+                      </div>
+                      <p className="text-sm text-muted-foreground">
+                        {payment.conta_descricao} • {format(new Date(payment.data_lancamento), 'dd/MM/yyyy')}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-4">
+                    <span className={cn(
+                      "font-bold",
+                      isPagamento ? "text-destructive" : "text-green-500"
+                    )}>
+                      {isPagamento ? '- ' : '+ '}{maskCurrency(Math.abs(payment.valor))}
+                    </span>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => removePayment(payment.id)}
+                      className="text-destructive hover:text-destructive"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </div>
                 </div>
-                <div className="flex items-center gap-4">
-                  <span className="font-bold text-accent">
-                    {maskCurrency(payment.valor)}
-                  </span>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => removePayment(payment.id)}
-                    className="text-destructive hover:text-destructive"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>
@@ -546,22 +610,22 @@ export function StepAcerto({
             </div>
             <div>
               <p className="text-muted-foreground">Recebimentos</p>
-              <p className="font-bold text-green-500">{maskCurrency(totals.totalPagamentos)}</p>
+              <p className="font-bold text-green-500">{maskCurrency(totals.totalRecebimentos)}</p>
             </div>
             <div>
               <p className="text-muted-foreground">Total a receber</p>
-              <p className="font-bold text-green-500">{maskCurrency(totals.valorAReceber)}</p>
+              <p className="font-bold text-green-500">{maskCurrency(Math.abs(totals.valorAReceber))}</p>
             </div>
             <div>
-              <p className="text-muted-foreground">Líquido Compra</p>
-              <p className="font-bold text-destructive">R$ 0,00</p>
+              <p className="text-muted-foreground">Pagamentos (saída)</p>
+              <p className="font-bold text-destructive">{maskCurrency(totals.totalPagamentosSaida)}</p>
             </div>
             <div>
               <p className="text-muted-foreground">Troca Cliente</p>
               <p className="font-bold text-destructive">{maskCurrency(totals.totalTrocas)}</p>
             </div>
             <div>
-              <p className="text-muted-foreground">Falta receber</p>
+              <p className="text-muted-foreground">Saldo Pendente</p>
               <p className={cn("font-bold", getSaldoColor())}>
                 {maskCurrency(Math.abs(totals.saldoPendente))}
               </p>
@@ -579,6 +643,23 @@ export function StepAcerto({
             {/* Tab Recebimento e Pagamento - mesmo formulário */}
             {(paymentType === 'recebimento' || paymentType === 'pagamento') && (
               <div className="space-y-4 mt-4">
+                {/* Hint sobre o tipo */}
+                {paymentType === 'pagamento' ? (
+                  <div className="glass rounded-lg p-3 border border-destructive/30 bg-destructive/5">
+                    <p className="text-sm text-destructive flex items-center gap-2">
+                      <ArrowDownCircle className="w-4 h-4" />
+                      <span><strong>Pagamento (Saída):</strong> Valor que a loja paga ao cliente (ex: troco, diferença de troca)</span>
+                    </p>
+                  </div>
+                ) : (
+                  <div className="glass rounded-lg p-3 border border-green-500/30 bg-green-500/5">
+                    <p className="text-sm text-green-500 flex items-center gap-2">
+                      <ArrowUpCircle className="w-4 h-4" />
+                      <span><strong>Recebimento (Entrada):</strong> Valor que o cliente paga à loja</span>
+                    </p>
+                  </div>
+                )}
+
                 <div className="space-y-2">
                   <Label>Valor</Label>
                   <Input

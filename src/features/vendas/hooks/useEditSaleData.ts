@@ -142,17 +142,22 @@ export function useEditSaleData(saleId: string | null) {
               .eq('id', pag.id_conta)
               .single();
 
+            const valorNum = Number(pag.valor);
+            // Determina tipo_lancamento pelo sinal do valor
+            const tipoLancamento = valorNum < 0 ? 'pagamento' : 'recebimento';
+
             return {
               id: pag.id,
               id_forma_pagamento: pag.id_forma_pagamento,
               id_conta: pag.id_conta,
-              valor: Number(pag.valor),
+              valor: valorNum,
               data_lancamento: pag.data_lancamento,
               data_pagamento: pag.data_pagamento,
               numero: pag.numero,
               observacao: pag.observacao,
               forma_descricao: formaData?.descricao,
               conta_descricao: contaData?.banco,
+              tipo_lancamento: tipoLancamento as 'recebimento' | 'pagamento',
             };
           })
         );
@@ -540,7 +545,16 @@ export function useEditSaleData(saleId: string | null) {
 
   // Calculate totals
   const totalTrocas = saleData.trocas.reduce((sum, t) => sum + t.valor_troca, 0);
-  const totalPagamentos = saleData.pagamentos.reduce((sum, p) => sum + p.valor, 0);
+  // Recebimentos são valores positivos (cliente paga loja)
+  const totalRecebimentos = saleData.pagamentos
+    .filter(p => p.valor > 0)
+    .reduce((sum, p) => sum + p.valor, 0);
+  // Pagamentos são valores negativos (loja paga cliente) - usamos valor absoluto
+  const totalPagamentosSaida = saleData.pagamentos
+    .filter(p => p.valor < 0)
+    .reduce((sum, p) => sum + Math.abs(p.valor), 0);
+  // Total líquido de pagamentos = recebimentos - pagamentos (saída)
+  const totalPagamentos = totalRecebimentos - totalPagamentosSaida;
   const totalFinanciamento = saleData.financiamento?.valor || 0;
   // Total a receber do cliente = valor do veículo - trocas - financiamento
   const valorAReceber = saleData.valor_venda - totalTrocas - totalFinanciamento;
@@ -573,6 +587,8 @@ export function useEditSaleData(saleId: string | null) {
       totalTrocas,
       valorAReceber,
       totalPagamentos,
+      totalRecebimentos,
+      totalPagamentosSaida,
       totalFinanciamento,
       saldoPendente,
     },

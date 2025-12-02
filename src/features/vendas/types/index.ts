@@ -30,13 +30,14 @@ export interface PaymentEntry {
   id: string; // Unique ID for the payment entry
   id_forma_pagamento: string;
   id_conta: string;
-  valor: number;
+  valor: number; // Positivo = recebimento (entrada), Negativo = pagamento (saída)
   data_lancamento: string;
   data_pagamento: string | null;
   numero: string;
   observacao: string | null;
   forma_descricao?: string;
   conta_descricao?: string;
+  tipo_lancamento: 'recebimento' | 'pagamento'; // recebimento = cliente paga loja, pagamento = loja paga cliente
 }
 
 export interface SaleData {

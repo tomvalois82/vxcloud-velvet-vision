@@ -353,7 +353,16 @@ export function useSaleData(vehicleId: number | null) {
 
   // Calculate totals
   const totalTrocas = saleData.trocas.reduce((sum, t) => sum + t.valor_troca, 0);
-  const totalPagamentos = saleData.pagamentos.reduce((sum, p) => sum + p.valor, 0);
+  // Recebimentos são valores positivos (cliente paga loja)
+  const totalRecebimentos = saleData.pagamentos
+    .filter(p => p.valor > 0)
+    .reduce((sum, p) => sum + p.valor, 0);
+  // Pagamentos são valores negativos (loja paga cliente) - usamos valor absoluto
+  const totalPagamentosSaida = saleData.pagamentos
+    .filter(p => p.valor < 0)
+    .reduce((sum, p) => sum + Math.abs(p.valor), 0);
+  // Total líquido de pagamentos = recebimentos - pagamentos (saída)
+  const totalPagamentos = totalRecebimentos - totalPagamentosSaida;
   const totalFinanciamento = saleData.financiamento?.valor || 0;
   // Total a receber do cliente = valor do veículo - trocas - financiamento
   const valorAReceber = saleData.valor_venda - totalTrocas - totalFinanciamento;
@@ -386,6 +395,8 @@ export function useSaleData(vehicleId: number | null) {
       totalTrocas,
       valorAReceber,
       totalPagamentos,
+      totalRecebimentos,
+      totalPagamentosSaida,
       totalFinanciamento,
       saldoPendente,
     },
