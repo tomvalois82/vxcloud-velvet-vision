@@ -68,6 +68,13 @@ export function StepAcerto({
     setObservacao('');
   };
 
+  const getContaDisplayName = (conta: ContaFinanceira) => {
+    if (conta.descricao) {
+      return `${conta.banco} - ${conta.descricao}`;
+    }
+    return conta.banco;
+  };
+
   const handleAddPayment = () => {
     if (!valor || !idFormaPagamento || !idConta) return;
 
@@ -83,7 +90,7 @@ export function StepAcerto({
       numero: numero || '1',
       observacao: observacao || null,
       forma_descricao: forma?.descricao,
-      conta_descricao: conta?.banco,
+      conta_descricao: conta ? getContaDisplayName(conta) : undefined,
     });
 
     resetForm();
@@ -275,7 +282,7 @@ export function StepAcerto({
                   <SelectContent>
                     {contas.map(conta => (
                       <SelectItem key={conta.id} value={conta.id}>
-                        {conta.banco}
+                        {getContaDisplayName(conta)}
                       </SelectItem>
                     ))}
                   </SelectContent>
