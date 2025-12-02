@@ -1,6 +1,21 @@
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { Calendar, Save, CheckCircle, Loader2, Car, User, Users, ArrowLeftRight, Wallet } from 'lucide-react';
+import { 
+  Calendar, 
+  Save, 
+  CheckCircle, 
+  Loader2, 
+  Car, 
+  User, 
+  Users, 
+  ArrowLeftRight, 
+  Wallet,
+  AlertTriangle,
+  Landmark,
+  TrendingUp,
+  TrendingDown,
+  Minus
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -8,6 +23,7 @@ import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { maskCurrency } from '@/features/estoque/utils/masks';
 import type { SaleData } from '../../types';
+import { cn } from '@/lib/utils';
 
 interface StepConclusaoProps {
   saleData: SaleData;
@@ -18,6 +34,9 @@ interface StepConclusaoProps {
     totalTrocas: number;
     valorAReceber: number;
     totalPagamentos: number;
+    totalRecebimentos: number;
+    totalPagamentosSaida: number;
+    totalFinanciamento: number;
     saldoPendente: number;
   };
   onSave: () => void;
@@ -34,9 +53,21 @@ export function StepConclusao({
 }: StepConclusaoProps) {
   const canSave = saleData.id_cliente && saleData.id_vendedor && saleData.veiculo;
 
+  // Calcular diferença a receber (valor veículo - trocas)
+  const diferencaAReceber = totals.valorVeiculo - totals.totalTrocas;
+  
+  // Total recebido = recebimentos + financiamento - pagamentos saída
+  const totalRecebido = totals.totalRecebimentos + totals.totalFinanciamento - totals.totalPagamentosSaida;
+  
+  // Saldo final = diferença a receber - total recebido
+  const saldoFinal = diferencaAReceber - totalRecebido;
+
+  // Determinar status do saldo
+  const saldoStatus = saldoFinal === 0 ? 'ok' : saldoFinal > 0 ? 'pendente' : 'excesso';
+
   return (
     <div className="space-y-6">
-      {/* Sale Summary */}
+      {/* Sale Summary - Basic Info */}
       <div className="glass rounded-lg p-6 space-y-4">
         <h3 className="text-lg font-semibold flex items-center gap-2">
           <CheckCircle className="w-5 h-5 text-accent" />
@@ -55,9 +86,6 @@ export function StepConclusao({
             </p>
             <p className="text-sm text-muted-foreground">
               {saleData.veiculo?.ano} {saleData.veiculo?.placa && `• ${saleData.veiculo.placa}`}
-            </p>
-            <p className="text-accent font-bold">
-              {maskCurrency(totals.valorVeiculo)}
             </p>
           </div>
 
@@ -96,34 +124,144 @@ export function StepConclusao({
               {maskCurrency(totals.totalTrocas)}
             </p>
           </div>
-
-          {/* Financial */}
-          <div className="space-y-2 md:col-span-2">
-            <div className="flex items-center gap-2 text-muted-foreground">
-              <Wallet className="w-4 h-4" />
-              <span className="text-sm">Acerto Financeiro</span>
-            </div>
-            <div className="grid grid-cols-3 gap-4 text-center">
-              <div className="glass rounded-lg p-3">
-                <p className="text-xs text-muted-foreground">A Receber</p>
-                <p className="font-bold text-green-500">{maskCurrency(totals.valorAReceber)}</p>
-              </div>
-              <div className="glass rounded-lg p-3">
-                <p className="text-xs text-muted-foreground">Recebido</p>
-                <p className="font-bold text-accent">{maskCurrency(totals.totalPagamentos)}</p>
-              </div>
-              <div className="glass rounded-lg p-3">
-                <p className="text-xs text-muted-foreground">Pendente</p>
-                <p className={`font-bold ${totals.saldoPendente === 0 ? 'text-green-500' : 'text-yellow-500'}`}>
-                  {maskCurrency(totals.saldoPendente)}
-                </p>
-              </div>
-            </div>
-          </div>
         </div>
       </div>
 
-      {/* Date and Time */}
+      {/* Financial Summary - Detailed */}
+      <div className="glass rounded-lg p-6 space-y-4">
+        <h3 className="text-lg font-semibold flex items-center gap-2">
+          <Wallet className="w-5 h-5 text-accent" />
+          Resumo Financeiro
+        </h3>
+
+        <div className="space-y-3">
+          {/* Valor do Veículo */}
+          <div className="flex justify-between items-center py-2">
+            <span className="text-muted-foreground">Valor do Veículo</span>
+            <span className="font-semibold text-foreground">{maskCurrency(totals.valorVeiculo)}</span>
+          </div>
+
+          {/* Total em Trocas */}
+          <div className="flex justify-between items-center py-2">
+            <span className="text-muted-foreground flex items-center gap-2">
+              <Minus className="w-4 h-4 text-orange-500" />
+              Total em Trocas
+            </span>
+            <span className="font-semibold text-orange-500">- {maskCurrency(totals.totalTrocas)}</span>
+          </div>
+
+          {/* Divider */}
+          <div className="border-t border-border my-2" />
+
+          {/* Diferença a Receber */}
+          <div className="flex justify-between items-center py-2 bg-muted/30 rounded-lg px-3 -mx-3">
+            <span className="font-medium text-foreground">= Diferença a Receber</span>
+            <span className="font-bold text-foreground">{maskCurrency(diferencaAReceber)}</span>
+          </div>
+
+          {/* Divider */}
+          <div className="border-t border-border my-2" />
+
+          {/* Formas de Pagamento Header */}
+          <p className="text-xs text-muted-foreground uppercase tracking-wider pt-2">Formas de Pagamento</p>
+
+          {/* Recebimentos */}
+          <div className="flex justify-between items-center py-2">
+            <span className="text-muted-foreground flex items-center gap-2">
+              <TrendingUp className="w-4 h-4 text-green-500" />
+              Recebimentos (entradas)
+            </span>
+            <span className="font-semibold text-green-500">+ {maskCurrency(totals.totalRecebimentos)}</span>
+          </div>
+
+          {/* Financiamento */}
+          {totals.totalFinanciamento > 0 && (
+            <div className="flex justify-between items-center py-2">
+              <span className="text-muted-foreground flex items-center gap-2">
+                <Landmark className="w-4 h-4 text-blue-500" />
+                Financiamento
+              </span>
+              <span className="font-semibold text-blue-500">+ {maskCurrency(totals.totalFinanciamento)}</span>
+            </div>
+          )}
+
+          {/* Pagamentos (Saída) */}
+          {totals.totalPagamentosSaida > 0 && (
+            <div className="flex justify-between items-center py-2">
+              <span className="text-muted-foreground flex items-center gap-2">
+                <TrendingDown className="w-4 h-4 text-red-500" />
+                Pagamentos (saídas)
+              </span>
+              <span className="font-semibold text-red-500">- {maskCurrency(totals.totalPagamentosSaida)}</span>
+            </div>
+          )}
+
+          {/* Divider */}
+          <div className="border-t border-border my-2" />
+
+          {/* Total Recebido */}
+          <div className="flex justify-between items-center py-2 bg-muted/30 rounded-lg px-3 -mx-3">
+            <span className="font-medium text-foreground">= Total Recebido</span>
+            <span className="font-bold text-foreground">{maskCurrency(totalRecebido)}</span>
+          </div>
+
+          {/* Divider */}
+          <div className="border-t-2 border-border my-3" />
+
+          {/* Saldo Final */}
+          <div className={cn(
+            "flex justify-between items-center py-3 px-4 -mx-4 rounded-lg",
+            saldoStatus === 'ok' && "bg-green-500/10 border border-green-500/30",
+            saldoStatus === 'pendente' && "bg-yellow-500/10 border border-yellow-500/30",
+            saldoStatus === 'excesso' && "bg-red-500/10 border border-red-500/30"
+          )}>
+            <div className="flex items-center gap-2">
+              {saldoStatus === 'ok' && <CheckCircle className="w-5 h-5 text-green-500" />}
+              {saldoStatus === 'pendente' && <AlertTriangle className="w-5 h-5 text-yellow-500" />}
+              {saldoStatus === 'excesso' && <AlertTriangle className="w-5 h-5 text-red-500" />}
+              <div>
+                <span className="font-semibold text-foreground">SALDO FINAL</span>
+                <p className={cn(
+                  "text-xs",
+                  saldoStatus === 'ok' && "text-green-500",
+                  saldoStatus === 'pendente' && "text-yellow-500",
+                  saldoStatus === 'excesso' && "text-red-500"
+                )}>
+                  {saldoStatus === 'ok' && "Venda quitada"}
+                  {saldoStatus === 'pendente' && "Falta receber do cliente"}
+                  {saldoStatus === 'excesso' && "Valor recebido a mais"}
+                </p>
+              </div>
+            </div>
+            <span className={cn(
+              "text-xl font-bold",
+              saldoStatus === 'ok' && "text-green-500",
+              saldoStatus === 'pendente' && "text-yellow-500",
+              saldoStatus === 'excesso' && "text-red-500"
+            )}>
+              {maskCurrency(Math.abs(saldoFinal))}
+            </span>
+          </div>
+        </div>
+
+        {/* Financing Details */}
+        {saleData.financiamento && (
+          <div className="mt-4 pt-4 border-t border-border">
+            <p className="text-xs text-muted-foreground uppercase tracking-wider mb-2">Detalhes do Financiamento</p>
+            <div className="glass rounded-lg p-3 space-y-1">
+              {saleData.financiamento.financeira_nome && (
+                <p className="text-sm"><span className="text-muted-foreground">Financeira:</span> <span className="font-medium">{saleData.financiamento.financeira_nome}</span></p>
+              )}
+              <p className="text-sm"><span className="text-muted-foreground">Valor Financiado:</span> <span className="font-medium">{maskCurrency(saleData.financiamento.valor)}</span></p>
+              {saleData.financiamento.numero_prestacao && saleData.financiamento.valor_prestacao && (
+                <p className="text-sm"><span className="text-muted-foreground">Parcelas:</span> <span className="font-medium">{saleData.financiamento.numero_prestacao}x de {maskCurrency(saleData.financiamento.valor_prestacao)}</span></p>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Date and Observations */}
       <div className="glass rounded-lg p-6 space-y-4">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="space-y-2">
