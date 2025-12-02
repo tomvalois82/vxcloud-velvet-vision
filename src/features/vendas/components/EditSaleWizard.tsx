@@ -46,14 +46,22 @@ export function EditSaleWizard({ saleId, onClose }: EditSaleWizardProps) {
   };
 
   const handleSave = async () => {
+    console.log('=== handleSave CHAMADO ===');
+    console.log('saleData atual:', saleData);
+    console.log('saleData.financiamento:', saleData.financiamento);
     const result = await saveSale(false);
+    console.log('Resultado do saveSale:', result);
     if (result) {
       navigate('/vendas');
     }
   };
 
   const handleSaveAndClose = async () => {
+    console.log('=== handleSaveAndClose CHAMADO ===');
+    console.log('saleData atual:', saleData);
+    console.log('saleData.financiamento:', saleData.financiamento);
     const result = await saveSale(true);
+    console.log('Resultado do saveSale:', result);
     if (result) {
       navigate('/vendas');
     }
