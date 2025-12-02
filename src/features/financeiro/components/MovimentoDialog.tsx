@@ -73,6 +73,7 @@ interface Veiculo {
   modelo: string | null;
   placa: string | null;
   ano: string | null;
+  status: string | null;
 }
 
 interface Movimento {
@@ -136,24 +137,60 @@ export function MovimentoDialog({
     const fetchData = async () => {
       setLoadingData(true);
       try {
-        const [contasRes, categoriasRes, veiculosRes] = await Promise.all([
+        // Calculate date 3 months ago
+        const tresMesesAtras = new Date();
+        tresMesesAtras.setMonth(tresMesesAtras.getMonth() - 3);
+
+        const [contasRes, categoriasRes, veiculosEstoqueRes, vendasRecentesRes] = await Promise.all([
           supabase.from("vx_fin_conta").select("*").order("banco"),
           supabase.from("vx_fin_categoria").select("*").eq("ativo", true).order("categoria"),
+          // Query 1: Veículos em estoque (não vendidos)
           supabase
             .from("estoque")
-            .select("id, fabricante, modelo, placa, ano")
+            .select("id, fabricante, modelo, placa, ano, status")
             .neq("status", "Vendido")
             .order("fabricante")
             .order("modelo"),
+          // Query 2: Veículos vendidos nos últimos 3 meses
+          supabase
+            .from("vx_vendas")
+            .select(`
+              id_veiculo_vendido,
+              estoque!id_veiculo_vendido (id, fabricante, modelo, placa, ano, status)
+            `)
+            .eq("fechada", true)
+            .gte("data_venda", tresMesesAtras.toISOString()),
         ]);
 
         if (contasRes.error) throw contasRes.error;
         if (categoriasRes.error) throw categoriasRes.error;
-        if (veiculosRes.error) throw veiculosRes.error;
+        if (veiculosEstoqueRes.error) throw veiculosEstoqueRes.error;
+        if (vendasRecentesRes.error) throw vendasRecentesRes.error;
+
+        // Combine vehicles from stock + recently sold (without duplicates)
+        const veiculosEmEstoque = (veiculosEstoqueRes.data || []) as Veiculo[];
+        const veiculosVendidosRecentes = (vendasRecentesRes.data || [])
+          .map((v: any) => v.estoque)
+          .filter((v: any): v is Veiculo => v !== null);
+
+        const todosVeiculosMap = new Map<number, Veiculo>();
+        veiculosEmEstoque.forEach((v) => todosVeiculosMap.set(v.id, v));
+        veiculosVendidosRecentes.forEach((v) => {
+          if (!todosVeiculosMap.has(v.id)) {
+            todosVeiculosMap.set(v.id, v);
+          }
+        });
+
+        const todosVeiculos = Array.from(todosVeiculosMap.values())
+          .sort((a, b) => {
+            const fabA = a.fabricante || '';
+            const fabB = b.fabricante || '';
+            return fabA.localeCompare(fabB);
+          });
 
         setContas(contasRes.data || []);
         setCategorias(categoriasRes.data || []);
-        setVeiculos(veiculosRes.data || []);
+        setVeiculos(todosVeiculos);
       } catch (error: any) {
         toast({
           title: "Erro ao carregar dados",
@@ -225,7 +262,8 @@ export function MovimentoDialog({
   const getVeiculoDisplayName = (veiculo: Veiculo) => {
     const parts = [veiculo.fabricante, veiculo.modelo, veiculo.ano].filter(Boolean);
     const base = parts.join(" ") || "Veículo sem nome";
-    return veiculo.placa ? `${base} - ${veiculo.placa}` : base;
+    const withPlaca = veiculo.placa ? `${base} - ${veiculo.placa}` : base;
+    return veiculo.status === "Vendido" ? `${withPlaca} [Vendido]` : withPlaca;
   };
 
   const onSubmit = async (data: FormData) => {
