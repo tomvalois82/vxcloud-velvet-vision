@@ -741,7 +741,7 @@ export function StepAcerto({
                     onCheckedChange={handleRecebidoChange}
                   />
                   <Label htmlFor="recebido" className="cursor-pointer">
-                    Recebido
+                    {paymentType === 'pagamento' ? 'Pago' : 'Recebido'}
                   </Label>
                 </div>
 
