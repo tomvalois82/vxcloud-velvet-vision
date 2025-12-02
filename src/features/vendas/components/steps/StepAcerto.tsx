@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   Select,
   SelectContent,
@@ -58,6 +59,8 @@ export function StepAcerto({
   const [numero, setNumero] = useState('');
   const [dataLancamento, setDataLancamento] = useState<Date>(new Date());
   const [observacao, setObservacao] = useState('');
+  const [recebido, setRecebido] = useState(false);
+  const [dataPagamento, setDataPagamento] = useState<Date>(new Date());
 
   const resetForm = () => {
     setValor('');
@@ -66,6 +69,15 @@ export function StepAcerto({
     setNumero('');
     setDataLancamento(new Date());
     setObservacao('');
+    setRecebido(false);
+    setDataPagamento(new Date());
+  };
+
+  const handleRecebidoChange = (checked: boolean) => {
+    setRecebido(checked);
+    if (checked) {
+      setDataPagamento(dataLancamento);
+    }
   };
 
   const getContaDisplayName = (conta: ContaFinanceira) => {
@@ -86,7 +98,7 @@ export function StepAcerto({
       id_conta: idConta,
       valor: unmaskCurrency(valor),
       data_lancamento: format(dataLancamento, 'yyyy-MM-dd'),
-      data_pagamento: null,
+      data_pagamento: recebido ? format(dataPagamento, 'yyyy-MM-dd') : null,
       numero: numero || '1',
       observacao: observacao || null,
       forma_descricao: forma?.descricao,
@@ -336,6 +348,42 @@ export function StepAcerto({
                   </Popover>
                 </div>
               </div>
+
+              {/* Checkbox Recebido */}
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="recebido"
+                  checked={recebido}
+                  onCheckedChange={handleRecebidoChange}
+                />
+                <Label htmlFor="recebido" className="cursor-pointer">
+                  Recebido
+                </Label>
+              </div>
+
+              {/* Date Picker para Data de Pagamento - só aparece quando recebido=true */}
+              {recebido && (
+                <div className="space-y-2">
+                  <Label>Data do Pagamento</Label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" className="w-full justify-start">
+                        <Calendar className="w-4 h-4 mr-2" />
+                        {format(dataPagamento, 'dd/MM/yyyy')}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <CalendarComponent
+                        mode="single"
+                        selected={dataPagamento}
+                        onSelect={(date) => date && setDataPagamento(date)}
+                        locale={ptBR}
+                        className="pointer-events-auto"
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </div>
+              )}
 
               <div className="space-y-2">
                 <Label>Descrição da forma</Label>
