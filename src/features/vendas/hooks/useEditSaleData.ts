@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import type { 
@@ -40,6 +40,15 @@ export function useEditSaleData(saleId: string | null) {
   const [contas, setContas] = useState<ContaFinanceira[]>([]);
   const [financeiras, setFinanceiras] = useState<Financeira[]>([]);
   const [originalVehicleId, setOriginalVehicleId] = useState<number | null>(null);
+
+  // Ref para manter referência atualizada do saleData (evita stale closure)
+  const saleDataRef = useRef<SaleData>(saleData);
+  
+  // Manter a ref sempre sincronizada com o estado
+  useEffect(() => {
+    saleDataRef.current = saleData;
+    console.log('saleDataRef atualizada:', saleDataRef.current.financiamento);
+  }, [saleData]);
 
   // Load existing sale data
   useEffect(() => {
@@ -376,7 +385,13 @@ export function useEditSaleData(saleId: string | null) {
   }, []);
 
   const saveSale = useCallback(async (fecharVenda: boolean = false) => {
-    if (!saleId || !saleData.veiculo || !saleData.id_cliente) {
+    // Usar ref para garantir dados mais recentes (evita stale closure)
+    const currentSaleData = saleDataRef.current;
+    
+    console.log('=== INICIANDO SAVE SALE ===');
+    console.log('currentSaleData.financiamento:', currentSaleData.financiamento);
+    
+    if (!saleId || !currentSaleData.veiculo || !currentSaleData.id_cliente) {
       toast({
         title: 'Erro',
         description: 'Veículo e cliente são obrigatórios',
@@ -391,11 +406,11 @@ export function useEditSaleData(saleId: string | null) {
       const { error: vendaError } = await supabase
         .from('vx_vendas')
         .update({
-          id_cliente: saleData.id_cliente,
-          valor_total_venda: saleData.valor_venda,
-          data_venda: saleData.data_venda.toISOString(),
-          id_vendedor: saleData.id_vendedor,
-          observacoes: saleData.observacoes || null,
+          id_cliente: currentSaleData.id_cliente,
+          valor_total_venda: currentSaleData.valor_venda,
+          data_venda: currentSaleData.data_venda.toISOString(),
+          id_vendedor: currentSaleData.id_vendedor,
+          observacoes: currentSaleData.observacoes || null,
           fechada: fecharVenda,
         })
         .eq('id', saleId);
@@ -408,8 +423,8 @@ export function useEditSaleData(saleId: string | null) {
         .delete()
         .eq('id_venda', saleId);
 
-      if (saleData.trocas.length > 0) {
-        const trocasInsert = saleData.trocas.map(troca => ({
+      if (currentSaleData.trocas.length > 0) {
+        const trocasInsert = currentSaleData.trocas.map(troca => ({
           id_venda: saleId,
           id_veiculo_troca: troca.vehicle.id,
           valor_troca: troca.valor_troca,
@@ -428,8 +443,8 @@ export function useEditSaleData(saleId: string | null) {
         .delete()
         .eq('id_venda', saleId);
 
-      if (saleData.pagamentos.length > 0) {
-        const pagamentosInsert = saleData.pagamentos.map(pag => ({
+      if (currentSaleData.pagamentos.length > 0) {
+        const pagamentosInsert = currentSaleData.pagamentos.map(pag => ({
           id_venda: saleId,
           id_forma_pagamento: pag.id_forma_pagamento,
           id_conta: pag.id_conta,
@@ -449,7 +464,7 @@ export function useEditSaleData(saleId: string | null) {
 
       // Delete existing financiamento and recreate
       console.log('=== SALVANDO FINANCIAMENTO ===');
-      console.log('saleData.financiamento atual:', saleData.financiamento);
+      console.log('currentSaleData.financiamento:', currentSaleData.financiamento);
       
       const { error: deleteFinError } = await supabase
         .from('vx_vendas_financiamento')
@@ -458,22 +473,22 @@ export function useEditSaleData(saleId: string | null) {
       
       console.log('Financiamento anterior deletado, erro:', deleteFinError);
 
-      if (saleData.financiamento) {
+      if (currentSaleData.financiamento) {
         const financiamentoInsert = {
           id_venda: saleId,
-          id_veiculo: saleData.veiculo!.id,
-          id_financeira: saleData.financiamento.id_financeira,
-          id_conta_destino: saleData.financiamento.id_conta_destino,
-          valor: saleData.financiamento.valor,
-          valor_r: saleData.financiamento.valor_r,
-          plus: saleData.financiamento.plus,
-          tac: saleData.financiamento.tac,
-          valor_tac: saleData.financiamento.valor_tac,
-          numero_contrato: saleData.financiamento.numero_contrato,
-          numero_prestacao: saleData.financiamento.numero_prestacao,
-          valor_prestacao: saleData.financiamento.valor_prestacao,
-          dados_financiamento: saleData.financiamento.dados_financiamento,
-          data_vencimento_inicial: saleData.financiamento.data_vencimento_inicial,
+          id_veiculo: currentSaleData.veiculo!.id,
+          id_financeira: currentSaleData.financiamento.id_financeira,
+          id_conta_destino: currentSaleData.financiamento.id_conta_destino,
+          valor: currentSaleData.financiamento.valor,
+          valor_r: currentSaleData.financiamento.valor_r,
+          plus: currentSaleData.financiamento.plus,
+          tac: currentSaleData.financiamento.tac,
+          valor_tac: currentSaleData.financiamento.valor_tac,
+          numero_contrato: currentSaleData.financiamento.numero_contrato,
+          numero_prestacao: currentSaleData.financiamento.numero_prestacao,
+          valor_prestacao: currentSaleData.financiamento.valor_prestacao,
+          dados_financiamento: currentSaleData.financiamento.dados_financiamento,
+          data_vencimento_inicial: currentSaleData.financiamento.data_vencimento_inicial,
         };
         
         console.log('Inserindo financiamento:', financiamentoInsert);
@@ -521,7 +536,7 @@ export function useEditSaleData(saleId: string | null) {
     } finally {
       setSaving(false);
     }
-  }, [saleId, saleData, originalVehicleId]);
+  }, [saleId, originalVehicleId]);
 
   // Calculate totals
   const totalTrocas = saleData.trocas.reduce((sum, t) => sum + t.valor_troca, 0);
