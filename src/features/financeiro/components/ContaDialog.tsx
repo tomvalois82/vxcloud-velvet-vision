@@ -118,20 +118,6 @@ export function ContaDialog({ open, onOpenChange, conta, onSuccess }: ContaDialo
     }
   }, [open, conta]);
 
-  const checkDuplicate = async (nome: string, excludeId?: string): Promise<boolean> => {
-    let query = supabase
-      .from("vx_fin_conta")
-      .select("id")
-      .ilike("banco", nome);
-
-    if (excludeId) {
-      query = query.neq("id", excludeId);
-    }
-
-    const { data } = await query;
-    return (data && data.length > 0) || false;
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setBancoError("");
@@ -144,13 +130,6 @@ export function ContaDialog({ open, onOpenChange, conta, onSuccess }: ContaDialo
     setLoading(true);
 
     try {
-      const isDuplicate = await checkDuplicate(banco.trim(), conta?.id);
-      if (isDuplicate) {
-        setBancoError("Já existe uma conta com este banco");
-        setLoading(false);
-        return;
-      }
-
       const contaData = {
         banco: banco.trim(),
         descricao: descricao.trim() || null,
