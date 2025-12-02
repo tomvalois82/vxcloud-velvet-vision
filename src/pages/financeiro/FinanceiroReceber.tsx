@@ -66,6 +66,7 @@ interface Movimento {
   id_empresa: string;
   observacoes: string | null;
   status: string;
+  id_estoque: number | null;
   vx_fin_conta: { banco: string; descricao: string | null } | null;
   vx_fin_categoria: { categoria: string } | null;
 }
