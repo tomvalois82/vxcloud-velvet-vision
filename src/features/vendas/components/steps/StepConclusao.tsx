@@ -81,8 +81,8 @@ export function StepConclusao({
   // Saldo final = diferença a receber - total recebido
   const saldoFinal = diferencaAReceber - totalRecebido;
 
-  // Determinar status do saldo
-  const saldoStatus = saldoFinal === 0 ? 'ok' : saldoFinal > 0 ? 'pendente' : 'excesso';
+  // Determinar status do saldo (usando tolerância de 0.01 para arredondamento)
+  const saldoStatus = Math.abs(saldoFinal) <= 0.01 ? 'ok' : saldoFinal > 0 ? 'pendente' : 'excesso';
 
   // Handler para atualizar hora/minuto preservando a data
   const handleTimeChange = (type: 'hours' | 'minutes', value: string) => {
