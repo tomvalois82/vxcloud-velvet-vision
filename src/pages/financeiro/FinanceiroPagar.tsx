@@ -94,7 +94,7 @@ const FinanceiroPagar = () => {
           vx_fin_conta!id_conta (banco, descricao),
           vx_fin_categoria (categoria)
         `)
-        .eq("tipo_movimento", "pagar")
+        .eq("tipo_movimento", "Pagar")
         .order("data_vencimento", { ascending: true });
 
       if (error) throw error;
@@ -382,7 +382,7 @@ const FinanceiroPagar = () => {
         open={dialogOpen}
         onOpenChange={setDialogOpen}
         movimento={selectedMovimento}
-        defaultTipo="pagar"
+        defaultTipo="Pagar"
         onSuccess={fetchMovimentos}
       />
 

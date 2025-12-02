@@ -94,7 +94,7 @@ const FinanceiroReceber = () => {
           vx_fin_conta!id_conta (banco, descricao),
           vx_fin_categoria (categoria)
         `)
-        .eq("tipo_movimento", "receber")
+        .eq("tipo_movimento", "Receber")
         .order("data_vencimento", { ascending: true });
 
       if (error) throw error;
@@ -382,7 +382,7 @@ const FinanceiroReceber = () => {
         open={dialogOpen}
         onOpenChange={setDialogOpen}
         movimento={selectedMovimento}
-        defaultTipo="receber"
+        defaultTipo="Receber"
         onSuccess={fetchMovimentos}
       />
 
