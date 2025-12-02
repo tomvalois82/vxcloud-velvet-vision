@@ -43,7 +43,7 @@ import { useToast } from "@/hooks/use-toast";
 import { maskCurrency, unmaskCurrency } from "@/features/estoque/utils/masks";
 
 const formSchema = z.object({
-  tipo_movimento: z.enum(["pagar", "receber"]),
+  tipo_movimento: z.enum(["Pagar", "Receber"]),
   descricao: z.string().min(1, "Descrição é obrigatória"),
   valor_bruto: z.string().min(1, "Valor é obrigatório"),
   data_vencimento: z.date({ required_error: "Data de vencimento é obrigatória" }),
@@ -95,7 +95,7 @@ interface MovimentoDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   movimento: Movimento | null;
-  defaultTipo?: "pagar" | "receber";
+  defaultTipo?: "Pagar" | "Receber";
   onSuccess: () => void;
 }
 
@@ -103,7 +103,7 @@ export function MovimentoDialog({
   open,
   onOpenChange,
   movimento,
-  defaultTipo = "receber",
+  defaultTipo = "Receber",
   onSuccess,
 }: MovimentoDialogProps) {
   const { toast } = useToast();
@@ -175,7 +175,7 @@ export function MovimentoDialog({
     if (open) {
       if (movimento) {
         form.reset({
-          tipo_movimento: movimento.tipo_movimento as "pagar" | "receber",
+          tipo_movimento: movimento.tipo_movimento as "Pagar" | "Receber",
           descricao: movimento.descricao,
           valor_bruto: maskCurrency(movimento.valor_bruto),
           data_vencimento: new Date(movimento.data_vencimento + "T00:00:00"),
@@ -211,7 +211,7 @@ export function MovimentoDialog({
 
   // Filter categorias based on tipo_movimento
   const filteredCategorias = categorias.filter((cat) => {
-    if (tipoMovimento === "receber") {
+    if (tipoMovimento === "Receber") {
       return cat.operacao === "Receber";
     } else {
       return cat.operacao === "Pagar";
@@ -339,8 +339,8 @@ export function MovimentoDialog({
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="receber">Receita (A Receber)</SelectItem>
-                        <SelectItem value="pagar">Despesa (A Pagar)</SelectItem>
+                        <SelectItem value="Receber">Receita (A Receber)</SelectItem>
+                        <SelectItem value="Pagar">Despesa (A Pagar)</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />
