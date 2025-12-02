@@ -8,9 +8,11 @@ import type {
   TradeInVehicle, 
   PaymentEntry,
   FinanciamentoEntry,
+  ServicoProdutoEntry,
   FormaPagamento,
   ContaFinanceira,
-  Financeira
+  Financeira,
+  CategoriaFinanceira
 } from '../types';
 
 const initialSaleData: SaleData = {
@@ -25,6 +27,7 @@ const initialSaleData: SaleData = {
   trocas: [],
   pagamentos: [],
   financiamento: null,
+  servicosProdutos: [],
   data_venda: new Date(),
   observacoes: '',
 };
@@ -39,6 +42,7 @@ export function useEditSaleData(saleId: string | null) {
   const [formasPagamento, setFormasPagamento] = useState<FormaPagamento[]>([]);
   const [contas, setContas] = useState<ContaFinanceira[]>([]);
   const [financeiras, setFinanceiras] = useState<Financeira[]>([]);
+  const [categorias, setCategorias] = useState<CategoriaFinanceira[]>([]);
   const [originalVehicleId, setOriginalVehicleId] = useState<number | null>(null);
 
   // Ref para manter referência atualizada do saleData (evita stale closure)
@@ -174,6 +178,7 @@ export function useEditSaleData(saleId: string | null) {
           trocas,
           pagamentos,
           financiamento: null, // Será carregado separadamente
+          servicosProdutos: [], // Será carregado separadamente
           data_venda: new Date(vendaData.data_venda),
           observacoes: vendaData.observacoes || '',
         });

@@ -59,6 +59,7 @@ export interface SaleData {
   // Step 4 - Acerto
   pagamentos: PaymentEntry[];
   financiamento: FinanciamentoEntry | null;
+  servicosProdutos: ServicoProdutoEntry[];
   
   // Step 5 - Conclusão
   data_venda: Date;
@@ -101,6 +102,22 @@ export interface FinanciamentoEntry {
   data_vencimento_inicial: string | null;
   financeira_nome?: string;
   conta_descricao?: string;
+}
+
+export interface ServicoProdutoEntry {
+  id: string;
+  descricao: string;
+  valor: number;
+  id_categoria: string;
+  id_veiculo: number | null;
+  categoria_nome?: string;
+}
+
+export interface CategoriaFinanceira {
+  id: string;
+  categoria: string;
+  operacao: string;
+  ativo: boolean;
 }
 
 export const SALE_STEPS = [
