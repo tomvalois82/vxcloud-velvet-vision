@@ -278,6 +278,48 @@ export function useEditSaleData(saleId: string | null) {
         
         setFinanceiras(financeirasData || []);
 
+        // Load categorias (para produtos/serviços)
+        const { data: categoriasData } = await supabase
+          .from('vx_fin_categoria')
+          .select('id, categoria, operacao, ativo')
+          .eq('ativo', true)
+          .eq('operacao', 'Receber')
+          .order('categoria');
+        
+        setCategorias(categoriasData || []);
+
+        // Load servicosProdutos existentes
+        const { data: servicosProdutosData } = await supabase
+          .from('vx_vendas_servico_produto')
+          .select('*')
+          .eq('id_venda', saleId);
+
+        if (servicosProdutosData) {
+          const servicosComCategoria: ServicoProdutoEntry[] = await Promise.all(
+            servicosProdutosData.map(async (sp) => {
+              const { data: catData } = await supabase
+                .from('vx_fin_categoria')
+                .select('categoria')
+                .eq('id', sp.id_categoria)
+                .single();
+              
+              return {
+                id: sp.id,
+                descricao: sp.descricao,
+                valor: Number(sp.valor),
+                id_categoria: sp.id_categoria,
+                id_veiculo: sp.id_veiculo,
+                categoria_nome: catData?.categoria,
+              };
+            })
+          );
+
+          setSaleData(prev => ({
+            ...prev,
+            servicosProdutos: servicosComCategoria,
+          }));
+        }
+
       } catch (error) {
         console.error('Error loading sale data:', error);
         toast({
@@ -391,6 +433,34 @@ export function useEditSaleData(saleId: string | null) {
     setSaleData(prev => ({
       ...prev,
       financiamento: null,
+    }));
+  }, []);
+
+  // Funções para Produtos/Serviços
+  const addServicoProduto = useCallback((item: Omit<ServicoProdutoEntry, 'id'>) => {
+    const newItem: ServicoProdutoEntry = {
+      ...item,
+      id: crypto.randomUUID(),
+    };
+    setSaleData(prev => ({
+      ...prev,
+      servicosProdutos: [...prev.servicosProdutos, newItem],
+    }));
+  }, []);
+
+  const removeServicoProduto = useCallback((id: string) => {
+    setSaleData(prev => ({
+      ...prev,
+      servicosProdutos: prev.servicosProdutos.filter(s => s.id !== id),
+    }));
+  }, []);
+
+  const updateServicoProduto = useCallback((id: string, item: Omit<ServicoProdutoEntry, 'id'>) => {
+    setSaleData(prev => ({
+      ...prev,
+      servicosProdutos: prev.servicosProdutos.map(s => 
+        s.id === id ? { ...item, id } : s
+      ),
     }));
   }, []);
 
@@ -519,6 +589,28 @@ export function useEditSaleData(saleId: string | null) {
         console.log('Nenhum financiamento para inserir');
       }
 
+      // Delete existing servicosProdutos and recreate
+      await supabase
+        .from('vx_vendas_servico_produto')
+        .delete()
+        .eq('id_venda', saleId);
+
+      if (currentSaleData.servicosProdutos.length > 0) {
+        const servicosInsert = currentSaleData.servicosProdutos.map(sp => ({
+          id_venda: saleId,
+          descricao: sp.descricao,
+          valor: sp.valor,
+          id_categoria: sp.id_categoria,
+          id_veiculo: sp.id_veiculo,
+        }));
+
+        const { error: servicosError } = await supabase
+          .from('vx_vendas_servico_produto')
+          .insert(servicosInsert);
+
+        if (servicosError) throw servicosError;
+      }
+
       // Update vehicle status if closing sale
       if (fecharVenda && originalVehicleId) {
         const { error: updateError } = await supabase
@@ -550,6 +642,7 @@ export function useEditSaleData(saleId: string | null) {
 
   // Calculate totals
   const totalTrocas = saleData.trocas.reduce((sum, t) => sum + t.valor_troca, 0);
+  const totalServicosProdutos = saleData.servicosProdutos.reduce((sum, s) => sum + s.valor, 0);
   // Recebimentos são valores positivos (cliente paga loja)
   const totalRecebimentos = saleData.pagamentos
     .filter(p => p.valor > 0)
@@ -561,8 +654,8 @@ export function useEditSaleData(saleId: string | null) {
   // Total líquido de pagamentos = recebimentos - pagamentos (saída)
   const totalPagamentos = totalRecebimentos - totalPagamentosSaida;
   const totalFinanciamento = saleData.financiamento?.valor || 0;
-  // Total a receber do cliente = valor do veículo - trocas - financiamento
-  const valorAReceber = saleData.valor_venda - totalTrocas - totalFinanciamento;
+  // Total a receber do cliente = valor do veículo + serviços/produtos - trocas - financiamento
+  const valorAReceber = saleData.valor_venda + totalServicosProdutos - totalTrocas - totalFinanciamento;
   // Saldo pendente = o que falta receber em pagamentos diretos
   const saldoPendente = valorAReceber - totalPagamentos;
 
@@ -576,6 +669,7 @@ export function useEditSaleData(saleId: string | null) {
     formasPagamento,
     contas,
     financeiras,
+    categorias,
     updateSaleData,
     setCliente,
     setVendedor,
@@ -586,10 +680,14 @@ export function useEditSaleData(saleId: string | null) {
     removePayment,
     setFinanciamento,
     removeFinanciamento,
+    addServicoProduto,
+    removeServicoProduto,
+    updateServicoProduto,
     saveSale,
     totals: {
       valorVeiculo: saleData.valor_venda,
       totalTrocas,
+      totalServicosProdutos,
       valorAReceber,
       totalPagamentos,
       totalRecebimentos,
