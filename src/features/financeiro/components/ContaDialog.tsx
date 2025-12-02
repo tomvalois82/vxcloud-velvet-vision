@@ -1,12 +1,85 @@
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2 } from "lucide-react";
+
+const BANCOS_BRASILEIROS = [
+  // Bancos Tradicionais
+  "Banco do Brasil",
+  "Bradesco",
+  "Itaú Unibanco",
+  "Santander",
+  "Caixa Econômica Federal",
+  "Banrisul",
+  "BRB - Banco de Brasília",
+  "Safra",
+  "BTG Pactual",
+  "Votorantim",
+  "Citibank",
+  "Sicredi",
+  "Sicoob",
+  "Banestes",
+  "Banco do Nordeste (BNB)",
+  "Banco da Amazônia (BASA)",
+  "Banpará",
+  "BRDE",
+  "Banco Pine",
+  "ABC Brasil",
+  "Banco Alfa",
+  "Banco Industrial",
+  
+  // Fintechs e Bancos Digitais
+  "Nubank",
+  "Banco Inter",
+  "C6 Bank",
+  "PagBank (PagSeguro)",
+  "Neon",
+  "Next",
+  "Banco Original",
+  "Agibank",
+  "Mercado Pago",
+  "PicPay",
+  "Iti Itaú",
+  "Will Bank",
+  "99Pay",
+  "RecargaPay",
+  "Stone",
+  "Ame Digital",
+  "XP Investimentos",
+  "Banco Modal",
+  "Daycoval",
+  "BS2",
+  "Banco Bari",
+  "Banco Pan",
+  "BMG",
+  "Sofisa Direto",
+  "Banco Fibra",
+  "Banco Topázio",
+  "Banco Digimais",
+  "Superdigital",
+  "N26",
+  "Wise",
+  "Revolut",
+  "PayPal",
+  
+  // Cooperativas e Outros
+  "Unicred",
+  "Cresol",
+  "Ailos",
+  "Banco Cooperativo do Brasil (Bancoob)",
+  "CrediSIS",
+  
+  // Caixa Física / Outros
+  "Caixa (Dinheiro)",
+  "Cofre",
+  "Carteira",
+  "Outro"
+];
 
 interface Conta {
   id: string;
@@ -60,7 +133,7 @@ export function ContaDialog({ open, onOpenChange, conta, onSuccess }: ContaDialo
     setBancoError("");
 
     if (!banco.trim()) {
-      setBancoError("Nome da conta é obrigatório");
+      setBancoError("Selecione um banco");
       return;
     }
 
@@ -69,7 +142,7 @@ export function ContaDialog({ open, onOpenChange, conta, onSuccess }: ContaDialo
     try {
       const isDuplicate = await checkDuplicate(banco.trim(), conta?.id);
       if (isDuplicate) {
-        setBancoError("Já existe uma conta com este nome");
+        setBancoError("Já existe uma conta com este banco");
         setLoading(false);
         return;
       }
@@ -129,19 +202,29 @@ export function ContaDialog({ open, onOpenChange, conta, onSuccess }: ContaDialo
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="banco" className="text-foreground">
-              Nome da Conta <span className="text-destructive">*</span>
+              Banco <span className="text-destructive">*</span>
             </Label>
-            <Input
-              id="banco"
+            <Select
               value={banco}
-              onChange={(e) => {
-                setBanco(e.target.value);
+              onValueChange={(value) => {
+                setBanco(value);
                 setBancoError("");
               }}
-              placeholder="Ex: Caixa, Banco do Brasil, Nubank..."
-              className={`bg-background/50 border-border/50 ${bancoError ? "border-destructive" : ""}`}
               disabled={loading}
-            />
+            >
+              <SelectTrigger 
+                className={`bg-background/50 border-border/50 ${bancoError ? "border-destructive" : ""}`}
+              >
+                <SelectValue placeholder="Selecione um banco..." />
+              </SelectTrigger>
+              <SelectContent className="bg-popover border-border/50 max-h-[300px]">
+                {BANCOS_BRASILEIROS.map((bancoOption) => (
+                  <SelectItem key={bancoOption} value={bancoOption}>
+                    {bancoOption}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             {bancoError && (
               <p className="text-sm text-destructive">{bancoError}</p>
             )}
