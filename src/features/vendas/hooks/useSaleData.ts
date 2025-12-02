@@ -7,8 +7,10 @@ import type {
   SalePerson, 
   TradeInVehicle, 
   PaymentEntry,
+  FinanciamentoEntry,
   FormaPagamento,
-  ContaFinanceira
+  ContaFinanceira,
+  Financeira
 } from '../types';
 
 const initialSaleData: SaleData = {
@@ -22,6 +24,7 @@ const initialSaleData: SaleData = {
   observacoes_veiculo: '',
   trocas: [],
   pagamentos: [],
+  financiamento: null,
   data_venda: new Date(),
   observacoes: '',
 };
@@ -35,6 +38,7 @@ export function useSaleData(vehicleId: number | null) {
   const [veiculosEstoque, setVeiculosEstoque] = useState<SaleVehicle[]>([]);
   const [formasPagamento, setFormasPagamento] = useState<FormaPagamento[]>([]);
   const [contas, setContas] = useState<ContaFinanceira[]>([]);
+  const [financeiras, setFinanceiras] = useState<Financeira[]>([]);
 
   // Load initial data
   useEffect(() => {
@@ -102,6 +106,15 @@ export function useSaleData(vehicleId: number | null) {
           .order('banco');
         
         setContas(contasData || []);
+
+        // Load financeiras
+        const { data: financeirasData } = await supabase
+          .from('vx_financeiras')
+          .select('*')
+          .eq('ativa', true)
+          .order('nome');
+        
+        setFinanceiras(financeirasData || []);
 
       } catch (error) {
         console.error('Error loading sale data:', error);
@@ -184,6 +197,31 @@ export function useSaleData(vehicleId: number | null) {
     }));
   }, []);
 
+  const setFinanciamento = useCallback((financiamento: Omit<FinanciamentoEntry, 'id'> | null) => {
+    if (financiamento) {
+      const newFinanciamento: FinanciamentoEntry = {
+        ...financiamento,
+        id: crypto.randomUUID(),
+      };
+      setSaleData(prev => ({
+        ...prev,
+        financiamento: newFinanciamento,
+      }));
+    } else {
+      setSaleData(prev => ({
+        ...prev,
+        financiamento: null,
+      }));
+    }
+  }, []);
+
+  const removeFinanciamento = useCallback(() => {
+    setSaleData(prev => ({
+      ...prev,
+      financiamento: null,
+    }));
+  }, []);
+
   const saveSale = useCallback(async (fecharVenda: boolean = false) => {
     if (!saleData.veiculo || !saleData.id_cliente) {
       toast({
@@ -260,6 +298,30 @@ export function useSaleData(vehicleId: number | null) {
         if (pagamentosError) throw pagamentosError;
       }
 
+      // Create financiamento record
+      if (saleData.financiamento) {
+        const { error: financiamentoError } = await supabase
+          .from('vx_vendas_financiamento')
+          .insert({
+            id_venda: vendaData.id,
+            id_veiculo: saleData.veiculo.id,
+            id_financeira: saleData.financiamento.id_financeira,
+            id_conta_destino: saleData.financiamento.id_conta_destino,
+            valor: saleData.financiamento.valor,
+            valor_r: saleData.financiamento.valor_r,
+            plus: saleData.financiamento.plus,
+            tac: saleData.financiamento.tac,
+            valor_tac: saleData.financiamento.valor_tac,
+            numero_contrato: saleData.financiamento.numero_contrato,
+            numero_prestacao: saleData.financiamento.numero_prestacao,
+            valor_prestacao: saleData.financiamento.valor_prestacao,
+            dados_financiamento: saleData.financiamento.dados_financiamento,
+            data_vencimento_inicial: saleData.financiamento.data_vencimento_inicial,
+          });
+
+        if (financiamentoError) throw financiamentoError;
+      }
+
       // Update vehicle status if closing sale
       if (fecharVenda) {
         const { error: updateError } = await supabase
@@ -292,8 +354,9 @@ export function useSaleData(vehicleId: number | null) {
   // Calculate totals
   const totalTrocas = saleData.trocas.reduce((sum, t) => sum + t.valor_troca, 0);
   const totalPagamentos = saleData.pagamentos.reduce((sum, p) => sum + p.valor, 0);
+  const totalFinanciamento = saleData.financiamento?.valor || 0;
   const valorAReceber = saleData.valor_venda - totalTrocas;
-  const saldoPendente = valorAReceber - totalPagamentos;
+  const saldoPendente = valorAReceber - totalPagamentos - totalFinanciamento;
 
   return {
     saleData,
@@ -304,6 +367,7 @@ export function useSaleData(vehicleId: number | null) {
     veiculosEstoque,
     formasPagamento,
     contas,
+    financeiras,
     updateSaleData,
     setCliente,
     setVendedor,
@@ -312,12 +376,15 @@ export function useSaleData(vehicleId: number | null) {
     updateTradeInValue,
     addPayment,
     removePayment,
+    setFinanciamento,
+    removeFinanciamento,
     saveSale,
     totals: {
       valorVeiculo: saleData.valor_venda,
       totalTrocas,
       valorAReceber,
       totalPagamentos,
+      totalFinanciamento,
       saldoPendente,
     },
   };

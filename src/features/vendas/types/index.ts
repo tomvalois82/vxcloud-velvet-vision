@@ -57,6 +57,7 @@ export interface SaleData {
   
   // Step 4 - Acerto
   pagamentos: PaymentEntry[];
+  financiamento: FinanciamentoEntry | null;
   
   // Step 5 - Conclusão
   data_venda: Date;
@@ -74,6 +75,31 @@ export interface ContaFinanceira {
   id: string;
   banco: string;
   descricao: string | null;
+}
+
+export interface Financeira {
+  id: string;
+  nome: string;
+  ativa: boolean;
+  logo_url: string | null;
+}
+
+export interface FinanciamentoEntry {
+  id: string;
+  id_financeira: string | null;
+  id_conta_destino: string;
+  valor: number;
+  valor_r: number | null;
+  plus: number | null;
+  tac: number | null;
+  valor_tac: number | null;
+  numero_contrato: string | null;
+  numero_prestacao: number | null;
+  valor_prestacao: number | null;
+  dados_financiamento: string | null;
+  data_vencimento_inicial: string | null;
+  financeira_nome?: string;
+  conta_descricao?: string;
 }
 
 export const SALE_STEPS = [
