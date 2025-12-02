@@ -1,8 +1,8 @@
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -234,12 +234,12 @@ export function ContaDialog({ open, onOpenChange, conta, onSuccess }: ContaDialo
             <Label htmlFor="descricao" className="text-foreground">
               Descrição
             </Label>
-            <Textarea
+            <Input
               id="descricao"
               value={descricao}
               onChange={(e) => setDescricao(e.target.value)}
               placeholder="Descrição opcional da conta..."
-              className="bg-background/50 border-border/50 min-h-[80px]"
+              className="bg-background/50 border-border/50"
               disabled={loading}
             />
           </div>
