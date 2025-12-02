@@ -14,6 +14,7 @@ import VeiculosRelatorios from "./pages/veiculos/VeiculosRelatorios";
 import PessoasList from "./pages/pessoas/PessoasList";
 import VendasList from "./pages/vendas/VendasList";
 import VendasRelatorios from "./pages/vendas/VendasRelatorios";
+import VendaVeiculo from "./pages/vendas/VendaVeiculo";
 import FinanceiroContas from "./pages/financeiro/FinanceiroContas";
 import FinanceiroPagar from "./pages/financeiro/FinanceiroPagar";
 import FinanceiroReceber from "./pages/financeiro/FinanceiroReceber";
@@ -51,6 +52,7 @@ const App = () => (
                             <Route path="/veiculos/relatorios" element={<VeiculosRelatorios />} />
                             <Route path="/pessoas" element={<PessoasList />} />
                             <Route path="/vendas" element={<VendasList />} />
+                            <Route path="/vendas/nova" element={<VendaVeiculo />} />
                             <Route path="/vendas/relatorios" element={<VendasRelatorios />} />
                             <Route path="/financeiro" element={<FinanceiroContas />} />
                             <Route path="/financeiro/pagar" element={<FinanceiroPagar />} />

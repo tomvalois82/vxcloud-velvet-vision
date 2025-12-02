@@ -1536,28 +1536,34 @@ export type Database = {
       vx_vendas: {
         Row: {
           data_venda: string
+          fechada: boolean
           id: string
           id_cliente: string
           id_empresa: string
           id_veiculo_vendido: number
+          id_vendedor: string | null
           observacoes: string | null
           valor_total_venda: number
         }
         Insert: {
           data_venda?: string
+          fechada?: boolean
           id?: string
           id_cliente: string
           id_empresa: string
           id_veiculo_vendido: number
+          id_vendedor?: string | null
           observacoes?: string | null
           valor_total_venda: number
         }
         Update: {
           data_venda?: string
+          fechada?: boolean
           id?: string
           id_cliente?: string
           id_empresa?: string
           id_veiculo_vendido?: number
+          id_vendedor?: string | null
           observacoes?: string | null
           valor_total_venda?: number
         }
@@ -1581,6 +1587,13 @@ export type Database = {
             columns: ["id_veiculo_vendido"]
             isOneToOne: false
             referencedRelation: "estoque"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vx_vendas_id_vendedor_fkey"
+            columns: ["id_vendedor"]
+            isOneToOne: false
+            referencedRelation: "vx_pessoa"
             referencedColumns: ["id"]
           },
         ]
