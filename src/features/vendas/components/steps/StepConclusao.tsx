@@ -14,9 +14,11 @@ import {
   Landmark,
   TrendingUp,
   TrendingDown,
-  Minus
+  Minus,
+  Clock
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Calendar as CalendarComponent } from '@/components/ui/calendar';
@@ -64,6 +66,21 @@ export function StepConclusao({
 
   // Determinar status do saldo
   const saldoStatus = saldoFinal === 0 ? 'ok' : saldoFinal > 0 ? 'pendente' : 'excesso';
+
+  // Handler para atualizar hora/minuto preservando a data
+  const handleTimeChange = (type: 'hours' | 'minutes', value: string) => {
+    const numValue = parseInt(value, 10);
+    if (isNaN(numValue)) return;
+    
+    const newDate = new Date(saleData.data_venda);
+    if (type === 'hours' && numValue >= 0 && numValue <= 23) {
+      newDate.setHours(numValue);
+      updateSaleData({ data_venda: newDate });
+    } else if (type === 'minutes' && numValue >= 0 && numValue <= 59) {
+      newDate.setMinutes(numValue);
+      updateSaleData({ data_venda: newDate });
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -279,10 +296,39 @@ export function StepConclusao({
                 <CalendarComponent
                   mode="single"
                   selected={saleData.data_venda}
-                  onSelect={(date) => date && updateSaleData({ data_venda: date })}
+                  onSelect={(date) => {
+                    if (date) {
+                      // Preservar hora e minuto atuais ao mudar a data
+                      const newDate = new Date(date);
+                      newDate.setHours(saleData.data_venda.getHours());
+                      newDate.setMinutes(saleData.data_venda.getMinutes());
+                      updateSaleData({ data_venda: newDate });
+                    }
+                  }}
                   locale={ptBR}
                   className="pointer-events-auto"
                 />
+                {/* Time Picker */}
+                <div className="border-t border-border p-3 flex items-center gap-2 justify-center">
+                  <Clock className="w-4 h-4 text-muted-foreground" />
+                  <Input
+                    type="number"
+                    min={0}
+                    max={23}
+                    value={saleData.data_venda.getHours().toString().padStart(2, '0')}
+                    onChange={(e) => handleTimeChange('hours', e.target.value)}
+                    className="w-14 text-center"
+                  />
+                  <span className="text-lg font-bold text-muted-foreground">:</span>
+                  <Input
+                    type="number"
+                    min={0}
+                    max={59}
+                    value={saleData.data_venda.getMinutes().toString().padStart(2, '0')}
+                    onChange={(e) => handleTimeChange('minutes', e.target.value)}
+                    className="w-14 text-center"
+                  />
+                </div>
               </PopoverContent>
             </Popover>
             <p className="text-xs text-muted-foreground">
