@@ -3,10 +3,12 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2 } from "lucide-react";
+import { Check, ChevronsUpDown, Loader2 } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 const BANCOS_BRASILEIROS = [
   // Bancos Tradicionais
@@ -100,6 +102,7 @@ export function ContaDialog({ open, onOpenChange, conta, onSuccess }: ContaDialo
   const [banco, setBanco] = useState("");
   const [descricao, setDescricao] = useState("");
   const [bancoError, setBancoError] = useState("");
+  const [openCombobox, setOpenCombobox] = useState(false);
 
   useEffect(() => {
     if (open) {
@@ -111,6 +114,7 @@ export function ContaDialog({ open, onOpenChange, conta, onSuccess }: ContaDialo
         setDescricao("");
       }
       setBancoError("");
+      setOpenCombobox(false);
     }
   }, [open, conta]);
 
@@ -204,27 +208,56 @@ export function ContaDialog({ open, onOpenChange, conta, onSuccess }: ContaDialo
             <Label htmlFor="banco" className="text-foreground">
               Banco <span className="text-destructive">*</span>
             </Label>
-            <Select
-              value={banco}
-              onValueChange={(value) => {
-                setBanco(value);
-                setBancoError("");
-              }}
-              disabled={loading}
-            >
-              <SelectTrigger 
-                className={`bg-background/50 border-border/50 ${bancoError ? "border-destructive" : ""}`}
-              >
-                <SelectValue placeholder="Selecione um banco..." />
-              </SelectTrigger>
-              <SelectContent className="bg-popover border-border/50 max-h-[300px]">
-                {BANCOS_BRASILEIROS.map((bancoOption) => (
-                  <SelectItem key={bancoOption} value={bancoOption}>
-                    {bancoOption}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Popover open={openCombobox} onOpenChange={setOpenCombobox}>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  role="combobox"
+                  aria-expanded={openCombobox}
+                  className={cn(
+                    "w-full justify-between bg-background/50 border-border/50 font-normal",
+                    !banco && "text-muted-foreground",
+                    bancoError && "border-destructive"
+                  )}
+                  disabled={loading}
+                >
+                  {banco || "Selecione um banco..."}
+                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-[--radix-popover-trigger-width] p-0 bg-popover border-border/50" align="start">
+                <Command>
+                  <CommandInput placeholder="Buscar banco..." className="h-9" />
+                  <CommandList>
+                    <CommandEmpty>Nenhum banco encontrado.</CommandEmpty>
+                    <CommandGroup className="max-h-[250px] overflow-auto">
+                      {BANCOS_BRASILEIROS.map((bancoOption) => (
+                        <CommandItem
+                          key={bancoOption}
+                          value={bancoOption}
+                          onSelect={(currentValue) => {
+                            const selectedBank = BANCOS_BRASILEIROS.find(
+                              b => b.toLowerCase() === currentValue.toLowerCase()
+                            ) || currentValue;
+                            setBanco(selectedBank === banco ? "" : selectedBank);
+                            setBancoError("");
+                            setOpenCombobox(false);
+                          }}
+                        >
+                          {bancoOption}
+                          <Check
+                            className={cn(
+                              "ml-auto h-4 w-4",
+                              banco.toLowerCase() === bancoOption.toLowerCase() ? "opacity-100" : "opacity-0"
+                            )}
+                          />
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                  </CommandList>
+                </Command>
+              </PopoverContent>
+            </Popover>
             {bancoError && (
               <p className="text-sm text-destructive">{bancoError}</p>
             )}
