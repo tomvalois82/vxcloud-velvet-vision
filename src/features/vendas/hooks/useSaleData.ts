@@ -8,9 +8,11 @@ import type {
   TradeInVehicle, 
   PaymentEntry,
   FinanciamentoEntry,
+  ServicoProdutoEntry,
   FormaPagamento,
   ContaFinanceira,
-  Financeira
+  Financeira,
+  CategoriaFinanceira
 } from '../types';
 
 const initialSaleData: SaleData = {
@@ -25,6 +27,7 @@ const initialSaleData: SaleData = {
   trocas: [],
   pagamentos: [],
   financiamento: null,
+  servicosProdutos: [],
   data_venda: new Date(),
   observacoes: '',
 };
@@ -39,6 +42,7 @@ export function useSaleData(vehicleId: number | null) {
   const [formasPagamento, setFormasPagamento] = useState<FormaPagamento[]>([]);
   const [contas, setContas] = useState<ContaFinanceira[]>([]);
   const [financeiras, setFinanceiras] = useState<Financeira[]>([]);
+  const [categorias, setCategorias] = useState<CategoriaFinanceira[]>([]);
 
   // Load initial data
   useEffect(() => {
@@ -115,6 +119,16 @@ export function useSaleData(vehicleId: number | null) {
           .order('nome');
         
         setFinanceiras(financeirasData || []);
+
+        // Load categorias (apenas Receber para produtos/serviços)
+        const { data: categoriasData } = await supabase
+          .from('vx_fin_categoria')
+          .select('id, categoria, operacao, ativo')
+          .eq('ativo', true)
+          .eq('operacao', 'Receber')
+          .order('categoria');
+        
+        setCategorias(categoriasData || []);
 
       } catch (error) {
         console.error('Error loading sale data:', error);
@@ -222,6 +236,34 @@ export function useSaleData(vehicleId: number | null) {
     }));
   }, []);
 
+  // Funções para Produtos/Serviços
+  const addServicoProduto = useCallback((item: Omit<ServicoProdutoEntry, 'id'>) => {
+    const newItem: ServicoProdutoEntry = {
+      ...item,
+      id: crypto.randomUUID(),
+    };
+    setSaleData(prev => ({
+      ...prev,
+      servicosProdutos: [...prev.servicosProdutos, newItem],
+    }));
+  }, []);
+
+  const removeServicoProduto = useCallback((id: string) => {
+    setSaleData(prev => ({
+      ...prev,
+      servicosProdutos: prev.servicosProdutos.filter(s => s.id !== id),
+    }));
+  }, []);
+
+  const updateServicoProduto = useCallback((id: string, item: Omit<ServicoProdutoEntry, 'id'>) => {
+    setSaleData(prev => ({
+      ...prev,
+      servicosProdutos: prev.servicosProdutos.map(s => 
+        s.id === id ? { ...item, id } : s
+      ),
+    }));
+  }, []);
+
   const saveSale = useCallback(async (fecharVenda: boolean = false) => {
     if (!saleData.veiculo || !saleData.id_cliente) {
       toast({
@@ -322,6 +364,23 @@ export function useSaleData(vehicleId: number | null) {
         if (financiamentoError) throw financiamentoError;
       }
 
+      // Create servicos/produtos records
+      if (saleData.servicosProdutos.length > 0) {
+        const servicosInsert = saleData.servicosProdutos.map(sp => ({
+          id_venda: vendaData.id,
+          descricao: sp.descricao,
+          valor: sp.valor,
+          id_categoria: sp.id_categoria,
+          id_veiculo: sp.id_veiculo,
+        }));
+
+        const { error: servicosError } = await supabase
+          .from('vx_vendas_servico_produto')
+          .insert(servicosInsert);
+
+        if (servicosError) throw servicosError;
+      }
+
       // Update vehicle status if closing sale
       if (fecharVenda) {
         const { error: updateError } = await supabase
@@ -353,6 +412,7 @@ export function useSaleData(vehicleId: number | null) {
 
   // Calculate totals
   const totalTrocas = saleData.trocas.reduce((sum, t) => sum + t.valor_troca, 0);
+  const totalServicosProdutos = saleData.servicosProdutos.reduce((sum, s) => sum + s.valor, 0);
   // Recebimentos são valores positivos (cliente paga loja)
   const totalRecebimentos = saleData.pagamentos
     .filter(p => p.valor > 0)
@@ -364,8 +424,8 @@ export function useSaleData(vehicleId: number | null) {
   // Total líquido de pagamentos = recebimentos - pagamentos (saída)
   const totalPagamentos = totalRecebimentos - totalPagamentosSaida;
   const totalFinanciamento = saleData.financiamento?.valor || 0;
-  // Total a receber do cliente = valor do veículo - trocas - financiamento
-  const valorAReceber = saleData.valor_venda - totalTrocas - totalFinanciamento;
+  // Total a receber do cliente = valor do veículo + serviços/produtos - trocas - financiamento
+  const valorAReceber = saleData.valor_venda + totalServicosProdutos - totalTrocas - totalFinanciamento;
   // Saldo pendente = o que falta receber em pagamentos diretos
   const saldoPendente = valorAReceber - totalPagamentos;
 
@@ -379,6 +439,7 @@ export function useSaleData(vehicleId: number | null) {
     formasPagamento,
     contas,
     financeiras,
+    categorias,
     updateSaleData,
     setCliente,
     setVendedor,
@@ -389,10 +450,14 @@ export function useSaleData(vehicleId: number | null) {
     removePayment,
     setFinanciamento,
     removeFinanciamento,
+    addServicoProduto,
+    removeServicoProduto,
+    updateServicoProduto,
     saveSale,
     totals: {
       valorVeiculo: saleData.valor_venda,
       totalTrocas,
+      totalServicosProdutos,
       valorAReceber,
       totalPagamentos,
       totalRecebimentos,
