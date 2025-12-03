@@ -690,7 +690,27 @@ export default function FinanceiroPainel() {
 
       {/* Account Balance Cards */}
       <div className="space-y-3">
-        <h2 className="text-lg font-semibold text-foreground">Contas Bancárias</h2>
+        <div className="flex items-center justify-between flex-wrap gap-2">
+          <h2 className="text-lg font-semibold text-foreground">Contas Bancárias</h2>
+          {contas.length > 0 && (() => {
+            const totalSaldo = contas.reduce((acc, conta) => acc + (Number(conta.saldo) || 0), 0);
+            const isPositive = totalSaldo >= 0;
+            return (
+              <div className={cn(
+                "px-4 py-2 rounded-lg",
+                isPositive ? "bg-green-500/10" : "bg-red-500/10"
+              )}>
+                <span className="text-sm text-muted-foreground mr-2">Total Geral:</span>
+                <span className={cn(
+                  "font-bold",
+                  isPositive ? "text-green-400" : "text-red-400"
+                )}>
+                  {maskCurrency(totalSaldo)}
+                </span>
+              </div>
+            );
+          })()}
+        </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {contas.map((conta) => {
             const IconComponent = getContaIcon(conta.banco);
