@@ -73,6 +73,7 @@ interface Conta {
   id: string;
   banco: string;
   descricao: string | null;
+  saldo: number;
 }
 
 interface Categoria {
@@ -693,21 +694,38 @@ export default function FinanceiroPainel() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {contas.map((conta) => {
             const IconComponent = getContaIcon(conta.banco);
+            const saldo = Number(conta.saldo) || 0;
+            const isPositive = saldo >= 0;
             return (
               <Card 
                 key={conta.id} 
-                className="glass border-border/50 hover:border-accent/30 transition-all group"
+                className={cn(
+                  "glass border-border/50 transition-all group",
+                  isPositive ? "hover:border-green-500/30" : "hover:border-red-500/30"
+                )}
               >
                 <CardContent className="p-4">
                   <div className="flex items-start gap-3">
-                    <div className="w-10 h-10 rounded-lg bg-accent/10 flex items-center justify-center group-hover:bg-accent/20 transition-colors">
-                      <IconComponent className="w-5 h-5 text-accent" />
+                    <div className={cn(
+                      "w-10 h-10 rounded-lg flex items-center justify-center transition-colors",
+                      isPositive ? "bg-green-500/10 group-hover:bg-green-500/20" : "bg-red-500/10 group-hover:bg-red-500/20"
+                    )}>
+                      <IconComponent className={cn(
+                        "w-5 h-5",
+                        isPositive ? "text-green-500" : "text-red-500"
+                      )} />
                     </div>
                     <div className="flex-1 min-w-0">
                       <h3 className="font-medium text-foreground truncate">{conta.banco}</h3>
                       {conta.descricao && (
                         <p className="text-xs text-muted-foreground truncate">{conta.descricao}</p>
                       )}
+                      <p className={cn(
+                        "text-lg font-bold mt-1",
+                        isPositive ? "text-green-400" : "text-red-400"
+                      )}>
+                        {maskCurrency(saldo)}
+                      </p>
                     </div>
                   </div>
                 </CardContent>
