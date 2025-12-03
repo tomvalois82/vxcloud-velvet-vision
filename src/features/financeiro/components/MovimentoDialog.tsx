@@ -47,11 +47,39 @@ import {
   formatarDescricaoRecorrente,
 } from "../utils/recorrenciaUtils";
 
+// Generate competencia options from 01/2019 to current month/year
+const gerarOpcoesCompetencia = (): { value: string; label: string }[] => {
+  const opcoes: { value: string; label: string }[] = [];
+  const dataInicio = new Date(2019, 0, 1); // Janeiro 2019
+  const dataAtual = new Date();
+  
+  let dataIteracao = new Date(dataInicio);
+  while (dataIteracao <= dataAtual) {
+    const mes = String(dataIteracao.getMonth() + 1).padStart(2, '0');
+    const ano = dataIteracao.getFullYear();
+    const value = `${mes}/${ano}`;
+    opcoes.push({ value, label: value });
+    dataIteracao = addMonths(dataIteracao, 1);
+  }
+  
+  return opcoes.reverse(); // Most recent first
+};
+
+const getCompetenciaAtual = () => {
+  const hoje = new Date();
+  const mes = String(hoje.getMonth() + 1).padStart(2, '0');
+  const ano = hoje.getFullYear();
+  return `${mes}/${ano}`;
+};
+
+const opcoesCompetencia = gerarOpcoesCompetencia();
+
 const formSchema = z.object({
   tipo_movimento: z.enum(["Pagar", "Receber"]),
   descricao: z.string().min(1, "Descrição é obrigatória"),
   valor_bruto: z.string().min(1, "Valor é obrigatório"),
   data_vencimento: z.date({ required_error: "Data de vencimento é obrigatória" }),
+  competencia: z.string().optional(),
   id_conta: z.string().min(1, "Conta é obrigatória"),
   id_categoria: z.string().min(1, "Categoria é obrigatória"),
   observacoes: z.string().optional(),
@@ -95,6 +123,7 @@ interface Movimento {
   observacoes: string | null;
   status: string;
   id_estoque: number | null;
+  competencia?: string | null;
   recorrencia_id?: string | null;
   ordem_ocorrencia?: number | null;
   total_ocorrencias?: number | null;
@@ -139,6 +168,7 @@ export function MovimentoDialog({
       descricao: "",
       valor_bruto: "",
       data_vencimento: new Date(),
+      competencia: getCompetenciaAtual(),
       id_conta: "",
       id_categoria: "",
       observacoes: "",
@@ -229,6 +259,7 @@ export function MovimentoDialog({
           descricao: movimento.descricao,
           valor_bruto: maskCurrency(movimento.valor_bruto),
           data_vencimento: new Date(movimento.data_vencimento + "T00:00:00"),
+          competencia: movimento.competencia || getCompetenciaAtual(),
           id_conta: movimento.id_conta,
           id_categoria: movimento.id_categoria,
           observacoes: movimento.observacoes || "",
@@ -252,6 +283,7 @@ export function MovimentoDialog({
           descricao: "",
           valor_bruto: "",
           data_vencimento: new Date(),
+          competencia: getCompetenciaAtual(),
           id_conta: "",
           id_categoria: "",
           observacoes: "",
@@ -347,6 +379,7 @@ export function MovimentoDialog({
           id_categoria: data.id_categoria,
           id_empresa: empresaData.id,
           observacoes: data.observacoes || null,
+          competencia: data.competencia || null,
           id_estoque: vincularVeiculo && veiculoSelecionado
             ? parseInt(veiculoSelecionado)
             : null,
@@ -440,6 +473,7 @@ export function MovimentoDialog({
             valor_bruto: valorNumerico,
             valor_liquido: valorNumerico,
             data_vencimento: format(data.data_vencimento, "yyyy-MM-dd"),
+            competencia: data.competencia || null,
             id_conta: data.id_conta,
             id_categoria: data.id_categoria,
             id_empresa: empresaData.id,
@@ -472,6 +506,7 @@ export function MovimentoDialog({
             valor_bruto: valorNumerico,
             valor_liquido: valorNumerico,
             data_vencimento: format(dataOcorrencia, "yyyy-MM-dd"),
+            competencia: data.competencia || null,
             id_conta: data.id_conta,
             id_categoria: data.id_categoria,
             id_empresa: empresaData.id,
@@ -634,6 +669,31 @@ export function MovimentoDialog({
                         />
                       </PopoverContent>
                     </Popover>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="competencia"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Competência</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger className="bg-background/50 border-border/50">
+                          <SelectValue placeholder="Selecione a competência" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent className="max-h-[300px]">
+                        {opcoesCompetencia.map((opcao) => (
+                          <SelectItem key={opcao.value} value={opcao.value}>
+                            {opcao.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                     <FormMessage />
                   </FormItem>
                 )}
