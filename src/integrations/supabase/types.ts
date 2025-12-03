@@ -1304,16 +1304,19 @@ export type Database = {
           banco: string
           descricao: string | null
           id: string
+          saldo: number
         }
         Insert: {
           banco: string
           descricao?: string | null
           id?: string
+          saldo?: number
         }
         Update: {
           banco?: string
           descricao?: string | null
           id?: string
+          saldo?: number
         }
         Relationships: []
       }

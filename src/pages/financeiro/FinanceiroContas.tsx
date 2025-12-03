@@ -25,11 +25,13 @@ import { Plus, Wallet, Search, Pencil, Trash2, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { ContaDialog } from "@/features/financeiro/components/ContaDialog";
+import { maskCurrency } from "@/features/estoque/utils/masks";
 
 interface Conta {
   id: string;
   banco: string;
   descricao: string | null;
+  saldo: number;
 }
 
 const FinanceiroContas = () => {
@@ -171,13 +173,14 @@ const FinanceiroContas = () => {
                   <TableRow className="border-border/50 hover:bg-transparent">
                     <TableHead className="text-foreground font-semibold">Nome</TableHead>
                     <TableHead className="text-foreground font-semibold">Descrição</TableHead>
+                    <TableHead className="text-foreground font-semibold text-right">Saldo</TableHead>
                     <TableHead className="text-foreground font-semibold w-[100px]">Ações</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {filteredContas.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={3} className="text-center text-muted-foreground py-8">
+                      <TableCell colSpan={4} className="text-center text-muted-foreground py-8">
                         Nenhuma conta encontrada com "{searchTerm}"
                       </TableCell>
                     </TableRow>
@@ -189,6 +192,9 @@ const FinanceiroContas = () => {
                         </TableCell>
                         <TableCell className="text-muted-foreground">
                           {conta.descricao || "-"}
+                        </TableCell>
+                        <TableCell className={`text-right font-medium ${Number(conta.saldo) >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                          {maskCurrency(Number(conta.saldo))}
                         </TableCell>
                         <TableCell>
                           <div className="flex items-center gap-2">
