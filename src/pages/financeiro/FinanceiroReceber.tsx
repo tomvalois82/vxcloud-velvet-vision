@@ -60,6 +60,7 @@ import { MovimentoDialog } from "@/features/financeiro/components/MovimentoDialo
 import { RecorrenciaActionDialog } from "@/features/financeiro/components/RecorrenciaActionDialog";
 import { BaixaLoteDialog } from "@/features/financeiro/components/BaixaLoteDialog";
 import { BaixaIndividualDialog } from "@/features/financeiro/components/BaixaIndividualDialog";
+import { atualizarSaldoConta, calcularValorFinal } from "@/features/financeiro/utils/saldoUtils";
 
 interface Movimento {
   id: string;
@@ -403,6 +404,11 @@ const FinanceiroReceber = () => {
     motivoAjuste: string | null;
   }) => {
     try {
+      // Buscar o movimento para obter o valor original
+      const movimento = movimentos.find(m => m.id === data.id);
+      if (!movimento) throw new Error("Movimento não encontrado");
+
+      // Atualizar o movimento
       const { error } = await supabase
         .from("vx_fin_movimento")
         .update({
@@ -418,9 +424,13 @@ const FinanceiroReceber = () => {
 
       if (error) throw error;
 
+      // Calcular valor final e atualizar saldo da conta
+      const valorFinal = calcularValorFinal(movimento.valor_bruto, data.desconto, data.acrescimo);
+      await atualizarSaldoConta(data.contaId, valorFinal, "Receber");
+
       toast({
         title: "Título baixado",
-        description: "O título foi baixado com sucesso.",
+        description: "O título foi baixado e o saldo da conta atualizado com sucesso.",
       });
       fetchMovimentos();
     } catch (error: any) {
@@ -441,6 +451,8 @@ const FinanceiroReceber = () => {
     if (selectedMovimentos.length === 0) return;
 
     try {
+      let totalAtualizado = 0;
+      
       for (const mov of selectedMovimentos) {
         const dataFinal = dataPagamento || mov.data_vencimento;
         
@@ -455,11 +467,17 @@ const FinanceiroReceber = () => {
           .eq("id", mov.id);
 
         if (error) throw error;
+        
+        // Acumular valor para atualização do saldo
+        totalAtualizado += mov.valor_bruto;
       }
+
+      // Atualizar saldo da conta uma única vez com o total
+      await atualizarSaldoConta(contaId, totalAtualizado, "Receber");
 
       toast({
         title: "Títulos baixados",
-        description: `${selectedMovimentos.length} título(s) baixado(s) com sucesso.`,
+        description: `${selectedMovimentos.length} título(s) baixado(s) e saldo atualizado com sucesso.`,
       });
       setSelectedIds(new Set());
       fetchMovimentos();
@@ -506,6 +524,16 @@ const FinanceiroReceber = () => {
 
     setEstornando(true);
     try {
+      // Calcular valor que foi creditado/debitado originalmente
+      const valorFinal = calcularValorFinal(
+        movimentoEstorno.valor_bruto,
+        movimentoEstorno.desconto || 0,
+        movimentoEstorno.acrescimo || 0
+      );
+
+      // Reverter o saldo da conta (estorno)
+      await atualizarSaldoConta(movimentoEstorno.id_conta, valorFinal, "Receber", true);
+
       const { error } = await supabase
         .from("vx_fin_movimento")
         .update({
@@ -521,7 +549,7 @@ const FinanceiroReceber = () => {
 
       toast({
         title: "Título estornado",
-        description: "O título foi reaberto com sucesso.",
+        description: "O título foi reaberto e o saldo da conta revertido com sucesso.",
       });
       fetchMovimentos();
     } catch (error: any) {
