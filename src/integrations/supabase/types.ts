@@ -1319,6 +1319,7 @@ export type Database = {
       }
       vx_fin_movimento: {
         Row: {
+          competencia: string | null
           data_pagamento: string | null
           data_vencimento: string
           descricao: string
@@ -1336,6 +1337,7 @@ export type Database = {
           valor_liquido: number
         }
         Insert: {
+          competencia?: string | null
           data_pagamento?: string | null
           data_vencimento: string
           descricao: string
@@ -1353,6 +1355,7 @@ export type Database = {
           valor_liquido?: number
         }
         Update: {
+          competencia?: string | null
           data_pagamento?: string | null
           data_vencimento?: string
           descricao?: string
