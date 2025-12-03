@@ -47,12 +47,14 @@ import {
   CalendarIcon,
   X,
   Car,
+  Repeat,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { maskCurrency } from "@/features/estoque/utils/masks";
 import { MovimentoDialog } from "@/features/financeiro/components/MovimentoDialog";
+import { RecorrenciaActionDialog } from "@/features/financeiro/components/RecorrenciaActionDialog";
 
 interface Movimento {
   id: string;
@@ -68,6 +70,9 @@ interface Movimento {
   observacoes: string | null;
   status: string;
   id_estoque: number | null;
+  recorrencia_id: string | null;
+  ordem_ocorrencia: number | null;
+  total_ocorrencias: number | null;
   vx_fin_conta: { banco: string; descricao: string | null } | null;
   vx_fin_categoria: { categoria: string } | null;
 }
@@ -95,6 +100,11 @@ const FinanceiroPagar = () => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [movimentoToDelete, setMovimentoToDelete] = useState<Movimento | null>(null);
   const [deleting, setDeleting] = useState(false);
+
+  // Recurrence action states
+  const [recorrenciaEditDialogOpen, setRecorrenciaEditDialogOpen] = useState(false);
+  const [recorrenciaDeleteDialogOpen, setRecorrenciaDeleteDialogOpen] = useState(false);
+  const [pendingEditMovimento, setPendingEditMovimento] = useState<Movimento | null>(null);
 
   const fetchMovimentos = async () => {
     setLoading(true);
@@ -172,8 +182,22 @@ const FinanceiroPagar = () => {
   }, []);
 
   const handleEdit = (movimento: Movimento) => {
-    setSelectedMovimento(movimento);
-    setDialogOpen(true);
+    if (movimento.recorrencia_id) {
+      setPendingEditMovimento(movimento);
+      setRecorrenciaEditDialogOpen(true);
+    } else {
+      setSelectedMovimento(movimento);
+      setDialogOpen(true);
+    }
+  };
+
+  const handleRecorrenciaEditConfirm = (scope: "single" | "future") => {
+    setRecorrenciaEditDialogOpen(false);
+    if (pendingEditMovimento) {
+      setSelectedMovimento(pendingEditMovimento);
+      setDialogOpen(true);
+      setPendingEditMovimento(null);
+    }
   };
 
   const handleNew = () => {
@@ -183,7 +207,11 @@ const FinanceiroPagar = () => {
 
   const handleDeleteClick = (movimento: Movimento) => {
     setMovimentoToDelete(movimento);
-    setDeleteDialogOpen(true);
+    if (movimento.recorrencia_id) {
+      setRecorrenciaDeleteDialogOpen(true);
+    } else {
+      setDeleteDialogOpen(true);
+    }
   };
 
   const handleDeleteConfirm = async () => {
@@ -212,6 +240,52 @@ const FinanceiroPagar = () => {
     } finally {
       setDeleting(false);
       setDeleteDialogOpen(false);
+      setMovimentoToDelete(null);
+    }
+  };
+
+  const handleRecorrenciaDeleteConfirm = async (scope: "single" | "future") => {
+    if (!movimentoToDelete) return;
+
+    setDeleting(true);
+    try {
+      if (scope === "single") {
+        const { error } = await supabase
+          .from("vx_fin_movimento")
+          .delete()
+          .eq("id", movimentoToDelete.id);
+
+        if (error) throw error;
+
+        toast({
+          title: "Lançamento excluído",
+          description: "A ocorrência foi excluída com sucesso.",
+        });
+      } else {
+        // Delete this and all future occurrences
+        const { error } = await supabase
+          .from("vx_fin_movimento")
+          .delete()
+          .eq("recorrencia_id", movimentoToDelete.recorrencia_id)
+          .gte("ordem_ocorrencia", movimentoToDelete.ordem_ocorrencia || 0);
+
+        if (error) throw error;
+
+        toast({
+          title: "Lançamentos excluídos",
+          description: "Esta e todas as ocorrências futuras foram excluídas.",
+        });
+      }
+      fetchMovimentos();
+    } catch (error: any) {
+      toast({
+        title: "Erro ao excluir",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setDeleting(false);
+      setRecorrenciaDeleteDialogOpen(false);
       setMovimentoToDelete(null);
     }
   };
@@ -419,7 +493,14 @@ const FinanceiroPagar = () => {
                         )}
                       >
                         <TableCell className="font-medium text-foreground">
-                          {mov.descricao}
+                          <div className="flex items-center gap-2">
+                            {mov.descricao}
+                            {mov.recorrencia_id && (
+                              <span title="Lançamento recorrente">
+                                <Repeat className="w-3 h-3 text-accent" />
+                              </span>
+                            )}
+                          </div>
                         </TableCell>
                         <TableCell className="text-foreground">
                           {maskCurrency(mov.valor_bruto)}
@@ -474,6 +555,7 @@ const FinanceiroPagar = () => {
         onSuccess={fetchMovimentos}
       />
 
+      {/* Simple delete dialog for non-recurring */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent className="glass-strong border-border/50">
           <AlertDialogHeader>
@@ -487,21 +569,31 @@ const FinanceiroPagar = () => {
             <AlertDialogCancel disabled={deleting}>Cancelar</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDeleteConfirm}
-              className="bg-destructive hover:bg-destructive/90"
               disabled={deleting}
+              className="bg-destructive hover:bg-destructive/90"
             >
-              {deleting ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Excluindo...
-                </>
-              ) : (
-                "Excluir"
-              )}
+              {deleting ? "Excluindo..." : "Excluir"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Recurrence edit dialog */}
+      <RecorrenciaActionDialog
+        open={recorrenciaEditDialogOpen}
+        onOpenChange={setRecorrenciaEditDialogOpen}
+        actionType="edit"
+        onConfirm={handleRecorrenciaEditConfirm}
+      />
+
+      {/* Recurrence delete dialog */}
+      <RecorrenciaActionDialog
+        open={recorrenciaDeleteDialogOpen}
+        onOpenChange={setRecorrenciaDeleteDialogOpen}
+        actionType="delete"
+        onConfirm={handleRecorrenciaDeleteConfirm}
+        loading={deleting}
+      />
     </div>
   );
 };

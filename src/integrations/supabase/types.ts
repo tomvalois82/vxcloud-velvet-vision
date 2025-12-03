@@ -1331,8 +1331,11 @@ export type Database = {
           id_estoque: number | null
           id_pessoa: string | null
           observacoes: string | null
+          ordem_ocorrencia: number | null
+          recorrencia_id: string | null
           status: string
           tipo_movimento: string
+          total_ocorrencias: number | null
           valor_bruto: number
           valor_liquido: number
         }
@@ -1349,8 +1352,11 @@ export type Database = {
           id_estoque?: number | null
           id_pessoa?: string | null
           observacoes?: string | null
+          ordem_ocorrencia?: number | null
+          recorrencia_id?: string | null
           status?: string
           tipo_movimento: string
+          total_ocorrencias?: number | null
           valor_bruto: number
           valor_liquido?: number
         }
@@ -1367,8 +1373,11 @@ export type Database = {
           id_estoque?: number | null
           id_pessoa?: string | null
           observacoes?: string | null
+          ordem_ocorrencia?: number | null
+          recorrencia_id?: string | null
           status?: string
           tipo_movimento?: string
+          total_ocorrencias?: number | null
           valor_bruto?: number
           valor_liquido?: number
         }
