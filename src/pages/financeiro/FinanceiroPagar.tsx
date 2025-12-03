@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { format, isPast, isToday } from "date-fns";
+import { useState, useEffect, useMemo } from "react";
+import { format, isPast, isToday, addMonths } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { PageHeader } from "@/components/PageHeader";
 import { EmptyState } from "@/components/EmptyState";
@@ -70,12 +70,33 @@ interface Movimento {
   observacoes: string | null;
   status: string;
   id_estoque: number | null;
+  competencia: string | null;
   recorrencia_id: string | null;
   ordem_ocorrencia: number | null;
   total_ocorrencias: number | null;
   vx_fin_conta: { banco: string; descricao: string | null } | null;
   vx_fin_categoria: { categoria: string } | null;
 }
+
+// Generate competencia options from 01/2019 to current month/year
+const gerarOpcoesCompetencia = (): { value: string; label: string }[] => {
+  const opcoes: { value: string; label: string }[] = [];
+  const dataInicio = new Date(2019, 0, 1);
+  const dataAtual = new Date();
+  
+  let dataIteracao = new Date(dataInicio);
+  while (dataIteracao <= dataAtual) {
+    const mes = String(dataIteracao.getMonth() + 1).padStart(2, '0');
+    const ano = dataIteracao.getFullYear();
+    const value = `${mes}/${ano}`;
+    opcoes.push({ value, label: value });
+    dataIteracao = addMonths(dataIteracao, 1);
+  }
+  
+  return opcoes.reverse();
+};
+
+const opcoesCompetencia = gerarOpcoesCompetencia();
 
 interface Veiculo {
   id: number;
@@ -94,6 +115,7 @@ const FinanceiroPagar = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("todos");
   const [veiculoFilter, setVeiculoFilter] = useState<string>("todos");
+  const [competenciaFilter, setCompetenciaFilter] = useState<string>("todos");
   const [dateFilter, setDateFilter] = useState<Date | undefined>(undefined);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedMovimento, setSelectedMovimento] = useState<Movimento | null>(null);
@@ -356,7 +378,12 @@ const FinanceiroPagar = () => {
       matchesVeiculo = mov.id_estoque === parseInt(veiculoFilter);
     }
 
-    return matchesSearch && matchesStatus && matchesDate && matchesVeiculo;
+    let matchesCompetencia = true;
+    if (competenciaFilter !== "todos") {
+      matchesCompetencia = mov.competencia === competenciaFilter;
+    }
+
+    return matchesSearch && matchesStatus && matchesDate && matchesVeiculo && matchesCompetencia;
   });
 
   return (
@@ -425,6 +452,20 @@ const FinanceiroPagar = () => {
                 </SelectContent>
               </Select>
 
+              <Select value={competenciaFilter} onValueChange={setCompetenciaFilter}>
+                <SelectTrigger className="w-[150px] bg-background/50 border-border/50">
+                  <SelectValue placeholder="Competência" />
+                </SelectTrigger>
+                <SelectContent className="max-h-[300px]">
+                  <SelectItem value="todos">Todas</SelectItem>
+                  {opcoesCompetencia.map((opcao) => (
+                    <SelectItem key={opcao.value} value={opcao.value}>
+                      {opcao.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
               <Popover>
                 <PopoverTrigger asChild>
                   <Button
@@ -449,13 +490,14 @@ const FinanceiroPagar = () => {
                 </PopoverContent>
               </Popover>
 
-              {(dateFilter || veiculoFilter !== "todos") && (
+              {(dateFilter || veiculoFilter !== "todos" || competenciaFilter !== "todos") && (
                 <Button
                   variant="ghost"
                   size="icon"
                   onClick={() => {
                     setDateFilter(undefined);
                     setVeiculoFilter("todos");
+                    setCompetenciaFilter("todos");
                   }}
                   className="h-10 w-10"
                   title="Limpar filtros"
