@@ -82,6 +82,7 @@ const formSchema = z.object({
   competencia: z.string().optional(),
   id_conta: z.string().min(1, "Conta é obrigatória"),
   id_categoria: z.string().min(1, "Categoria é obrigatória"),
+  id_forma_pagamento: z.string().optional(),
   observacoes: z.string().optional(),
   status: z.string().default("Pendente"),
 });
@@ -98,6 +99,12 @@ interface Categoria {
   id: string;
   categoria: string;
   operacao: string;
+}
+
+interface FormaPagamento {
+  id: string;
+  descricao: string;
+  ativa: boolean;
 }
 
 interface Veiculo {
@@ -120,6 +127,7 @@ interface Movimento {
   id_conta: string;
   id_categoria: string;
   id_empresa: string;
+  id_forma_pagamento: string | null;
   observacoes: string | null;
   status: string;
   id_estoque: number | null;
@@ -150,6 +158,7 @@ export function MovimentoDialog({
   const [saving, setSaving] = useState(false);
   const [contas, setContas] = useState<Conta[]>([]);
   const [categorias, setCategorias] = useState<Categoria[]>([]);
+  const [formasPagamento, setFormasPagamento] = useState<FormaPagamento[]>([]);
   const [veiculos, setVeiculos] = useState<Veiculo[]>([]);
   const [loadingData, setLoadingData] = useState(true);
   const [vincularVeiculo, setVincularVeiculo] = useState(false);
@@ -171,6 +180,7 @@ export function MovimentoDialog({
       competencia: getCompetenciaAtual(),
       id_conta: "",
       id_categoria: "",
+      id_forma_pagamento: "",
       observacoes: "",
       status: "Pendente",
     },
@@ -187,9 +197,10 @@ export function MovimentoDialog({
         const tresMesesAtras = new Date();
         tresMesesAtras.setMonth(tresMesesAtras.getMonth() - 3);
 
-        const [contasRes, categoriasRes, veiculosEstoqueRes, vendasRecentesRes] = await Promise.all([
+        const [contasRes, categoriasRes, formasPagamentoRes, veiculosEstoqueRes, vendasRecentesRes] = await Promise.all([
           supabase.from("vx_fin_conta").select("*").order("banco"),
           supabase.from("vx_fin_categoria").select("*").eq("ativo", true).order("categoria"),
+          supabase.from("vx_forma_pagamento").select("*").eq("ativa", true).order("descricao"),
           supabase
             .from("estoque")
             .select("id, fabricante, modelo, placa, ano, status")
@@ -207,6 +218,7 @@ export function MovimentoDialog({
         ]);
 
         if (contasRes.error) throw contasRes.error;
+        if (formasPagamentoRes.error) throw formasPagamentoRes.error;
         if (categoriasRes.error) throw categoriasRes.error;
         if (veiculosEstoqueRes.error) throw veiculosEstoqueRes.error;
         if (vendasRecentesRes.error) throw vendasRecentesRes.error;
@@ -233,6 +245,7 @@ export function MovimentoDialog({
 
         setContas(contasRes.data || []);
         setCategorias(categoriasRes.data || []);
+        setFormasPagamento(formasPagamentoRes.data || []);
         setVeiculos(todosVeiculos);
       } catch (error: any) {
         toast({
@@ -262,6 +275,7 @@ export function MovimentoDialog({
           competencia: movimento.competencia || getCompetenciaAtual(),
           id_conta: movimento.id_conta,
           id_categoria: movimento.id_categoria,
+          id_forma_pagamento: movimento.id_forma_pagamento || "",
           observacoes: movimento.observacoes || "",
           status: movimento.status,
         });
@@ -286,6 +300,7 @@ export function MovimentoDialog({
           competencia: getCompetenciaAtual(),
           id_conta: "",
           id_categoria: "",
+          id_forma_pagamento: "",
           observacoes: "",
           status: "Pendente",
         });
@@ -377,6 +392,7 @@ export function MovimentoDialog({
           valor_liquido: valorNumerico,
           id_conta: data.id_conta,
           id_categoria: data.id_categoria,
+          id_forma_pagamento: data.id_forma_pagamento || null,
           id_empresa: empresaData.id,
           observacoes: data.observacoes || null,
           competencia: data.competencia || null,
@@ -476,6 +492,7 @@ export function MovimentoDialog({
             competencia: data.competencia || null,
             id_conta: data.id_conta,
             id_categoria: data.id_categoria,
+            id_forma_pagamento: data.id_forma_pagamento || null,
             id_empresa: empresaData.id,
             observacoes: data.observacoes || null,
             status: data.status,
@@ -509,6 +526,7 @@ export function MovimentoDialog({
             competencia: data.competencia || null,
             id_conta: data.id_conta,
             id_categoria: data.id_categoria,
+            id_forma_pagamento: data.id_forma_pagamento || null,
             id_empresa: empresaData.id,
             observacoes: data.observacoes || null,
             status: "Pendente",
@@ -740,6 +758,31 @@ export function MovimentoDialog({
                         {filteredCategorias.map((cat) => (
                           <SelectItem key={cat.id} value={cat.id}>
                             {cat.categoria}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="id_forma_pagamento"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Forma de Pagamento</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger className="bg-background/50 border-border/50">
+                          <SelectValue placeholder="Selecione a forma de pagamento" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {formasPagamento.map((fp) => (
+                          <SelectItem key={fp.id} value={fp.id}>
+                            {fp.descricao}
                           </SelectItem>
                         ))}
                       </SelectContent>

@@ -33,6 +33,11 @@ interface Conta {
   descricao: string | null;
 }
 
+interface FormaPagamento {
+  id: string;
+  descricao: string;
+}
+
 interface MovimentoSelecionado {
   id: string;
   descricao: string;
@@ -45,7 +50,8 @@ interface BaixaLoteDialogProps {
   onOpenChange: (open: boolean) => void;
   movimentosSelecionados: MovimentoSelecionado[];
   contas: Conta[];
-  onConfirm: (dataPagamento: string, contaId: string) => Promise<void>;
+  formasPagamento: FormaPagamento[];
+  onConfirm: (dataPagamento: string, contaId: string, formaPagamentoId: string | null) => Promise<void>;
 }
 
 export function BaixaLoteDialog({
@@ -53,11 +59,13 @@ export function BaixaLoteDialog({
   onOpenChange,
   movimentosSelecionados,
   contas,
+  formasPagamento,
   onConfirm,
 }: BaixaLoteDialogProps) {
   const [dataPagamento, setDataPagamento] = useState<Date | undefined>(new Date());
   const [usarDataVencimento, setUsarDataVencimento] = useState(false);
   const [contaId, setContaId] = useState<string>("");
+  const [formaPagamentoId, setFormaPagamentoId] = useState<string>("");
   const [isLoading, setIsLoading] = useState(false);
 
   const getContaDisplayName = (conta: Conta) => {
@@ -73,7 +81,7 @@ export function BaixaLoteDialog({
         ? "" // será tratado individualmente no handler
         : format(dataPagamento!, "yyyy-MM-dd");
       
-      await onConfirm(dataFormatada, contaId);
+      await onConfirm(dataFormatada, contaId, formaPagamentoId || null);
       onOpenChange(false);
       resetForm();
     } finally {
@@ -85,6 +93,7 @@ export function BaixaLoteDialog({
     setDataPagamento(new Date());
     setUsarDataVencimento(false);
     setContaId("");
+    setFormaPagamentoId("");
   };
 
   const handleOpenChange = (newOpen: boolean) => {
@@ -179,6 +188,23 @@ export function BaixaLoteDialog({
                 {contas.map((conta) => (
                   <SelectItem key={conta.id} value={conta.id}>
                     {getContaDisplayName(conta)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Forma de Pagamento */}
+          <div className="space-y-2">
+            <Label className="text-foreground">Forma de Pagamento</Label>
+            <Select value={formaPagamentoId} onValueChange={setFormaPagamentoId}>
+              <SelectTrigger className="bg-background/50">
+                <SelectValue placeholder="Selecione a forma de pagamento" />
+              </SelectTrigger>
+              <SelectContent>
+                {formasPagamento.map((fp) => (
+                  <SelectItem key={fp.id} value={fp.id}>
+                    {fp.descricao}
                   </SelectItem>
                 ))}
               </SelectContent>
