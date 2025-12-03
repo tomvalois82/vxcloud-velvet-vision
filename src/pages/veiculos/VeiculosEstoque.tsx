@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { VehicleDialog } from '@/features/estoque/components/VehicleDialog';
+import { VehicleDetailDialog } from '@/features/estoque/components/VehicleDetailDialog';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import {
@@ -37,12 +38,12 @@ interface Vehicle {
 
 function VehicleCard({
   vehicle,
-  onEdit,
+  onView,
   onDelete,
   onSell,
 }: {
   vehicle: Vehicle;
-  onEdit: (id: number) => void;
+  onView: (id: number) => void;
   onDelete: (e: React.MouseEvent, vehicle: Vehicle) => void;
   onSell: (e: React.MouseEvent, vehicleId: number) => void;
 }) {
@@ -51,7 +52,7 @@ function VehicleCard({
   return (
     <Card
       className="glass hover:border-accent/50 transition-all cursor-pointer group"
-      onClick={() => onEdit(vehicle.id)}
+      onClick={() => onView(vehicle.id)}
     >
       <CardContent className="p-0">
         <div className="relative h-48 overflow-hidden rounded-t-lg bg-muted">
@@ -118,6 +119,7 @@ const VeiculosEstoque = () => {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [detailDialogOpen, setDetailDialogOpen] = useState(false);
   const [selectedVehicleId, setSelectedVehicleId] = useState<number | undefined>();
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [vehicleToDelete, setVehicleToDelete] = useState<Vehicle | null>(null);
@@ -158,8 +160,14 @@ const VeiculosEstoque = () => {
     );
   });
 
+  const handleView = (vehicleId: number) => {
+    setSelectedVehicleId(vehicleId);
+    setDetailDialogOpen(true);
+  };
+
   const handleEdit = (vehicleId: number) => {
     setSelectedVehicleId(vehicleId);
+    setDetailDialogOpen(false);
     setDialogOpen(true);
   };
 
@@ -287,7 +295,7 @@ const VeiculosEstoque = () => {
               <VehicleCard
                 key={vehicle.id}
                 vehicle={vehicle}
-                onEdit={handleEdit}
+                onView={handleView}
                 onDelete={handleDeleteClick}
                 onSell={handleSellClick}
               />
@@ -295,6 +303,13 @@ const VeiculosEstoque = () => {
           </div>
         )}
       </div>
+
+      <VehicleDetailDialog
+        open={detailDialogOpen}
+        onOpenChange={setDetailDialogOpen}
+        vehicleId={selectedVehicleId}
+        onEdit={handleEdit}
+      />
 
       <VehicleDialog
         open={dialogOpen}
