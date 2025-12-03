@@ -50,6 +50,7 @@ import {
   Car,
   Repeat,
   CheckCircle2,
+  RotateCcw,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
@@ -148,6 +149,11 @@ const FinanceiroReceber = () => {
   const [baixaLoteDialogOpen, setBaixaLoteDialogOpen] = useState(false);
   const [baixaIndividualDialogOpen, setBaixaIndividualDialogOpen] = useState(false);
   const [movimentoBaixa, setMovimentoBaixa] = useState<Movimento | null>(null);
+
+  // Estorno states
+  const [estornoDialogOpen, setEstornoDialogOpen] = useState(false);
+  const [movimentoEstorno, setMovimentoEstorno] = useState<Movimento | null>(null);
+  const [estornando, setEstornando] = useState(false);
 
   const fetchMovimentos = async () => {
     setLoading(true);
@@ -462,6 +468,49 @@ const FinanceiroReceber = () => {
     setSelectedIds(newSelected);
   };
 
+  // Estorno handlers
+  const handleEstornoClick = (movimento: Movimento) => {
+    if (movimento.status !== "Pago") return;
+    setMovimentoEstorno(movimento);
+    setEstornoDialogOpen(true);
+  };
+
+  const handleEstornoConfirm = async () => {
+    if (!movimentoEstorno) return;
+
+    setEstornando(true);
+    try {
+      const { error } = await supabase
+        .from("vx_fin_movimento")
+        .update({
+          status: "Pendente",
+          data_pagamento: null,
+          desconto: 0,
+          acrescimo: 0,
+          motivo_ajuste: null,
+        })
+        .eq("id", movimentoEstorno.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Título estornado",
+        description: "O título foi reaberto com sucesso.",
+      });
+      fetchMovimentos();
+    } catch (error: any) {
+      toast({
+        title: "Erro ao estornar",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setEstornando(false);
+      setEstornoDialogOpen(false);
+      setMovimentoEstorno(null);
+    }
+  };
+
   const getStatusBadge = (status: string, dataVencimento: string) => {
     const vencimentoDate = new Date(dataVencimento + "T00:00:00");
     const isVencido = isPast(vencimentoDate) && !isToday(vencimentoDate) && status === "Pendente";
@@ -754,21 +803,27 @@ const FinanceiroReceber = () => {
                           </TableCell>
                           <TableCell>
                             <div className="flex items-center gap-1">
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className={cn(
-                                  "h-8 w-8",
-                                  isPago
-                                    ? "opacity-50 cursor-not-allowed"
-                                    : "hover:bg-green-500/20 text-green-500"
-                                )}
-                                onClick={() => handleBaixaIndividual(mov)}
-                                disabled={isPago}
-                                title={isPago ? "Já está recebido" : "Baixar"}
-                              >
-                                <CheckCircle2 className="w-4 h-4" />
-                              </Button>
+                              {isPago ? (
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8 hover:bg-orange-500/20 text-orange-500"
+                                  onClick={() => handleEstornoClick(mov)}
+                                  title="Estornar/Reabrir"
+                                >
+                                  <RotateCcw className="w-4 h-4" />
+                                </Button>
+                              ) : (
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8 hover:bg-green-500/20 text-green-500"
+                                  onClick={() => handleBaixaIndividual(mov)}
+                                  title="Baixar"
+                                >
+                                  <CheckCircle2 className="w-4 h-4" />
+                                </Button>
+                              )}
                               <Button
                                 variant="ghost"
                                 size="icon"
@@ -780,7 +835,7 @@ const FinanceiroReceber = () => {
                                 )}
                                 onClick={() => handleEdit(mov)}
                                 disabled={isPago}
-                                title={isPago ? "Reabra para editar" : "Editar"}
+                                title={isPago ? "Estorne para editar" : "Editar"}
                               >
                                 <Pencil className="w-4 h-4" />
                               </Button>
@@ -795,7 +850,7 @@ const FinanceiroReceber = () => {
                                 )}
                                 onClick={() => handleDeleteClick(mov)}
                                 disabled={isPago}
-                                title={isPago ? "Não pode excluir recebido" : "Excluir"}
+                                title={isPago ? "Estorne para excluir" : "Excluir"}
                               >
                                 <Trash2 className="w-4 h-4" />
                               </Button>
@@ -883,6 +938,32 @@ const FinanceiroReceber = () => {
         contas={contas}
         onConfirm={handleBaixaIndividualConfirm}
       />
+
+      {/* Estorno dialog */}
+      <AlertDialog open={estornoDialogOpen} onOpenChange={setEstornoDialogOpen}>
+        <AlertDialogContent className="glass-strong border-border/50">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmar estorno</AlertDialogTitle>
+            <AlertDialogDescription>
+              Deseja realmente estornar o título "{movimentoEstorno?.descricao}"?
+              <br />
+              <span className="text-muted-foreground text-sm">
+                O status será alterado para "Pendente" e os valores de desconto/acréscimo serão zerados.
+              </span>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={estornando}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleEstornoConfirm}
+              disabled={estornando}
+              className="bg-orange-500 hover:bg-orange-600"
+            >
+              {estornando ? "Estornando..." : "Estornar"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
