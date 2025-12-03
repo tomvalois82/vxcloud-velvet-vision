@@ -10,6 +10,7 @@ import {
   ArrowDownCircle,
   ArrowUpCircle,
   ArrowLeftRight,
+  FolderTree,
   ChevronDown,
   LogOut
 } from "lucide-react";
@@ -69,6 +70,7 @@ const menuItems: MenuItem[] = [
     items: [
       { title: "Painel", url: "/financeiro", icon: LayoutDashboard },
       { title: "Contas", url: "/financeiro/contas", icon: Wallet },
+      { title: "Categorias", url: "/financeiro/categorias", icon: FolderTree },
       { title: "A Pagar", url: "/financeiro/pagar", icon: ArrowDownCircle },
       { title: "A Receber", url: "/financeiro/receber", icon: ArrowUpCircle },
       { title: "Transferências", url: "/financeiro/transferencias", icon: ArrowLeftRight },
