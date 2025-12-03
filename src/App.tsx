@@ -22,6 +22,7 @@ import FinanceiroReceber from "./pages/financeiro/FinanceiroReceber";
 import FinanceiroTransferencias from "./pages/financeiro/FinanceiroTransferencias";
 import FinanceiroRelatorios from "./pages/financeiro/FinanceiroRelatorios";
 import FinanceiroPainel from "./pages/financeiro/FinanceiroPainel";
+import FinanceiroCategorias from "./pages/financeiro/FinanceiroCategorias";
 import Configuracoes from "./pages/configuracoes/Configuracoes";
 import FormasPagamento from "./pages/configuracoes/FormasPagamento";
 import NotFound from "./pages/NotFound";
@@ -63,6 +64,7 @@ const App = () => (
                             <Route path="/financeiro/pagar" element={<FinanceiroPagar />} />
                             <Route path="/financeiro/receber" element={<FinanceiroReceber />} />
                             <Route path="/financeiro/transferencias" element={<FinanceiroTransferencias />} />
+                            <Route path="/financeiro/categorias" element={<FinanceiroCategorias />} />
                             <Route path="/financeiro/relatorios" element={<FinanceiroRelatorios />} />
                             <Route path="/configuracoes" element={<Configuracoes />} />
                             <Route path="/configuracoes/formas-pagamento" element={<FormasPagamento />} />
