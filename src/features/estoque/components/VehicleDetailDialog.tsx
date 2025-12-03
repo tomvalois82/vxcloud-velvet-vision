@@ -3,7 +3,7 @@ import { differenceInDays, differenceInMonths, format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { 
   Car, Calendar, Gauge, Palette, CreditCard, FileText, 
-  Clock, Edit, MapPin, Hash, Settings, Fuel
+  Clock, Edit, MapPin, Hash, Settings, Fuel, TrendingUp, Receipt
 } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -12,6 +12,7 @@ import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
 import { supabase } from '@/integrations/supabase/client';
 import { useVehicleMainPhoto } from '@/features/estoque/hooks/useVehicleMainPhoto';
+import { useVehicleFinancials } from '@/features/estoque/hooks/useVehicleFinancials';
 import { maskCurrency, maskKm } from '@/features/estoque/utils/masks';
 import { PhotoCarousel } from './PhotoCarousel';
 import { StorageManager, PhotoMetadata } from '@/features/estoque/utils/storageManager';
@@ -92,6 +93,10 @@ export function VehicleDetailDialog({ open, onOpenChange, vehicleId, onEdit }: V
   const [carouselIndex, setCarouselIndex] = useState(0);
   
   const { mainPhoto } = useVehicleMainPhoto(vehicleId, vehicle?.foto || null);
+  const { custos, valorVenda, margem, loading: financialsLoading } = useVehicleFinancials(
+    vehicleId,
+    vehicle?.valor_aquisicao || null
+  );
 
   useEffect(() => {
     if (open && vehicleId) {
@@ -269,10 +274,10 @@ export function VehicleDetailDialog({ open, onOpenChange, vehicleId, onEdit }: V
               </div>
 
               {/* Price Section */}
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                 <div className="glass rounded-lg p-4">
                   <p className="text-xs text-muted-foreground mb-1">Valor de Venda</p>
-                  <p className="text-2xl font-bold text-accent">
+                  <p className="text-xl font-bold text-accent">
                     {vehicle.valor ? maskCurrency(Number(vehicle.valor)) : 'Não informado'}
                   </p>
                 </div>
@@ -281,6 +286,34 @@ export function VehicleDetailDialog({ open, onOpenChange, vehicleId, onEdit }: V
                   <p className="text-xl font-semibold text-foreground">
                     {vehicle.valor_aquisicao ? maskCurrency(vehicle.valor_aquisicao) : 'Não informado'}
                   </p>
+                </div>
+                <div className="glass rounded-lg p-4">
+                  <div className="flex items-center gap-2 mb-1">
+                    <Receipt className="w-3 h-3 text-muted-foreground" />
+                    <p className="text-xs text-muted-foreground">Custos com o Veículo</p>
+                  </div>
+                  {financialsLoading ? (
+                    <Skeleton className="h-7 w-24" />
+                  ) : (
+                    <p className="text-xl font-semibold text-red-400">
+                      {maskCurrency(custos)}
+                    </p>
+                  )}
+                </div>
+                <div className="glass rounded-lg p-4">
+                  <div className="flex items-center gap-2 mb-1">
+                    <TrendingUp className="w-3 h-3 text-muted-foreground" />
+                    <p className="text-xs text-muted-foreground">Margem</p>
+                  </div>
+                  {financialsLoading ? (
+                    <Skeleton className="h-7 w-24" />
+                  ) : margem !== null ? (
+                    <p className={`text-xl font-bold ${margem >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                      {maskCurrency(margem)}
+                    </p>
+                  ) : (
+                    <p className="text-sm text-muted-foreground italic">Sem venda</p>
+                  )}
                 </div>
               </div>
 
