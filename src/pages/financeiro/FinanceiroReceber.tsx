@@ -46,6 +46,7 @@ import {
   Loader2,
   CalendarIcon,
   X,
+  Car,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
@@ -71,12 +72,23 @@ interface Movimento {
   vx_fin_categoria: { categoria: string } | null;
 }
 
+interface Veiculo {
+  id: number;
+  fabricante: string | null;
+  modelo: string | null;
+  placa: string | null;
+  ano: string | null;
+  status: string | null;
+}
+
 const FinanceiroReceber = () => {
   const { toast } = useToast();
   const [movimentos, setMovimentos] = useState<Movimento[]>([]);
+  const [veiculos, setVeiculos] = useState<Veiculo[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("todos");
+  const [veiculoFilter, setVeiculoFilter] = useState<string>("todos");
   const [dateFilter, setDateFilter] = useState<Date | undefined>(undefined);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedMovimento, setSelectedMovimento] = useState<Movimento | null>(null);
@@ -110,8 +122,53 @@ const FinanceiroReceber = () => {
     }
   };
 
+  const fetchVeiculos = async () => {
+    try {
+      const tresMesesAtras = new Date();
+      tresMesesAtras.setMonth(tresMesesAtras.getMonth() - 3);
+
+      const [veiculosEstoqueRes, vendasRecentesRes] = await Promise.all([
+        supabase
+          .from("estoque")
+          .select("id, fabricante, modelo, placa, ano, status")
+          .neq("status", "Vendido")
+          .order("fabricante")
+          .order("modelo"),
+        supabase
+          .from("vx_vendas")
+          .select(`
+            id_veiculo_vendido,
+            estoque!id_veiculo_vendido (id, fabricante, modelo, placa, ano, status)
+          `)
+          .eq("fechada", true)
+          .gte("data_venda", tresMesesAtras.toISOString()),
+      ]);
+
+      const veiculosEmEstoque = (veiculosEstoqueRes.data || []) as Veiculo[];
+      const veiculosVendidosRecentes = (vendasRecentesRes.data || [])
+        .map((v: any) => v.estoque)
+        .filter((v: any): v is Veiculo => v !== null);
+
+      const todosVeiculosMap = new Map<number, Veiculo>();
+      veiculosEmEstoque.forEach((v) => todosVeiculosMap.set(v.id, v));
+      veiculosVendidosRecentes.forEach((v) => {
+        if (!todosVeiculosMap.has(v.id)) {
+          todosVeiculosMap.set(v.id, v);
+        }
+      });
+
+      const todosVeiculos = Array.from(todosVeiculosMap.values())
+        .sort((a, b) => (a.fabricante || '').localeCompare(b.fabricante || ''));
+
+      setVeiculos(todosVeiculos);
+    } catch (error) {
+      console.error("Erro ao carregar veículos:", error);
+    }
+  };
+
   useEffect(() => {
     fetchMovimentos();
+    fetchVeiculos();
   }, []);
 
   const handleEdit = (movimento: Movimento) => {
@@ -189,6 +246,13 @@ const FinanceiroReceber = () => {
     return isPast(vencimentoDate) && !isToday(vencimentoDate) && status === "Pendente";
   };
 
+  const getVeiculoDisplayName = (veiculo: Veiculo) => {
+    const parts = [veiculo.fabricante, veiculo.modelo, veiculo.ano].filter(Boolean);
+    const base = parts.join(" ") || "Veículo sem nome";
+    const withPlaca = veiculo.placa ? `${base} - ${veiculo.placa}` : base;
+    return veiculo.status === "Vendido" ? `${withPlaca} [Vendido]` : withPlaca;
+  };
+
   const filteredMovimentos = movimentos.filter((mov) => {
     const matchesSearch = mov.descricao.toLowerCase().includes(searchTerm.toLowerCase());
     
@@ -210,7 +274,12 @@ const FinanceiroReceber = () => {
         movDate.getDate() === dateFilter.getDate();
     }
 
-    return matchesSearch && matchesStatus && matchesDate;
+    let matchesVeiculo = true;
+    if (veiculoFilter !== "todos") {
+      matchesVeiculo = mov.id_estoque === parseInt(veiculoFilter);
+    }
+
+    return matchesSearch && matchesStatus && matchesDate && matchesVeiculo;
   });
 
   return (
@@ -241,7 +310,7 @@ const FinanceiroReceber = () => {
         ) : (
           <div className="space-y-4">
             {/* Filters */}
-            <div className="flex flex-col sm:flex-row gap-4">
+            <div className="flex flex-col sm:flex-row gap-4 flex-wrap">
               <div className="relative flex-1 max-w-sm">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <Input
@@ -261,6 +330,21 @@ const FinanceiroReceber = () => {
                   <SelectItem value="pendente">Pendente</SelectItem>
                   <SelectItem value="pago">Recebido</SelectItem>
                   <SelectItem value="vencido">Vencido</SelectItem>
+                </SelectContent>
+              </Select>
+
+              <Select value={veiculoFilter} onValueChange={setVeiculoFilter}>
+                <SelectTrigger className="w-[220px] bg-background/50 border-border/50">
+                  <Car className="mr-2 h-4 w-4" />
+                  <SelectValue placeholder="Filtrar veículo" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="todos">Todos os veículos</SelectItem>
+                  {veiculos.map((v) => (
+                    <SelectItem key={v.id} value={v.id.toString()}>
+                      {getVeiculoDisplayName(v)}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
 
@@ -288,12 +372,16 @@ const FinanceiroReceber = () => {
                 </PopoverContent>
               </Popover>
 
-              {dateFilter && (
+              {(dateFilter || veiculoFilter !== "todos") && (
                 <Button
                   variant="ghost"
                   size="icon"
-                  onClick={() => setDateFilter(undefined)}
+                  onClick={() => {
+                    setDateFilter(undefined);
+                    setVeiculoFilter("todos");
+                  }}
                   className="h-10 w-10"
+                  title="Limpar filtros"
                 >
                   <X className="h-4 w-4" />
                 </Button>
