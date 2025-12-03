@@ -515,6 +515,7 @@ const FinanceiroPagar = () => {
                     <TableHead className="text-foreground font-semibold">Descrição</TableHead>
                     <TableHead className="text-foreground font-semibold">Valor</TableHead>
                     <TableHead className="text-foreground font-semibold">Vencimento</TableHead>
+                    <TableHead className="text-foreground font-semibold">Competência</TableHead>
                     <TableHead className="text-foreground font-semibold">Conta</TableHead>
                     <TableHead className="text-foreground font-semibold">Categoria</TableHead>
                     <TableHead className="text-foreground font-semibold">Status</TableHead>
@@ -524,7 +525,7 @@ const FinanceiroPagar = () => {
                 <TableBody>
                   {filteredMovimentos.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
+                      <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
                         Nenhum lançamento encontrado
                       </TableCell>
                     </TableRow>
@@ -552,6 +553,9 @@ const FinanceiroPagar = () => {
                         </TableCell>
                         <TableCell className="text-foreground">
                           {format(new Date(mov.data_vencimento + "T00:00:00"), "dd/MM/yyyy", { locale: ptBR })}
+                        </TableCell>
+                        <TableCell className="text-muted-foreground">
+                          {mov.competencia || "-"}
                         </TableCell>
                         <TableCell className="text-muted-foreground">
                           {getContaDisplayName(mov)}
