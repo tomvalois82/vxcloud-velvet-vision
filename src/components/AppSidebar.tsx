@@ -67,7 +67,8 @@ const menuItems: MenuItem[] = [
     title: "Financeiro",
     icon: Wallet,
     items: [
-      { title: "Contas", url: "/financeiro", icon: Wallet },
+      { title: "Painel", url: "/financeiro", icon: LayoutDashboard },
+      { title: "Contas", url: "/financeiro/contas", icon: Wallet },
       { title: "A Pagar", url: "/financeiro/pagar", icon: ArrowDownCircle },
       { title: "A Receber", url: "/financeiro/receber", icon: ArrowUpCircle },
       { title: "Transferências", url: "/financeiro/transferencias", icon: ArrowLeftRight },
