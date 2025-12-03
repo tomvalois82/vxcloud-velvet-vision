@@ -198,11 +198,11 @@ export default function FinanceiroPainel() {
   const [filters, setFilters] = useState<Filters>({
     dataInicio: startOfMonth(new Date()),
     dataFim: endOfMonth(new Date()),
-    competencia: "",
+    competencia: "__all__",
     status: "todos",
-    idEstoque: "",
-    idPessoa: "",
-    idCategoria: "",
+    idEstoque: "__all__",
+    idPessoa: "__all__",
+    idCategoria: "__all__",
     busca: "",
   });
 
@@ -265,7 +265,7 @@ export default function FinanceiroPainel() {
     if (filters.dataFim) {
       query = query.lte("data_vencimento", format(filters.dataFim, "yyyy-MM-dd"));
     }
-    if (filters.competencia) {
+    if (filters.competencia && filters.competencia !== "__all__") {
       query = query.eq("competencia", filters.competencia);
     }
     if (filters.status && filters.status !== "todos") {
@@ -277,13 +277,13 @@ export default function FinanceiroPainel() {
         query = query.neq("status", "Pago");
       }
     }
-    if (filters.idEstoque) {
+    if (filters.idEstoque && filters.idEstoque !== "__all__") {
       query = query.eq("id_estoque", parseInt(filters.idEstoque));
     }
-    if (filters.idPessoa) {
+    if (filters.idPessoa && filters.idPessoa !== "__all__") {
       query = query.eq("id_pessoa", filters.idPessoa);
     }
-    if (filters.idCategoria) {
+    if (filters.idCategoria && filters.idCategoria !== "__all__") {
       query = query.eq("id_categoria", filters.idCategoria);
     }
     if (filters.busca) {
@@ -432,11 +432,11 @@ export default function FinanceiroPainel() {
     setFilters({
       dataInicio: startOfMonth(new Date()),
       dataFim: endOfMonth(new Date()),
-      competencia: "",
+      competencia: "__all__",
       status: "todos",
-      idEstoque: "",
-      idPessoa: "",
-      idCategoria: "",
+      idEstoque: "__all__",
+      idPessoa: "__all__",
+      idCategoria: "__all__",
       busca: "",
     });
     setFiltersApplied(false);
@@ -794,7 +794,7 @@ export default function FinanceiroPainel() {
                       <SelectValue placeholder="Todas" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">Todas</SelectItem>
+                      <SelectItem value="__all__">Todas</SelectItem>
                       {opcoesCompetencia.map((opt) => (
                         <SelectItem key={opt.value} value={opt.value}>
                           {opt.label}
@@ -834,7 +834,7 @@ export default function FinanceiroPainel() {
                       <SelectValue placeholder="Todos" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">Todos</SelectItem>
+                      <SelectItem value="__all__">Todos</SelectItem>
                       {veiculos.map((v) => (
                         <SelectItem key={v.id} value={String(v.id)}>
                           {getVeiculoDisplayName(v)}
@@ -856,7 +856,7 @@ export default function FinanceiroPainel() {
                       <SelectValue placeholder="Todas" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">Todas</SelectItem>
+                      <SelectItem value="__all__">Todas</SelectItem>
                       {pessoas.map((p) => (
                         <SelectItem key={p.id} value={p.id}>
                           {p.nome}
@@ -877,7 +877,7 @@ export default function FinanceiroPainel() {
                       <SelectValue placeholder="Todas" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">Todas</SelectItem>
+                      <SelectItem value="__all__">Todas</SelectItem>
                       {categorias.map((c) => (
                         <SelectItem key={c.id} value={c.id}>
                           {c.categoria}
