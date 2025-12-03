@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { differenceInDays, differenceInMonths, format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { 
@@ -16,6 +16,14 @@ import { useVehicleFinancials } from '@/features/estoque/hooks/useVehicleFinanci
 import { maskCurrency, maskKm } from '@/features/estoque/utils/masks';
 import { PhotoCarousel } from './PhotoCarousel';
 import { StorageManager, PhotoMetadata } from '@/features/estoque/utils/storageManager';
+
+interface VehicleCost {
+  id: string;
+  descricao: string;
+  data_vencimento: string;
+  data_pagamento: string | null;
+  valor_liquido: number;
+}
 
 interface VehicleDetail {
   id: number;
@@ -91,6 +99,7 @@ export function VehicleDetailDialog({ open, onOpenChange, vehicleId, onEdit }: V
   const [photos, setPhotos] = useState<PhotoMetadata[]>([]);
   const [carouselOpen, setCarouselOpen] = useState(false);
   const [carouselIndex, setCarouselIndex] = useState(0);
+  const [vehicleCosts, setVehicleCosts] = useState<VehicleCost[]>([]);
   
   const { mainPhoto } = useVehicleMainPhoto(vehicleId, vehicle?.foto || null);
   const { custos, valorVenda, margem, loading: financialsLoading } = useVehicleFinancials(
@@ -98,15 +107,57 @@ export function VehicleDetailDialog({ open, onOpenChange, vehicleId, onEdit }: V
     vehicle?.valor_aquisicao || null
   );
 
+  const loadVehicleCosts = useCallback(async () => {
+    if (!vehicleId) return;
+    
+    try {
+      const { data, error } = await supabase
+        .from('vx_fin_movimento')
+        .select('id, descricao, data_vencimento, data_pagamento, valor_liquido')
+        .eq('id_estoque', vehicleId)
+        .eq('tipo_movimento', 'Pagar')
+        .order('data_vencimento', { ascending: true });
+
+      if (error) throw error;
+      setVehicleCosts(data || []);
+    } catch (error) {
+      console.error('Error loading vehicle costs:', error);
+    }
+  }, [vehicleId]);
+
   useEffect(() => {
     if (open && vehicleId) {
       loadVehicle();
       loadPhotos();
+      loadVehicleCosts();
     } else {
       setVehicle(null);
       setPhotos([]);
+      setVehicleCosts([]);
     }
   }, [open, vehicleId]);
+
+  useEffect(() => {
+    if (!open || !vehicleId) return;
+
+    const channel = supabase
+      .channel(`vehicle-costs-detail-${vehicleId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'vx_fin_movimento',
+          filter: `id_estoque=eq.${vehicleId}`
+        },
+        () => loadVehicleCosts()
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [open, vehicleId, loadVehicleCosts]);
 
   const loadVehicle = async () => {
     if (!vehicleId) return;
@@ -215,45 +266,18 @@ export function VehicleDetailDialog({ open, onOpenChange, vehicleId, onEdit }: V
               {/* Photo Section */}
               <div className="relative">
                 {photos.length > 0 ? (
-                  <div className="space-y-2">
-                    <div 
-                      className="relative h-64 rounded-lg overflow-hidden cursor-pointer group"
-                      onClick={() => handlePhotoClick(0)}
-                    >
-                      <img
-                        src={mainPhoto || photos[0].url}
-                        alt={`${vehicle.fabricante} ${vehicle.modelo}`}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                      />
-                      <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                        <span className="text-white font-medium">Clique para ampliar</span>
-                      </div>
+                  <div 
+                    className="relative h-64 rounded-lg overflow-hidden cursor-pointer group"
+                    onClick={() => handlePhotoClick(0)}
+                  >
+                    <img
+                      src={mainPhoto || photos[0].url}
+                      alt={`${vehicle.fabricante} ${vehicle.modelo}`}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                    />
+                    <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                      <span className="text-white font-medium">Clique para ampliar</span>
                     </div>
-                    {photos.length > 1 && (
-                      <div className="flex gap-2 overflow-x-auto pb-2">
-                        {photos.slice(0, 6).map((photo, idx) => (
-                          <div
-                            key={idx}
-                            className="relative w-20 h-20 rounded-lg overflow-hidden cursor-pointer shrink-0 border-2 border-transparent hover:border-accent transition-colors"
-                            onClick={() => handlePhotoClick(idx)}
-                          >
-                            <img
-                              src={photo.url}
-                              alt={`Foto ${idx + 1}`}
-                              className="w-full h-full object-cover"
-                            />
-                          </div>
-                        ))}
-                        {photos.length > 6 && (
-                          <div 
-                            className="w-20 h-20 rounded-lg bg-muted flex items-center justify-center cursor-pointer shrink-0 hover:bg-muted/80 transition-colors"
-                            onClick={() => handlePhotoClick(6)}
-                          >
-                            <span className="text-sm text-muted-foreground">+{photos.length - 6}</span>
-                          </div>
-                        )}
-                      </div>
-                    )}
                   </div>
                 ) : (
                   <div className="h-48 rounded-lg bg-muted flex items-center justify-center">
@@ -340,6 +364,55 @@ export function VehicleDetailDialog({ open, onOpenChange, vehicleId, onEdit }: V
                   <DetailRow icon={Fuel} label="Motor" value={vehicle.motor} />
                 </div>
               </div>
+
+              {/* Costs Section */}
+              {vehicleCosts.length > 0 && (
+                <>
+                  <Separator />
+                  <div>
+                    <h3 className="text-sm font-semibold text-foreground mb-3">Custos</h3>
+                    <div className="glass rounded-lg overflow-hidden">
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="border-b border-border/50">
+                            <th className="text-left py-2 px-3 text-muted-foreground font-medium">Descrição</th>
+                            <th className="text-left py-2 px-3 text-muted-foreground font-medium">Vencimento</th>
+                            <th className="text-left py-2 px-3 text-muted-foreground font-medium">Pagamento</th>
+                            <th className="text-right py-2 px-3 text-muted-foreground font-medium">Valor</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {vehicleCosts.map((cost) => (
+                            <tr key={cost.id} className="border-b border-border/30 last:border-0">
+                              <td className="py-2 px-3 text-foreground">{cost.descricao}</td>
+                              <td className="py-2 px-3 text-muted-foreground">
+                                {format(new Date(cost.data_vencimento), 'dd/MM/yyyy', { locale: ptBR })}
+                              </td>
+                              <td className="py-2 px-3 text-muted-foreground">
+                                {cost.data_pagamento 
+                                  ? format(new Date(cost.data_pagamento), 'dd/MM/yyyy', { locale: ptBR })
+                                  : '-'
+                                }
+                              </td>
+                              <td className="py-2 px-3 text-right text-red-400">
+                                {maskCurrency(cost.valor_liquido)}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                        <tfoot>
+                          <tr className="bg-muted/30">
+                            <td colSpan={3} className="py-2 px-3 font-semibold text-foreground">Total</td>
+                            <td className="py-2 px-3 text-right font-bold text-red-400">
+                              {maskCurrency(vehicleCosts.reduce((acc, c) => acc + c.valor_liquido, 0))}
+                            </td>
+                          </tr>
+                        </tfoot>
+                      </table>
+                    </div>
+                  </div>
+                </>
+              )}
 
               <Separator />
 
