@@ -307,9 +307,9 @@ export function VehicleDetailDialog({ open, onOpenChange, vehicleId, onEdit }: V
                   </div>
                   {financialsLoading ? (
                     <Skeleton className="h-7 w-24" />
-                  ) : margem !== null ? (
+                  ) : margem !== null && valorVenda ? (
                     <p className={`text-xl font-bold ${margem >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                      {maskCurrency(margem)}
+                      {maskCurrency(margem)} / {((margem / valorVenda) * 100).toFixed(0)}%
                     </p>
                   ) : (
                     <p className="text-sm text-muted-foreground italic">Sem venda</p>
