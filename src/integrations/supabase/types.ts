@@ -1319,9 +1319,11 @@ export type Database = {
       }
       vx_fin_movimento: {
         Row: {
+          acrescimo: number | null
           competencia: string | null
           data_pagamento: string | null
           data_vencimento: string
+          desconto: number | null
           descricao: string
           id: string
           id_categoria: string
@@ -1330,6 +1332,7 @@ export type Database = {
           id_empresa: string
           id_estoque: number | null
           id_pessoa: string | null
+          motivo_ajuste: string | null
           observacoes: string | null
           ordem_ocorrencia: number | null
           recorrencia_id: string | null
@@ -1340,9 +1343,11 @@ export type Database = {
           valor_liquido: number
         }
         Insert: {
+          acrescimo?: number | null
           competencia?: string | null
           data_pagamento?: string | null
           data_vencimento: string
+          desconto?: number | null
           descricao: string
           id?: string
           id_categoria: string
@@ -1351,6 +1356,7 @@ export type Database = {
           id_empresa: string
           id_estoque?: number | null
           id_pessoa?: string | null
+          motivo_ajuste?: string | null
           observacoes?: string | null
           ordem_ocorrencia?: number | null
           recorrencia_id?: string | null
@@ -1361,9 +1367,11 @@ export type Database = {
           valor_liquido?: number
         }
         Update: {
+          acrescimo?: number | null
           competencia?: string | null
           data_pagamento?: string | null
           data_vencimento?: string
+          desconto?: number | null
           descricao?: string
           id?: string
           id_categoria?: string
@@ -1372,6 +1380,7 @@ export type Database = {
           id_empresa?: string
           id_estoque?: number | null
           id_pessoa?: string | null
+          motivo_ajuste?: string | null
           observacoes?: string | null
           ordem_ocorrencia?: number | null
           recorrencia_id?: string | null

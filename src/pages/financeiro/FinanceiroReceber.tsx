@@ -6,6 +6,7 @@ import { EmptyState } from "@/components/EmptyState";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Table,
   TableBody,
@@ -48,6 +49,7 @@ import {
   X,
   Car,
   Repeat,
+  CheckCircle2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
@@ -55,6 +57,8 @@ import { useToast } from "@/hooks/use-toast";
 import { maskCurrency } from "@/features/estoque/utils/masks";
 import { MovimentoDialog } from "@/features/financeiro/components/MovimentoDialog";
 import { RecorrenciaActionDialog } from "@/features/financeiro/components/RecorrenciaActionDialog";
+import { BaixaLoteDialog } from "@/features/financeiro/components/BaixaLoteDialog";
+import { BaixaIndividualDialog } from "@/features/financeiro/components/BaixaIndividualDialog";
 
 interface Movimento {
   id: string;
@@ -74,8 +78,17 @@ interface Movimento {
   recorrencia_id: string | null;
   ordem_ocorrencia: number | null;
   total_ocorrencias: number | null;
+  desconto: number | null;
+  acrescimo: number | null;
+  motivo_ajuste: string | null;
   vx_fin_conta: { banco: string; descricao: string | null } | null;
   vx_fin_categoria: { categoria: string } | null;
+}
+
+interface Conta {
+  id: string;
+  banco: string;
+  descricao: string | null;
 }
 
 // Generate competencia options from 01/2019 to current month/year
@@ -111,6 +124,7 @@ const FinanceiroReceber = () => {
   const { toast } = useToast();
   const [movimentos, setMovimentos] = useState<Movimento[]>([]);
   const [veiculos, setVeiculos] = useState<Veiculo[]>([]);
+  const [contas, setContas] = useState<Conta[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("todos");
@@ -128,6 +142,12 @@ const FinanceiroReceber = () => {
   const [recorrenciaDeleteDialogOpen, setRecorrenciaDeleteDialogOpen] = useState(false);
   const [pendingEditMovimento, setPendingEditMovimento] = useState<Movimento | null>(null);
   const [editScope, setEditScope] = useState<"single" | "future">("single");
+
+  // Baixa states
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [baixaLoteDialogOpen, setBaixaLoteDialogOpen] = useState(false);
+  const [baixaIndividualDialogOpen, setBaixaIndividualDialogOpen] = useState(false);
+  const [movimentoBaixa, setMovimentoBaixa] = useState<Movimento | null>(null);
 
   const fetchMovimentos = async () => {
     setLoading(true);
@@ -152,6 +172,20 @@ const FinanceiroReceber = () => {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchContas = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("vx_fin_conta")
+        .select("id, banco, descricao")
+        .order("banco");
+
+      if (error) throw error;
+      setContas(data || []);
+    } catch (error) {
+      console.error("Erro ao carregar contas:", error);
     }
   };
 
@@ -202,9 +236,16 @@ const FinanceiroReceber = () => {
   useEffect(() => {
     fetchMovimentos();
     fetchVeiculos();
+    fetchContas();
   }, []);
 
+  // Clear selection when filtered list changes
+  useEffect(() => {
+    setSelectedIds(new Set());
+  }, [searchTerm, statusFilter, veiculoFilter, competenciaFilter, dateFilter]);
+
   const handleEdit = (movimento: Movimento) => {
+    if (movimento.status === "Pago") return;
     if (movimento.recorrencia_id) {
       setPendingEditMovimento(movimento);
       setRecorrenciaEditDialogOpen(true);
@@ -231,6 +272,7 @@ const FinanceiroReceber = () => {
   };
 
   const handleDeleteClick = (movimento: Movimento) => {
+    if (movimento.status === "Pago") return;
     setMovimentoToDelete(movimento);
     if (movimento.recorrencia_id) {
       setRecorrenciaDeleteDialogOpen(true);
@@ -315,6 +357,111 @@ const FinanceiroReceber = () => {
     }
   };
 
+  // Baixa handlers
+  const handleBaixaIndividual = (movimento: Movimento) => {
+    if (movimento.status === "Pago") return;
+    setMovimentoBaixa(movimento);
+    setBaixaIndividualDialogOpen(true);
+  };
+
+  const handleBaixaIndividualConfirm = async (data: {
+    id: string;
+    dataPagamento: string;
+    contaId: string;
+    desconto: number;
+    acrescimo: number;
+    motivoAjuste: string | null;
+  }) => {
+    try {
+      const { error } = await supabase
+        .from("vx_fin_movimento")
+        .update({
+          status: "Pago",
+          data_pagamento: data.dataPagamento,
+          id_conta: data.contaId,
+          desconto: data.desconto,
+          acrescimo: data.acrescimo,
+          motivo_ajuste: data.motivoAjuste,
+        })
+        .eq("id", data.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Título baixado",
+        description: "O título foi baixado com sucesso.",
+      });
+      fetchMovimentos();
+    } catch (error: any) {
+      toast({
+        title: "Erro ao baixar título",
+        description: error.message,
+        variant: "destructive",
+      });
+      throw error;
+    }
+  };
+
+  const handleBaixaLoteConfirm = async (dataPagamento: string, contaId: string) => {
+    const selectedMovimentos = filteredMovimentos.filter(
+      (mov) => selectedIds.has(mov.id) && mov.status !== "Pago"
+    );
+
+    if (selectedMovimentos.length === 0) return;
+
+    try {
+      for (const mov of selectedMovimentos) {
+        const dataFinal = dataPagamento || mov.data_vencimento;
+        
+        const { error } = await supabase
+          .from("vx_fin_movimento")
+          .update({
+            status: "Pago",
+            data_pagamento: dataFinal,
+            id_conta: contaId,
+          })
+          .eq("id", mov.id);
+
+        if (error) throw error;
+      }
+
+      toast({
+        title: "Títulos baixados",
+        description: `${selectedMovimentos.length} título(s) baixado(s) com sucesso.`,
+      });
+      setSelectedIds(new Set());
+      fetchMovimentos();
+    } catch (error: any) {
+      toast({
+        title: "Erro ao baixar títulos",
+        description: error.message,
+        variant: "destructive",
+      });
+      throw error;
+    }
+  };
+
+  const handleSelectAll = (checked: boolean) => {
+    if (checked) {
+      const pendingIds = filteredMovimentos
+        .filter((mov) => mov.status !== "Pago")
+        .map((mov) => mov.id);
+      setSelectedIds(new Set(pendingIds));
+    } else {
+      setSelectedIds(new Set());
+    }
+  };
+
+  const handleSelectOne = (id: string, checked: boolean) => {
+    const newSelected = new Set(selectedIds);
+    if (checked) {
+      newSelected.add(id);
+    } else {
+      newSelected.delete(id);
+    }
+    setSelectedIds(newSelected);
+  };
+
   const getStatusBadge = (status: string, dataVencimento: string) => {
     const vencimentoDate = new Date(dataVencimento + "T00:00:00");
     const isVencido = isPast(vencimentoDate) && !isToday(vencimentoDate) && status === "Pendente";
@@ -386,16 +533,35 @@ const FinanceiroReceber = () => {
     return matchesSearch && matchesStatus && matchesDate && matchesVeiculo && matchesCompetencia;
   });
 
+  const pendingMovimentos = filteredMovimentos.filter((mov) => mov.status !== "Pago");
+  const allPendingSelected = pendingMovimentos.length > 0 && pendingMovimentos.every((mov) => selectedIds.has(mov.id));
+  const somePendingSelected = pendingMovimentos.some((mov) => selectedIds.has(mov.id));
+
+  const selectedMovimentosForBaixa = filteredMovimentos.filter(
+    (mov) => selectedIds.has(mov.id) && mov.status !== "Pago"
+  );
+
   return (
     <div className="animate-fade-in">
       <PageHeader
         title="Contas a Receber"
         description="Gerencie recebimentos e cobranças"
         action={
-          <Button className="bg-accent hover:bg-accent/90" onClick={handleNew}>
-            <Plus className="w-4 h-4 mr-2" />
-            Nova Receita
-          </Button>
+          <div className="flex items-center gap-2">
+            {selectedIds.size > 0 && (
+              <Button
+                className="bg-green-600 hover:bg-green-700"
+                onClick={() => setBaixaLoteDialogOpen(true)}
+              >
+                <CheckCircle2 className="w-4 h-4 mr-2" />
+                Baixar Selecionados ({selectedMovimentosForBaixa.length})
+              </Button>
+            )}
+            <Button className="bg-accent hover:bg-accent/90" onClick={handleNew}>
+              <Plus className="w-4 h-4 mr-2" />
+              Nova Receita
+            </Button>
+          </div>
         }
       />
 
@@ -512,6 +678,14 @@ const FinanceiroReceber = () => {
               <Table>
                 <TableHeader>
                   <TableRow className="border-border/50 hover:bg-transparent">
+                    <TableHead className="w-[50px]">
+                      <Checkbox
+                        checked={allPendingSelected}
+                        onCheckedChange={handleSelectAll}
+                        aria-label="Selecionar todos"
+                        className={somePendingSelected && !allPendingSelected ? "data-[state=checked]:bg-accent/50" : ""}
+                      />
+                    </TableHead>
                     <TableHead className="text-foreground font-semibold">Descrição</TableHead>
                     <TableHead className="text-foreground font-semibold">Valor</TableHead>
                     <TableHead className="text-foreground font-semibold">Vencimento</TableHead>
@@ -519,75 +693,117 @@ const FinanceiroReceber = () => {
                     <TableHead className="text-foreground font-semibold">Conta</TableHead>
                     <TableHead className="text-foreground font-semibold">Categoria</TableHead>
                     <TableHead className="text-foreground font-semibold">Status</TableHead>
-                    <TableHead className="text-foreground font-semibold w-[100px]">Ações</TableHead>
+                    <TableHead className="text-foreground font-semibold w-[130px]">Ações</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {filteredMovimentos.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
+                      <TableCell colSpan={9} className="text-center text-muted-foreground py-8">
                         Nenhum lançamento encontrado
                       </TableCell>
                     </TableRow>
                   ) : (
-                    filteredMovimentos.map((mov) => (
-                      <TableRow
-                        key={mov.id}
-                        className={cn(
-                          "border-border/50",
-                          isRowVencido(mov.status, mov.data_vencimento) && "bg-destructive/10"
-                        )}
-                      >
-                        <TableCell className="font-medium text-foreground">
-                          <div className="flex items-center gap-2">
-                            {mov.descricao}
-                            {mov.recorrencia_id && (
-                              <span title="Lançamento recorrente">
-                                <Repeat className="w-3 h-3 text-accent" />
-                              </span>
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-foreground">
-                          {maskCurrency(mov.valor_bruto)}
-                        </TableCell>
-                        <TableCell className="text-foreground">
-                          {format(new Date(mov.data_vencimento + "T00:00:00"), "dd/MM/yyyy", { locale: ptBR })}
-                        </TableCell>
-                        <TableCell className="text-muted-foreground">
-                          {mov.competencia || "-"}
-                        </TableCell>
-                        <TableCell className="text-muted-foreground">
-                          {getContaDisplayName(mov)}
-                        </TableCell>
-                        <TableCell className="text-muted-foreground">
-                          {mov.vx_fin_categoria?.categoria || "-"}
-                        </TableCell>
-                        <TableCell>
-                          {getStatusBadge(mov.status, mov.data_vencimento)}
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8 hover:bg-accent/20"
-                              onClick={() => handleEdit(mov)}
-                            >
-                              <Pencil className="w-4 h-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8 hover:bg-destructive/20 text-destructive"
-                              onClick={() => handleDeleteClick(mov)}
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))
+                    filteredMovimentos.map((mov) => {
+                      const isPago = mov.status === "Pago";
+                      return (
+                        <TableRow
+                          key={mov.id}
+                          className={cn(
+                            "border-border/50",
+                            isRowVencido(mov.status, mov.data_vencimento) && "bg-destructive/10",
+                            isPago && "opacity-60 bg-green-500/5"
+                          )}
+                        >
+                          <TableCell>
+                            <Checkbox
+                              checked={selectedIds.has(mov.id)}
+                              onCheckedChange={(checked) => handleSelectOne(mov.id, checked === true)}
+                              disabled={isPago}
+                              aria-label={`Selecionar ${mov.descricao}`}
+                            />
+                          </TableCell>
+                          <TableCell className="font-medium text-foreground">
+                            <div className="flex items-center gap-2">
+                              {isPago && <CheckCircle2 className="w-4 h-4 text-green-500" />}
+                              {mov.descricao}
+                              {mov.recorrencia_id && (
+                                <span title="Lançamento recorrente">
+                                  <Repeat className="w-3 h-3 text-accent" />
+                                </span>
+                              )}
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-foreground">
+                            {maskCurrency(mov.valor_bruto)}
+                          </TableCell>
+                          <TableCell className="text-foreground">
+                            {format(new Date(mov.data_vencimento + "T00:00:00"), "dd/MM/yyyy", { locale: ptBR })}
+                          </TableCell>
+                          <TableCell className="text-muted-foreground">
+                            {mov.competencia || "-"}
+                          </TableCell>
+                          <TableCell className="text-muted-foreground">
+                            {getContaDisplayName(mov)}
+                          </TableCell>
+                          <TableCell className="text-muted-foreground">
+                            {mov.vx_fin_categoria?.categoria || "-"}
+                          </TableCell>
+                          <TableCell>
+                            {getStatusBadge(mov.status, mov.data_vencimento)}
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-1">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className={cn(
+                                  "h-8 w-8",
+                                  isPago
+                                    ? "opacity-50 cursor-not-allowed"
+                                    : "hover:bg-green-500/20 text-green-500"
+                                )}
+                                onClick={() => handleBaixaIndividual(mov)}
+                                disabled={isPago}
+                                title={isPago ? "Já está recebido" : "Baixar"}
+                              >
+                                <CheckCircle2 className="w-4 h-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className={cn(
+                                  "h-8 w-8",
+                                  isPago
+                                    ? "opacity-50 cursor-not-allowed"
+                                    : "hover:bg-accent/20"
+                                )}
+                                onClick={() => handleEdit(mov)}
+                                disabled={isPago}
+                                title={isPago ? "Reabra para editar" : "Editar"}
+                              >
+                                <Pencil className="w-4 h-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className={cn(
+                                  "h-8 w-8",
+                                  isPago
+                                    ? "opacity-50 cursor-not-allowed"
+                                    : "hover:bg-destructive/20 text-destructive"
+                                )}
+                                onClick={() => handleDeleteClick(mov)}
+                                disabled={isPago}
+                                title={isPago ? "Não pode excluir recebido" : "Excluir"}
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })
                   )}
                 </TableBody>
               </Table>
@@ -643,6 +859,29 @@ const FinanceiroReceber = () => {
         actionType="delete"
         onConfirm={handleRecorrenciaDeleteConfirm}
         loading={deleting}
+      />
+
+      {/* Baixa em Lote */}
+      <BaixaLoteDialog
+        open={baixaLoteDialogOpen}
+        onOpenChange={setBaixaLoteDialogOpen}
+        movimentosSelecionados={selectedMovimentosForBaixa.map((mov) => ({
+          id: mov.id,
+          descricao: mov.descricao,
+          valor_bruto: mov.valor_bruto,
+          data_vencimento: mov.data_vencimento,
+        }))}
+        contas={contas}
+        onConfirm={handleBaixaLoteConfirm}
+      />
+
+      {/* Baixa Individual */}
+      <BaixaIndividualDialog
+        open={baixaIndividualDialogOpen}
+        onOpenChange={setBaixaIndividualDialogOpen}
+        movimento={movimentoBaixa}
+        contas={contas}
+        onConfirm={handleBaixaIndividualConfirm}
       />
     </div>
   );
