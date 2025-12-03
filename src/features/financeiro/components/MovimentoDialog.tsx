@@ -2,9 +2,9 @@ import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { format } from "date-fns";
+import { format, addDays, addMonths, setDate, lastDayOfMonth } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { CalendarIcon, Loader2, Car } from "lucide-react";
+import { CalendarIcon, Loader2, Car, Repeat } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -41,6 +41,11 @@ import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { maskCurrency, unmaskCurrency } from "@/features/estoque/utils/masks";
+import {
+  TipoRecorrencia,
+  generateRecorrenciaId,
+  formatarDescricaoRecorrente,
+} from "../utils/recorrenciaUtils";
 
 const formSchema = z.object({
   tipo_movimento: z.enum(["Pagar", "Receber"]),
@@ -90,6 +95,9 @@ interface Movimento {
   observacoes: string | null;
   status: string;
   id_estoque: number | null;
+  recorrencia_id?: string | null;
+  ordem_ocorrencia?: number | null;
+  total_ocorrencias?: number | null;
 }
 
 interface MovimentoDialogProps {
@@ -116,6 +124,12 @@ export function MovimentoDialog({
   const [vincularVeiculo, setVincularVeiculo] = useState(false);
   const [veiculoSelecionado, setVeiculoSelecionado] = useState<string>("");
 
+  // Recurrence state
+  const [tipoRecorrencia, setTipoRecorrencia] = useState<TipoRecorrencia>("nao_recorrente");
+  const [numeroOcorrencias, setNumeroOcorrencias] = useState(12);
+  const [intervaloDias, setIntervaloDias] = useState(30);
+  const [diaFixoMes, setDiaFixoMes] = useState(10);
+
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -131,27 +145,25 @@ export function MovimentoDialog({
   });
 
   const tipoMovimento = form.watch("tipo_movimento");
+  const isEditing = !!movimento;
 
   // Fetch contas, categorias e veículos
   useEffect(() => {
     const fetchData = async () => {
       setLoadingData(true);
       try {
-        // Calculate date 3 months ago
         const tresMesesAtras = new Date();
         tresMesesAtras.setMonth(tresMesesAtras.getMonth() - 3);
 
         const [contasRes, categoriasRes, veiculosEstoqueRes, vendasRecentesRes] = await Promise.all([
           supabase.from("vx_fin_conta").select("*").order("banco"),
           supabase.from("vx_fin_categoria").select("*").eq("ativo", true).order("categoria"),
-          // Query 1: Veículos em estoque (não vendidos)
           supabase
             .from("estoque")
             .select("id, fabricante, modelo, placa, ano, status")
             .neq("status", "Vendido")
             .order("fabricante")
             .order("modelo"),
-          // Query 2: Veículos vendidos nos últimos 3 meses
           supabase
             .from("vx_vendas")
             .select(`
@@ -167,7 +179,6 @@ export function MovimentoDialog({
         if (veiculosEstoqueRes.error) throw veiculosEstoqueRes.error;
         if (vendasRecentesRes.error) throw vendasRecentesRes.error;
 
-        // Combine vehicles from stock + recently sold (without duplicates)
         const veiculosEmEstoque = (veiculosEstoqueRes.data || []) as Veiculo[];
         const veiculosVendidosRecentes = (vendasRecentesRes.data || [])
           .map((v: any) => v.estoque)
@@ -221,7 +232,6 @@ export function MovimentoDialog({
           observacoes: movimento.observacoes || "",
           status: movimento.status,
         });
-        // Set vehicle link state
         if (movimento.id_estoque) {
           setVincularVeiculo(true);
           setVeiculoSelecionado(movimento.id_estoque.toString());
@@ -229,6 +239,11 @@ export function MovimentoDialog({
           setVincularVeiculo(false);
           setVeiculoSelecionado("");
         }
+        // Reset recurrence fields when editing
+        setTipoRecorrencia("nao_recorrente");
+        setNumeroOcorrencias(12);
+        setIntervaloDias(30);
+        setDiaFixoMes(10);
       } else {
         form.reset({
           tipo_movimento: defaultTipo,
@@ -242,11 +257,14 @@ export function MovimentoDialog({
         });
         setVincularVeiculo(false);
         setVeiculoSelecionado("");
+        setTipoRecorrencia("nao_recorrente");
+        setNumeroOcorrencias(12);
+        setIntervaloDias(30);
+        setDiaFixoMes(10);
       }
     }
   }, [open, movimento, defaultTipo, form]);
 
-  // Filter categorias based on tipo_movimento
   const filteredCategorias = categorias.filter((cat) => {
     if (tipoMovimento === "Receber") {
       return cat.operacao === "Receber";
@@ -266,10 +284,34 @@ export function MovimentoDialog({
     return veiculo.status === "Vendido" ? `${withPlaca} [Vendido]` : withPlaca;
   };
 
+  // Generate recurrence dates
+  const gerarDatasRecorrencia = (dataInicial: Date): Date[] => {
+    if (tipoRecorrencia === "nao_recorrente") {
+      return [dataInicial];
+    }
+
+    const datas: Date[] = [];
+
+    if (tipoRecorrencia === "por_ocorrencias" || tipoRecorrencia === "intervalo_dias") {
+      for (let i = 0; i < numeroOcorrencias; i++) {
+        datas.push(addDays(dataInicial, i * intervaloDias));
+      }
+    } else if (tipoRecorrencia === "dia_mes") {
+      for (let i = 0; i < numeroOcorrencias; i++) {
+        const mesBase = addMonths(dataInicial, i);
+        const ultimoDiaMes = lastDayOfMonth(mesBase).getDate();
+        const diaReal = Math.min(diaFixoMes, ultimoDiaMes);
+        const dataOcorrencia = setDate(mesBase, diaReal);
+        datas.push(dataOcorrencia);
+      }
+    }
+
+    return datas;
+  };
+
   const onSubmit = async (data: FormData) => {
     setSaving(true);
     try {
-      // Get empresa from usuario config
       const { data: userData } = await supabase.auth.getUser();
       if (!userData.user) throw new Error("Usuário não autenticado");
 
@@ -293,23 +335,24 @@ export function MovimentoDialog({
 
       const valorNumerico = unmaskCurrency(data.valor_bruto);
 
-      const movimentoData = {
-        tipo_movimento: data.tipo_movimento,
-        descricao: data.descricao,
-        valor_bruto: valorNumerico,
-        valor_liquido: valorNumerico,
-        data_vencimento: format(data.data_vencimento, "yyyy-MM-dd"),
-        id_conta: data.id_conta,
-        id_categoria: data.id_categoria,
-        id_empresa: empresaData.id,
-        observacoes: data.observacoes || null,
-        status: data.status,
-        id_estoque: vincularVeiculo && veiculoSelecionado
-          ? parseInt(veiculoSelecionado)
-          : null,
-      };
-
       if (movimento) {
+        // Editing existing - no recurrence changes
+        const movimentoData = {
+          tipo_movimento: data.tipo_movimento,
+          descricao: data.descricao,
+          valor_bruto: valorNumerico,
+          valor_liquido: valorNumerico,
+          data_vencimento: format(data.data_vencimento, "yyyy-MM-dd"),
+          id_conta: data.id_conta,
+          id_categoria: data.id_categoria,
+          id_empresa: empresaData.id,
+          observacoes: data.observacoes || null,
+          status: data.status,
+          id_estoque: vincularVeiculo && veiculoSelecionado
+            ? parseInt(veiculoSelecionado)
+            : null,
+        };
+
         const { error } = await supabase
           .from("vx_fin_movimento")
           .update(movimentoData)
@@ -322,16 +365,71 @@ export function MovimentoDialog({
           description: "O lançamento foi atualizado com sucesso.",
         });
       } else {
-        const { error } = await supabase
-          .from("vx_fin_movimento")
-          .insert(movimentoData);
+        // Creating new - check for recurrence
+        if (tipoRecorrencia === "nao_recorrente") {
+          // Single entry
+          const movimentoData = {
+            tipo_movimento: data.tipo_movimento,
+            descricao: data.descricao,
+            valor_bruto: valorNumerico,
+            valor_liquido: valorNumerico,
+            data_vencimento: format(data.data_vencimento, "yyyy-MM-dd"),
+            id_conta: data.id_conta,
+            id_categoria: data.id_categoria,
+            id_empresa: empresaData.id,
+            observacoes: data.observacoes || null,
+            status: data.status,
+            id_estoque: vincularVeiculo && veiculoSelecionado
+              ? parseInt(veiculoSelecionado)
+              : null,
+          };
 
-        if (error) throw error;
+          const { error } = await supabase
+            .from("vx_fin_movimento")
+            .insert(movimentoData);
 
-        toast({
-          title: "Lançamento criado",
-          description: "O lançamento foi criado com sucesso.",
-        });
+          if (error) throw error;
+
+          toast({
+            title: "Lançamento criado",
+            description: "O lançamento foi criado com sucesso.",
+          });
+        } else {
+          // Multiple entries (recurrence)
+          const datas = gerarDatasRecorrencia(data.data_vencimento);
+          const recorrenciaId = generateRecorrenciaId();
+          const totalOcorrencias = datas.length;
+
+          const movimentosParaInserir = datas.map((dataOcorrencia, index) => ({
+            tipo_movimento: data.tipo_movimento,
+            descricao: formatarDescricaoRecorrente(data.descricao, index + 1, totalOcorrencias),
+            valor_bruto: valorNumerico,
+            valor_liquido: valorNumerico,
+            data_vencimento: format(dataOcorrencia, "yyyy-MM-dd"),
+            id_conta: data.id_conta,
+            id_categoria: data.id_categoria,
+            id_empresa: empresaData.id,
+            observacoes: data.observacoes || null,
+            status: "Pendente",
+            id_estoque: vincularVeiculo && veiculoSelecionado
+              ? parseInt(veiculoSelecionado)
+              : null,
+            recorrencia_id: recorrenciaId,
+            ordem_ocorrencia: index + 1,
+            total_ocorrencias: totalOcorrencias,
+          }));
+
+          const { error } = await supabase
+            .from("vx_fin_movimento")
+            .insert(movimentosParaInserir);
+
+          if (error) throw error;
+
+          toast({
+            title: "Lançamentos criados",
+            description: `${totalOcorrencias} lançamentos recorrentes foram criados com sucesso.`,
+          });
+        }
       }
 
       onSuccess();
@@ -347,9 +445,14 @@ export function MovimentoDialog({
     }
   };
 
+  // Calculate preview of dates for recurrence
+  const previewDatas = tipoRecorrencia !== "nao_recorrente" && !isEditing
+    ? gerarDatasRecorrencia(form.watch("data_vencimento")).slice(0, 5)
+    : [];
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="glass-strong border-border/50 sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
+      <DialogContent className="glass-strong border-border/50 sm:max-w-[550px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
             {movimento ? "Editar Lançamento" : "Novo Lançamento"}
@@ -431,7 +534,11 @@ export function MovimentoDialog({
                 name="data_vencimento"
                 render={({ field }) => (
                   <FormItem className="flex flex-col">
-                    <FormLabel>Data de Vencimento *</FormLabel>
+                    <FormLabel>
+                      {tipoRecorrencia !== "nao_recorrente" && !isEditing
+                        ? "Data Inicial *"
+                        : "Data de Vencimento *"}
+                    </FormLabel>
                     <Popover>
                       <PopoverTrigger asChild>
                         <FormControl>
@@ -539,6 +646,96 @@ export function MovimentoDialog({
                 )}
               />
 
+              {/* Recurrence Section - Only for new entries */}
+              {!isEditing && (
+                <div className="space-y-4 border border-border/50 rounded-lg p-4 bg-background/30">
+                  <div className="flex items-center gap-2 text-foreground font-medium">
+                    <Repeat className="w-4 h-4" />
+                    Lançamento Recorrente
+                  </div>
+
+                  <Select
+                    value={tipoRecorrencia}
+                    onValueChange={(v) => setTipoRecorrencia(v as TipoRecorrencia)}
+                  >
+                    <SelectTrigger className="bg-background/50 border-border/50">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="nao_recorrente">Não recorrente</SelectItem>
+                      <SelectItem value="por_ocorrencias">Repetir por número de ocorrências</SelectItem>
+                      <SelectItem value="intervalo_dias">Repetir a cada X dias</SelectItem>
+                      <SelectItem value="dia_mes">Repetir todo dia X do mês</SelectItem>
+                    </SelectContent>
+                  </Select>
+
+                  {tipoRecorrencia !== "nao_recorrente" && (
+                    <div className="space-y-3">
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <Label className="text-sm">Quantidade de ocorrências</Label>
+                          <Input
+                            type="number"
+                            min={2}
+                            max={120}
+                            value={numeroOcorrencias}
+                            onChange={(e) => setNumeroOcorrencias(Math.max(2, parseInt(e.target.value) || 2))}
+                            className="bg-background/50 border-border/50 mt-1"
+                          />
+                        </div>
+
+                        {(tipoRecorrencia === "por_ocorrencias" || tipoRecorrencia === "intervalo_dias") && (
+                          <div>
+                            <Label className="text-sm">Intervalo em dias</Label>
+                            <Input
+                              type="number"
+                              min={1}
+                              max={365}
+                              value={intervaloDias}
+                              onChange={(e) => setIntervaloDias(Math.max(1, parseInt(e.target.value) || 1))}
+                              className="bg-background/50 border-border/50 mt-1"
+                            />
+                          </div>
+                        )}
+
+                        {tipoRecorrencia === "dia_mes" && (
+                          <div>
+                            <Label className="text-sm">Dia do mês</Label>
+                            <Input
+                              type="number"
+                              min={1}
+                              max={31}
+                              value={diaFixoMes}
+                              onChange={(e) => setDiaFixoMes(Math.min(31, Math.max(1, parseInt(e.target.value) || 1)))}
+                              className="bg-background/50 border-border/50 mt-1"
+                            />
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Preview */}
+                      {previewDatas.length > 0 && (
+                        <div className="text-xs text-muted-foreground space-y-1 pt-2 border-t border-border/30">
+                          <p className="font-medium">Prévia das primeiras datas:</p>
+                          <div className="flex flex-wrap gap-2">
+                            {previewDatas.map((d, i) => (
+                              <span key={i} className="bg-accent/10 text-accent px-2 py-1 rounded">
+                                {format(d, "dd/MM/yyyy", { locale: ptBR })}
+                              </span>
+                            ))}
+                            {numeroOcorrencias > 5 && (
+                              <span className="text-muted-foreground">
+                                ... +{numeroOcorrencias - 5} mais
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+
               {/* Vincular a Veículo */}
               <div className="space-y-3">
                 <div className="flex items-center space-x-2">
@@ -620,6 +817,8 @@ export function MovimentoDialog({
                     </>
                   ) : movimento ? (
                     "Atualizar"
+                  ) : tipoRecorrencia !== "nao_recorrente" ? (
+                    `Criar ${numeroOcorrencias} Lançamentos`
                   ) : (
                     "Criar Lançamento"
                   )}
