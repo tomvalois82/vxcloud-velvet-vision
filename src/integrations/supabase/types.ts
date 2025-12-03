@@ -1331,6 +1331,7 @@ export type Database = {
           id_conta_destino: string | null
           id_empresa: string
           id_estoque: number | null
+          id_forma_pagamento: string | null
           id_pessoa: string | null
           motivo_ajuste: string | null
           observacoes: string | null
@@ -1355,6 +1356,7 @@ export type Database = {
           id_conta_destino?: string | null
           id_empresa: string
           id_estoque?: number | null
+          id_forma_pagamento?: string | null
           id_pessoa?: string | null
           motivo_ajuste?: string | null
           observacoes?: string | null
@@ -1379,6 +1381,7 @@ export type Database = {
           id_conta_destino?: string | null
           id_empresa?: string
           id_estoque?: number | null
+          id_forma_pagamento?: string | null
           id_pessoa?: string | null
           motivo_ajuste?: string | null
           observacoes?: string | null
@@ -1424,6 +1427,13 @@ export type Database = {
             columns: ["id_estoque"]
             isOneToOne: false
             referencedRelation: "estoque"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vx_fin_movimento_id_forma_pagamento_fkey"
+            columns: ["id_forma_pagamento"]
+            isOneToOne: false
+            referencedRelation: "vx_forma_pagamento"
             referencedColumns: ["id"]
           },
           {

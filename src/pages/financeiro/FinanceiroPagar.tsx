@@ -72,6 +72,7 @@ interface Movimento {
   id_conta: string;
   id_categoria: string;
   id_empresa: string;
+  id_forma_pagamento: string | null;
   observacoes: string | null;
   status: string;
   id_estoque: number | null;
@@ -90,6 +91,11 @@ interface Conta {
   id: string;
   banco: string;
   descricao: string | null;
+}
+
+interface FormaPagamento {
+  id: string;
+  descricao: string;
 }
 
 // Generate competencia options from 01/2019 to current month/year
@@ -126,6 +132,7 @@ const FinanceiroPagar = () => {
   const [movimentos, setMovimentos] = useState<Movimento[]>([]);
   const [veiculos, setVeiculos] = useState<Veiculo[]>([]);
   const [contas, setContas] = useState<Conta[]>([]);
+  const [formasPagamento, setFormasPagamento] = useState<FormaPagamento[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("todos");
@@ -195,6 +202,21 @@ const FinanceiroPagar = () => {
     }
   };
 
+  const fetchFormasPagamento = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("vx_forma_pagamento")
+        .select("id, descricao")
+        .eq("ativa", true)
+        .order("descricao");
+
+      if (error) throw error;
+      setFormasPagamento(data || []);
+    } catch (error) {
+      console.error("Erro ao carregar formas de pagamento:", error);
+    }
+  };
+
   const fetchVeiculos = async () => {
     try {
       const tresMesesAtras = new Date();
@@ -243,6 +265,7 @@ const FinanceiroPagar = () => {
     fetchMovimentos();
     fetchVeiculos();
     fetchContas();
+    fetchFormasPagamento();
   }, []);
 
   // Clear selection when filtered list changes
@@ -374,6 +397,7 @@ const FinanceiroPagar = () => {
     id: string;
     dataPagamento: string;
     contaId: string;
+    formaPagamentoId: string | null;
     desconto: number;
     acrescimo: number;
     motivoAjuste: string | null;
@@ -385,6 +409,7 @@ const FinanceiroPagar = () => {
           status: "Pago",
           data_pagamento: data.dataPagamento,
           id_conta: data.contaId,
+          id_forma_pagamento: data.formaPagamentoId,
           desconto: data.desconto,
           acrescimo: data.acrescimo,
           motivo_ajuste: data.motivoAjuste,
@@ -408,7 +433,7 @@ const FinanceiroPagar = () => {
     }
   };
 
-  const handleBaixaLoteConfirm = async (dataPagamento: string, contaId: string) => {
+  const handleBaixaLoteConfirm = async (dataPagamento: string, contaId: string, formaPagamentoId: string | null) => {
     const selectedMovimentos = filteredMovimentos.filter(
       (mov) => selectedIds.has(mov.id) && mov.status !== "Pago"
     );
@@ -425,6 +450,7 @@ const FinanceiroPagar = () => {
             status: "Pago",
             data_pagamento: dataFinal,
             id_conta: contaId,
+            id_forma_pagamento: formaPagamentoId,
           })
           .eq("id", mov.id);
 
@@ -927,6 +953,7 @@ const FinanceiroPagar = () => {
           data_vencimento: mov.data_vencimento,
         }))}
         contas={contas}
+        formasPagamento={formasPagamento}
         onConfirm={handleBaixaLoteConfirm}
       />
 
@@ -936,6 +963,7 @@ const FinanceiroPagar = () => {
         onOpenChange={setBaixaIndividualDialogOpen}
         movimento={movimentoBaixa}
         contas={contas}
+        formasPagamento={formasPagamento}
         onConfirm={handleBaixaIndividualConfirm}
       />
 

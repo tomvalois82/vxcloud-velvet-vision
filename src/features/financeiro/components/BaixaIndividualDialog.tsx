@@ -34,12 +34,18 @@ interface Conta {
   descricao: string | null;
 }
 
+interface FormaPagamento {
+  id: string;
+  descricao: string;
+}
+
 interface Movimento {
   id: string;
   descricao: string;
   valor_bruto: number;
   data_vencimento: string;
   id_conta: string;
+  id_forma_pagamento: string | null;
 }
 
 interface BaixaIndividualDialogProps {
@@ -47,10 +53,12 @@ interface BaixaIndividualDialogProps {
   onOpenChange: (open: boolean) => void;
   movimento: Movimento | null;
   contas: Conta[];
+  formasPagamento: FormaPagamento[];
   onConfirm: (data: {
     id: string;
     dataPagamento: string;
     contaId: string;
+    formaPagamentoId: string | null;
     desconto: number;
     acrescimo: number;
     motivoAjuste: string | null;
@@ -77,10 +85,12 @@ export function BaixaIndividualDialog({
   onOpenChange,
   movimento,
   contas,
+  formasPagamento,
   onConfirm,
 }: BaixaIndividualDialogProps) {
   const [dataPagamento, setDataPagamento] = useState<Date | undefined>(new Date());
   const [contaId, setContaId] = useState<string>("");
+  const [formaPagamentoId, setFormaPagamentoId] = useState<string>("");
   const [descontoDisplay, setDescontoDisplay] = useState("R$ 0,00");
   const [acrescimoDisplay, setAcrescimoDisplay] = useState("R$ 0,00");
   const [motivoAjuste, setMotivoAjuste] = useState("");
@@ -101,6 +111,7 @@ export function BaixaIndividualDialog({
     if (movimento && open) {
       setDataPagamento(new Date());
       setContaId(movimento.id_conta);
+      setFormaPagamentoId(movimento.id_forma_pagamento || "");
       setDescontoDisplay("R$ 0,00");
       setAcrescimoDisplay("R$ 0,00");
       setMotivoAjuste("");
@@ -140,6 +151,7 @@ export function BaixaIndividualDialog({
         id: movimento.id,
         dataPagamento: format(dataPagamento!, "yyyy-MM-dd"),
         contaId,
+        formaPagamentoId: formaPagamentoId || null,
         desconto,
         acrescimo,
         motivoAjuste: (desconto > 0 || acrescimo > 0) ? motivoAjuste.trim() : null,
@@ -154,6 +166,7 @@ export function BaixaIndividualDialog({
   const resetForm = () => {
     setDataPagamento(new Date());
     setContaId("");
+    setFormaPagamentoId("");
     setDescontoDisplay("R$ 0,00");
     setAcrescimoDisplay("R$ 0,00");
     setMotivoAjuste("");
@@ -245,6 +258,23 @@ export function BaixaIndividualDialog({
             {errors.contaId && (
               <p className="text-xs text-destructive">{errors.contaId}</p>
             )}
+          </div>
+
+          {/* Forma de Pagamento */}
+          <div className="space-y-2">
+            <Label className="text-foreground">Forma de Pagamento</Label>
+            <Select value={formaPagamentoId} onValueChange={setFormaPagamentoId}>
+              <SelectTrigger className="bg-background/50">
+                <SelectValue placeholder="Selecione a forma de pagamento" />
+              </SelectTrigger>
+              <SelectContent>
+                {formasPagamento.map((fp) => (
+                  <SelectItem key={fp.id} value={fp.id}>
+                    {fp.descricao}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           {/* Desconto e Acréscimo lado a lado */}
