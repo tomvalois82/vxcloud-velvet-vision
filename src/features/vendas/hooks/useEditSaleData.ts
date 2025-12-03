@@ -699,6 +699,7 @@ export function useEditSaleData(saleId: string | null) {
       status: string;
       id_conta: string;
       id_categoria: string;
+      id_forma_pagamento: string | null;
       descricao: string;
       valor_bruto: number;
       valor_liquido: number;
@@ -707,6 +708,8 @@ export function useEditSaleData(saleId: string | null) {
       id_pessoa: string | null;
       id_estoque: number | null;
       observacoes: string | null;
+      desconto: number;
+      acrescimo: number;
     }> = [];
 
     const veiculoDesc = `${currentSaleData.veiculo?.fabricante || ''} ${currentSaleData.veiculo?.modelo || ''}`.trim();
@@ -715,7 +718,8 @@ export function useEditSaleData(saleId: string | null) {
     for (const pagamento of currentSaleData.pagamentos) {
       const isRecebimento = pagamento.valor > 0;
       const valorAbsoluto = Math.abs(pagamento.valor);
-      const status = pagamento.data_pagamento ? 'Pago' : 'Pendente';
+      const isPago = !!pagamento.data_pagamento;
+      const status = isPago ? 'Pago' : 'Pendente';
 
       movimentosParaInserir.push({
         tipo_movimento: isRecebimento ? 'Receber' : 'Pagar',
@@ -723,14 +727,17 @@ export function useEditSaleData(saleId: string | null) {
         status,
         id_conta: pagamento.id_conta,
         id_categoria: isRecebimento ? categoriaReceber.id : categoriaPagar.id,
+        id_forma_pagamento: pagamento.id_forma_pagamento,
         descricao: `Venda ${veiculoDesc} - ${pagamento.forma_descricao || 'Pagamento'} ${pagamento.numero}`,
         valor_bruto: valorAbsoluto,
         valor_liquido: valorAbsoluto,
         data_vencimento: pagamento.data_lancamento,
-        data_pagamento: pagamento.data_pagamento,
+        data_pagamento: isPago ? pagamento.data_pagamento : null,
         id_pessoa: currentSaleData.id_cliente,
         id_estoque: currentSaleData.veiculo!.id,
         observacoes: pagamento.observacao,
+        desconto: 0,
+        acrescimo: 0,
       });
     }
 
@@ -742,6 +749,7 @@ export function useEditSaleData(saleId: string | null) {
         status: 'Pendente',
         id_conta: currentSaleData.financiamento.id_conta_destino,
         id_categoria: categoriaReceber.id,
+        id_forma_pagamento: null,
         descricao: `Venda ${veiculoDesc} - Financiamento ${currentSaleData.financiamento.financeira_nome || ''}`,
         valor_bruto: currentSaleData.financiamento.valor,
         valor_liquido: currentSaleData.financiamento.valor,
@@ -752,6 +760,8 @@ export function useEditSaleData(saleId: string | null) {
         observacoes: currentSaleData.financiamento.numero_contrato 
           ? `Contrato: ${currentSaleData.financiamento.numero_contrato}` 
           : null,
+        desconto: 0,
+        acrescimo: 0,
       });
     }
 
