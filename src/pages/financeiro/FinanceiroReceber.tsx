@@ -105,6 +105,7 @@ const FinanceiroReceber = () => {
   const [recorrenciaEditDialogOpen, setRecorrenciaEditDialogOpen] = useState(false);
   const [recorrenciaDeleteDialogOpen, setRecorrenciaDeleteDialogOpen] = useState(false);
   const [pendingEditMovimento, setPendingEditMovimento] = useState<Movimento | null>(null);
+  const [editScope, setEditScope] = useState<"single" | "future">("single");
 
   const fetchMovimentos = async () => {
     setLoading(true);
@@ -186,6 +187,7 @@ const FinanceiroReceber = () => {
       setPendingEditMovimento(movimento);
       setRecorrenciaEditDialogOpen(true);
     } else {
+      setEditScope("single");
       setSelectedMovimento(movimento);
       setDialogOpen(true);
     }
@@ -194,6 +196,7 @@ const FinanceiroReceber = () => {
   const handleRecorrenciaEditConfirm = (scope: "single" | "future") => {
     setRecorrenciaEditDialogOpen(false);
     if (pendingEditMovimento) {
+      setEditScope(scope);
       setSelectedMovimento(pendingEditMovimento);
       setDialogOpen(true);
       setPendingEditMovimento(null);
@@ -553,6 +556,7 @@ const FinanceiroReceber = () => {
         movimento={selectedMovimento}
         defaultTipo="Receber"
         onSuccess={fetchMovimentos}
+        editScope={editScope}
       />
 
       {/* Simple delete dialog for non-recurring */}
