@@ -9,6 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Check, ChevronsUpDown, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { maskCurrency, unmaskCurrency } from "@/features/estoque/utils/masks";
 
 const BANCOS_BRASILEIROS = [
   // Bancos Tradicionais
@@ -87,6 +88,7 @@ interface Conta {
   id: string;
   banco: string;
   descricao: string | null;
+  saldo: number;
 }
 
 interface ContaDialogProps {
@@ -101,6 +103,7 @@ export function ContaDialog({ open, onOpenChange, conta, onSuccess }: ContaDialo
   const [loading, setLoading] = useState(false);
   const [banco, setBanco] = useState("");
   const [descricao, setDescricao] = useState("");
+  const [saldo, setSaldo] = useState("R$ 0,00");
   const [bancoError, setBancoError] = useState("");
   const [openCombobox, setOpenCombobox] = useState(false);
 
@@ -109,14 +112,21 @@ export function ContaDialog({ open, onOpenChange, conta, onSuccess }: ContaDialo
       if (conta) {
         setBanco(conta.banco);
         setDescricao(conta.descricao || "");
+        setSaldo(maskCurrency(Number(conta.saldo)));
       } else {
         setBanco("");
         setDescricao("");
+        setSaldo("R$ 0,00");
       }
       setBancoError("");
       setOpenCombobox(false);
     }
   }, [open, conta]);
+
+  const handleSaldoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setSaldo(maskCurrency(value));
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -133,6 +143,7 @@ export function ContaDialog({ open, onOpenChange, conta, onSuccess }: ContaDialo
       const contaData = {
         banco: banco.trim(),
         descricao: descricao.trim() || null,
+        saldo: unmaskCurrency(saldo),
       };
 
       if (conta) {
@@ -251,6 +262,20 @@ export function ContaDialog({ open, onOpenChange, conta, onSuccess }: ContaDialo
               value={descricao}
               onChange={(e) => setDescricao(e.target.value)}
               placeholder="Descrição opcional da conta..."
+              className="bg-background/50 border-border/50"
+              disabled={loading}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="saldo" className="text-foreground">
+              Saldo
+            </Label>
+            <Input
+              id="saldo"
+              value={saldo}
+              onChange={handleSaldoChange}
+              placeholder="R$ 0,00"
               className="bg-background/50 border-border/50"
               disabled={loading}
             />
