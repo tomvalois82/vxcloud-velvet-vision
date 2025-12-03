@@ -106,6 +106,7 @@ interface MovimentoDialogProps {
   movimento: Movimento | null;
   defaultTipo?: "Pagar" | "Receber";
   onSuccess: () => void;
+  editScope?: "single" | "future";
 }
 
 export function MovimentoDialog({
@@ -114,6 +115,7 @@ export function MovimentoDialog({
   movimento,
   defaultTipo = "Receber",
   onSuccess,
+  editScope = "single",
 }: MovimentoDialogProps) {
   const { toast } = useToast();
   const [saving, setSaving] = useState(false);
@@ -336,34 +338,98 @@ export function MovimentoDialog({
       const valorNumerico = unmaskCurrency(data.valor_bruto);
 
       if (movimento) {
-        // Editing existing - no recurrence changes
-        const movimentoData = {
+        // Editing existing
+        const baseMovimentoData = {
           tipo_movimento: data.tipo_movimento,
-          descricao: data.descricao,
           valor_bruto: valorNumerico,
           valor_liquido: valorNumerico,
-          data_vencimento: format(data.data_vencimento, "yyyy-MM-dd"),
           id_conta: data.id_conta,
           id_categoria: data.id_categoria,
           id_empresa: empresaData.id,
           observacoes: data.observacoes || null,
-          status: data.status,
           id_estoque: vincularVeiculo && veiculoSelecionado
             ? parseInt(veiculoSelecionado)
             : null,
         };
 
-        const { error } = await supabase
-          .from("vx_fin_movimento")
-          .update(movimentoData)
-          .eq("id", movimento.id);
+        if (editScope === "future" && movimento.recorrencia_id) {
+          // Update this and all future occurrences
+          const { data: registrosFuturos, error: fetchError } = await supabase
+            .from("vx_fin_movimento")
+            .select("id, ordem_ocorrencia, total_ocorrencias, data_vencimento")
+            .eq("recorrencia_id", movimento.recorrencia_id)
+            .gte("ordem_ocorrencia", movimento.ordem_ocorrencia || 0)
+            .order("ordem_ocorrencia", { ascending: true });
 
-        if (error) throw error;
+          if (fetchError) throw fetchError;
 
-        toast({
-          title: "Lançamento atualizado",
-          description: "O lançamento foi atualizado com sucesso.",
-        });
+          if (registrosFuturos && registrosFuturos.length > 0) {
+            // Calculate interval between entries
+            let intervaloDiasCalculado = 30;
+            if (registrosFuturos.length > 1) {
+              const data1 = new Date(registrosFuturos[0].data_vencimento);
+              const data2 = new Date(registrosFuturos[1].data_vencimento);
+              intervaloDiasCalculado = Math.round((data2.getTime() - data1.getTime()) / (1000 * 60 * 60 * 24));
+            }
+
+            // Remove numbering from description for base
+            const descricaoBase = data.descricao.replace(/\s*\(\d+\/\d+\)$/, '');
+
+            // Update each record
+            for (let i = 0; i < registrosFuturos.length; i++) {
+              const registro = registrosFuturos[i];
+              const novaDescricao = formatarDescricaoRecorrente(
+                descricaoBase,
+                registro.ordem_ocorrencia || (i + 1),
+                registro.total_ocorrencias || registrosFuturos.length
+              );
+
+              // Calculate new due date
+              let novaDataVencimento: string;
+              if (i === 0) {
+                novaDataVencimento = format(data.data_vencimento, "yyyy-MM-dd");
+              } else {
+                const dataBase = addDays(data.data_vencimento, intervaloDiasCalculado * i);
+                novaDataVencimento = format(dataBase, "yyyy-MM-dd");
+              }
+
+              const { error: updateError } = await supabase
+                .from("vx_fin_movimento")
+                .update({
+                  ...baseMovimentoData,
+                  descricao: novaDescricao,
+                  data_vencimento: novaDataVencimento,
+                  // Preserve individual status
+                })
+                .eq("id", registro.id);
+
+              if (updateError) throw updateError;
+            }
+
+            toast({
+              title: "Lançamentos atualizados",
+              description: `${registrosFuturos.length} lançamentos foram atualizados.`,
+            });
+          }
+        } else {
+          // Update only this record
+          const { error } = await supabase
+            .from("vx_fin_movimento")
+            .update({
+              ...baseMovimentoData,
+              descricao: data.descricao,
+              data_vencimento: format(data.data_vencimento, "yyyy-MM-dd"),
+              status: data.status,
+            })
+            .eq("id", movimento.id);
+
+          if (error) throw error;
+
+          toast({
+            title: "Lançamento atualizado",
+            description: "O lançamento foi atualizado com sucesso.",
+          });
+        }
       } else {
         // Creating new - check for recurrence
         if (tipoRecorrencia === "nao_recorrente") {
