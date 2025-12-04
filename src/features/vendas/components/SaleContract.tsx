@@ -57,9 +57,17 @@ export const SaleContract = forwardRef<HTMLDivElement, SaleContractProps>(
         <div className="flex items-start justify-between border-b-2 border-gray-300 pb-4 mb-6">
           {/* Logo */}
           <div className="flex items-center gap-4">
-            <div className="w-16 h-16 bg-gray-800 text-white flex items-center justify-center text-2xl font-bold rounded">
-              {data.empresa?.nome_fantasia?.charAt(0) || 'V'}
-            </div>
+            {data.empresa?.foto_url ? (
+              <img 
+                src={data.empresa.foto_url} 
+                alt={data.empresa.nome_fantasia || 'Logo'}
+                className="w-16 h-16 object-contain rounded"
+              />
+            ) : (
+              <div className="w-16 h-16 bg-gray-800 text-white flex items-center justify-center text-2xl font-bold rounded">
+                {data.empresa?.nome_fantasia?.charAt(0) || 'V'}
+              </div>
+            )}
             <div>
               <h1 className="text-xl font-bold text-gray-900">
                 {data.empresa?.nome_fantasia || 'VX MOTORS'}
