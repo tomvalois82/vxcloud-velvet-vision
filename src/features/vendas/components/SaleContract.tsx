@@ -349,17 +349,20 @@ export const SaleContract = forwardRef<HTMLDivElement, SaleContractProps>(
             </h2>
           </div>
           <div className="flex justify-end">
-            <div className="w-80 text-sm">
+            <div className="w-96 text-sm">
+              {/* Valor Base */}
               <div className="flex justify-between py-1 border-b border-gray-100">
                 <span>(+) Valor do Veículo:</span>
                 <span className="font-semibold">{formatCurrency(data.totais.valorVenda)}</span>
               </div>
+              
               {data.totais.totalServicosProdutos > 0 && (
                 <div className="flex justify-between py-1 border-b border-gray-100">
                   <span>(+) Produtos/Serviços:</span>
                   <span className="font-semibold">{formatCurrency(data.totais.totalServicosProdutos)}</span>
                 </div>
               )}
+              
               {data.totais.totalTrocas > 0 && (
                 <div className="flex justify-between py-1 border-b border-gray-100">
                   <span>(-) Veículo(s) de Troca:</span>
@@ -368,12 +371,58 @@ export const SaleContract = forwardRef<HTMLDivElement, SaleContractProps>(
                   </span>
                 </div>
               )}
-              <div className="flex justify-between py-2 border-t-2 border-gray-300 mt-2">
-                <span className="font-bold text-base">(=) TOTAL A PAGAR:</span>
-                <span className="font-bold text-base text-green-700">
-                  {formatCurrency(data.totais.totalAPagar)}
+
+              {/* Subtotal */}
+              <div className="flex justify-between py-1 border-b border-gray-200 bg-gray-50 px-1">
+                <span className="font-semibold">(=) Total a Receber:</span>
+                <span className="font-semibold">
+                  {formatCurrency(data.totais.valorVenda + data.totais.totalServicosProdutos - data.totais.totalTrocas)}
                 </span>
               </div>
+
+              {/* Financiamento */}
+              {data.totais.totalFinanciamento > 0 && (
+                <div className="flex justify-between py-1 border-b border-gray-100">
+                  <span>(-) Financiamento:</span>
+                  <span className="font-semibold text-purple-700">
+                    {formatCurrency(data.totais.totalFinanciamento)}
+                  </span>
+                </div>
+              )}
+
+              {/* Recebimentos (Acerto - valores positivos) */}
+              {data.totais.totalRecebimentos > 0 && (
+                <div className="flex justify-between py-1 border-b border-gray-100">
+                  <span>(-) Recebido do Cliente:</span>
+                  <span className="font-semibold text-green-700">
+                    {formatCurrency(data.totais.totalRecebimentos)}
+                  </span>
+                </div>
+              )}
+
+              {/* Pagamentos pela Loja (Acerto - valores negativos) */}
+              {data.totais.totalPagamentos > 0 && (
+                <div className="flex justify-between py-1 border-b border-gray-100">
+                  <span>(+) Pago ao Cliente:</span>
+                  <span className="font-semibold text-red-600">
+                    {formatCurrency(data.totais.totalPagamentos)}
+                  </span>
+                </div>
+              )}
+
+              {/* Saldo Final */}
+              {(() => {
+                const totalAReceber = data.totais.valorVenda + data.totais.totalServicosProdutos - data.totais.totalTrocas;
+                const saldoFinal = totalAReceber - data.totais.totalFinanciamento - data.totais.totalRecebimentos + data.totais.totalPagamentos;
+                return (
+                  <div className="flex justify-between py-2 border-t-2 border-gray-300 mt-2">
+                    <span className="font-bold text-base">(=) SALDO FINAL:</span>
+                    <span className={`font-bold text-base ${saldoFinal === 0 ? 'text-green-700' : saldoFinal > 0 ? 'text-yellow-600' : 'text-red-600'}`}>
+                      {formatCurrency(saldoFinal)}
+                    </span>
+                  </div>
+                );
+              })()}
             </div>
           </div>
         </div>
