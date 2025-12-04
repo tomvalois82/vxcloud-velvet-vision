@@ -244,8 +244,12 @@ export default function FinanceiroCategorias() {
   };
 
   const filteredCategorias = filterCategorias(categorias, searchTerm);
+  
+  // Separate categories by operation type
+  const categoriasReceber = filteredCategorias.filter((cat) => cat.operacao === "Receber");
+  const categoriasPagar = filteredCategorias.filter((cat) => cat.operacao === "Pagar");
 
-  const renderCategoriaItem = (categoria: Categoria, level: number = 0) => {
+  const renderCategoriaItem = (categoria: Categoria, level: number = 0, showBadge: boolean = false) => {
     const isExpanded = expandedIds.has(categoria.id);
     const isLoadingChildren = loadingChildren.has(categoria.id);
     const paddingLeft = level * 24 + 12;
@@ -278,16 +282,18 @@ export default function FinanceiroCategorias() {
           {/* Category Name */}
           <span className="flex-1 text-foreground font-medium">{categoria.categoria}</span>
 
-          {/* Operation Badge */}
-          <span
-            className={`text-xs px-2 py-1 rounded-full ${
-              categoria.operacao === "Receber"
-                ? "bg-emerald-500/20 text-emerald-400"
-                : "bg-red-500/20 text-red-400"
-            }`}
-          >
-            {categoria.operacao}
-          </span>
+          {/* Operation Badge - only show if requested */}
+          {showBadge && (
+            <span
+              className={`text-xs px-2 py-1 rounded-full ${
+                categoria.operacao === "Receber"
+                  ? "bg-emerald-500/20 text-emerald-400"
+                  : "bg-red-500/20 text-red-400"
+              }`}
+            >
+              {categoria.operacao}
+            </span>
+          )}
 
           {/* Action Buttons */}
           <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
@@ -324,12 +330,46 @@ export default function FinanceiroCategorias() {
         {/* Children */}
         {isExpanded && categoria.children && categoria.children.length > 0 && (
           <div className="overflow-hidden transition-all duration-300 ease-in-out">
-            {categoria.children.map((child) => renderCategoriaItem(child, level + 1))}
+            {categoria.children.map((child) => renderCategoriaItem(child, level + 1, showBadge))}
           </div>
         )}
       </div>
     );
   };
+
+  const renderCategoryPanel = (
+    title: string, 
+    categories: Categoria[], 
+    colorClass: string,
+    emptyMessage: string
+  ) => (
+    <div className="rounded-xl border border-border bg-card/50 backdrop-blur-sm overflow-hidden">
+      {/* Panel Header */}
+      <div className={`px-4 py-3 border-b border-border ${colorClass}`}>
+        <h3 className="font-semibold text-foreground">{title}</h3>
+        <p className="text-xs text-muted-foreground mt-0.5">{categories.length} categorias</p>
+      </div>
+      
+      {/* Panel Content */}
+      <div className="p-4 min-h-[300px]">
+        {loading ? (
+          <div className="flex items-center justify-center py-12">
+            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+          </div>
+        ) : categories.length === 0 ? (
+          <EmptyState
+            icon={Search}
+            title="Nenhuma categoria"
+            description={searchTerm ? "Tente buscar por outro termo" : emptyMessage}
+          />
+        ) : (
+          <div className="space-y-1">
+            {categories.map((categoria) => renderCategoriaItem(categoria, 0, false))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
 
   return (
     <div className="space-y-6">
@@ -355,22 +395,22 @@ export default function FinanceiroCategorias() {
         />
       </div>
 
-      {/* Tree View */}
-      <div className="rounded-xl border border-border bg-card/50 backdrop-blur-sm p-4">
-        {loading ? (
-          <div className="flex items-center justify-center py-12">
-            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-          </div>
-        ) : filteredCategorias.length === 0 ? (
-          <EmptyState
-            icon={Search}
-            title="Nenhuma categoria encontrada"
-            description={searchTerm ? "Tente buscar por outro termo" : "Comece criando sua primeira categoria"}
-          />
-        ) : (
-          <div className="space-y-1">
-            {filteredCategorias.map((categoria) => renderCategoriaItem(categoria))}
-          </div>
+      {/* Two Column Layout */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Receber (Left) */}
+        {renderCategoryPanel(
+          "Receber (Receitas)", 
+          categoriasReceber, 
+          "bg-emerald-500/10",
+          "Crie categorias de receita"
+        )}
+        
+        {/* Pagar (Right) */}
+        {renderCategoryPanel(
+          "Pagar (Despesas)", 
+          categoriasPagar, 
+          "bg-red-500/10",
+          "Crie categorias de despesa"
         )}
       </div>
 
