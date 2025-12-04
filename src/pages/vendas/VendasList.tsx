@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { useReactToPrint } from 'react-to-print';
 import {
   Search,
   Plus,
@@ -13,6 +14,7 @@ import {
   Filter,
   X,
   CalendarIcon,
+  Printer,
 } from 'lucide-react';
 import { PageHeader } from '@/components/PageHeader';
 import { EmptyState } from '@/components/EmptyState';
@@ -57,6 +59,8 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { useSalesList } from '@/features/vendas/hooks/useSalesList';
+import { useSaleContract } from '@/features/vendas/hooks/useSaleContract';
+import { SaleContract } from '@/features/vendas/components/SaleContract';
 import { maskCurrency } from '@/features/estoque/utils/masks';
 
 const VendasList = () => {
@@ -72,13 +76,36 @@ const VendasList = () => {
     closeSale,
   } = useSalesList();
 
+  const { loading: contractLoading, contractData, fetchContractData } = useSaleContract();
+  const contractRef = useRef<HTMLDivElement>(null);
+
   const [showFilters, setShowFilters] = useState(false);
   const [reopenDialogOpen, setReopenDialogOpen] = useState(false);
   const [closeDialogOpen, setCloseDialogOpen] = useState(false);
+  const [printSaleId, setPrintSaleId] = useState<string | null>(null);
   const [selectedSale, setSelectedSale] = useState<{
     id: string;
     vehicleId: number;
   } | null>(null);
+
+  const handlePrint = useReactToPrint({
+    contentRef: contractRef,
+    documentTitle: `Contrato-${contractData?.id.slice(0, 8) || 'venda'}`,
+    onAfterPrint: () => {
+      setPrintSaleId(null);
+    },
+  });
+
+  const handlePrintContract = async (saleId: string) => {
+    setPrintSaleId(saleId);
+    const data = await fetchContractData(saleId);
+    if (data) {
+      // Wait for state update and DOM render
+      setTimeout(() => {
+        handlePrint();
+      }, 100);
+    }
+  };
 
   const handleReopenConfirm = async () => {
     if (selectedSale) {
@@ -395,6 +422,26 @@ const VendasList = () => {
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-2">
+                        {/* Print Contract Button - Always visible */}
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handlePrintContract(sale.id)}
+                              disabled={printSaleId === sale.id || contractLoading}
+                              className="gap-1"
+                            >
+                              {printSaleId === sale.id ? (
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                              ) : (
+                                <Printer className="w-4 h-4" />
+                              )}
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>Imprimir Contrato</TooltipContent>
+                        </Tooltip>
+
                         {sale.fechada ? (
                           <>
                             {/* Reopen Button */}
@@ -545,6 +592,13 @@ const VendasList = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Hidden Print Component */}
+      <div className="hidden">
+        <div ref={contractRef}>
+          {contractData && <SaleContract data={contractData} />}
+        </div>
+      </div>
     </div>
   );
 };
