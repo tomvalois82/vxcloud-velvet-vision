@@ -74,6 +74,7 @@ const menuItems: MenuItem[] = [
       { title: "A Pagar", url: "/financeiro/pagar", icon: ArrowDownCircle },
       { title: "A Receber", url: "/financeiro/receber", icon: ArrowUpCircle },
       { title: "Transferências", url: "/financeiro/transferencias", icon: ArrowLeftRight },
+      { title: "Margem", url: "/financeiro/margem", icon: BarChart3 },
       { title: "Relatórios", url: "/financeiro/relatorios", icon: BarChart3 },
     ],
   },
