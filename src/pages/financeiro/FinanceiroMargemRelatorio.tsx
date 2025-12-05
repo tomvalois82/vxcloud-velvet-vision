@@ -239,10 +239,11 @@ const FinanceiroMargemRelatorio = () => {
         const produtosServicos = servicosMap.get(venda.id) || 0;
         const retornosFinanciamento = retornosMap.get(venda.id) || 0;
         
-        const totalReceitas = valorVenda + produtosServicos + retornosFinanciamento + receitasVeiculo;
-        const totalDespesas = valorCompra + custos;
-        const margem = totalReceitas - totalDespesas;
-        const margemPercentual = totalDespesas > 0 ? (margem / totalDespesas) * 100 : 0;
+        // Margem = (Venda + Produtos + Retorno) - (Compra + Custos)
+        const totalGanhos = valorVenda + produtosServicos + retornosFinanciamento;
+        const totalCustos = valorCompra + custos;
+        const margem = totalGanhos - totalCustos;
+        const margemPercentual = totalCustos > 0 ? (margem / totalCustos) * 100 : 0;
 
         return {
           id: venda.id,
@@ -292,10 +293,12 @@ const FinanceiroMargemRelatorio = () => {
       const compras = analiticas.reduce((acc, v) => acc + v.valor_compra, 0);
       const despesasVeiculo = analiticas.reduce((acc, v) => acc + v.custos_veiculo, 0);
       
+      // Sintético: Margem = (Vendas + Produtos + Retornos) - (Compras + Despesas)
       const totalReceitas = vendasProprios + vendasConsignados + produtosServicos + receitasVeiculos + retornosFinanciamentos;
       const totalDespesas = compras + despesasVeiculo;
-      const margem = totalReceitas - totalDespesas;
-      const margemPercentual = totalDespesas > 0 ? (margem / totalDespesas) * 100 : 0;
+      // Cálculo da margem conforme fórmula: (venda + produtos + retorno) - (compra + custos)
+      const margem = (vendasProprios + vendasConsignados + produtosServicos + retornosFinanciamentos) - (compras + despesasVeiculo);
+      const margemPercentual = (compras + despesasVeiculo) > 0 ? (margem / (compras + despesasVeiculo)) * 100 : 0;
 
       setResumoSintetico({
         totalNegociacoes: analiticas.length,
