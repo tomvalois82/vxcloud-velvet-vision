@@ -123,7 +123,7 @@ export function useSaleData(vehicleId: number | null) {
         // Load categorias (apenas Receber para produtos/serviços)
         const { data: categoriasData } = await supabase
           .from('vx_fin_categoria')
-          .select('id, categoria, operacao, ativo')
+          .select('id, categoria, operacao, ativo, id_categoria_pai')
           .eq('ativo', true)
           .eq('operacao', 'Receber')
           .order('categoria');

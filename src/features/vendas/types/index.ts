@@ -118,6 +118,7 @@ export interface CategoriaFinanceira {
   categoria: string;
   operacao: string;
   ativo: boolean;
+  id_categoria_pai: string | null;
 }
 
 export const SALE_STEPS = [

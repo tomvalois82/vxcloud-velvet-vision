@@ -28,6 +28,7 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
+import { organizarCategoriasHierarquicamente } from "../utils/categoryHierarchy";
 
 const formSchema = z.object({
   categoria: z.string().min(1, "Nome da categoria é obrigatório"),
@@ -287,9 +288,11 @@ export function CategoriaDialog({
                       </FormControl>
                       <SelectContent>
                         <SelectItem value="none">Nenhuma (Categoria Raiz)</SelectItem>
-                        {availableParents.map((cat) => (
+                        {organizarCategoriasHierarquicamente(availableParents).map((cat) => (
                           <SelectItem key={cat.id} value={cat.id}>
-                            {getCategoriaPath(cat)}
+                            <span style={{ paddingLeft: `${cat.nivel * 16}px` }}>
+                              {cat.categoria}
+                            </span>
                           </SelectItem>
                         ))}
                       </SelectContent>
