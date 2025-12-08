@@ -20,6 +20,7 @@ import {
 } from '@/components/ui/dialog';
 import { maskCurrency, unmaskCurrency } from '@/features/estoque/utils/masks';
 import { toast } from 'sonner';
+import { organizarCategoriasHierarquicamente } from '@/features/financeiro/utils/categoryHierarchy';
 import type { ServicoProdutoEntry, CategoriaFinanceira } from '../types';
 
 interface ServicoProdutoDialogProps {
@@ -140,9 +141,11 @@ export function ServicoProdutoDialog({
                 <SelectValue placeholder="Selecione a categoria" />
               </SelectTrigger>
               <SelectContent>
-                {categorias.map(cat => (
+                {organizarCategoriasHierarquicamente(categorias).map(cat => (
                   <SelectItem key={cat.id} value={cat.id}>
-                    {cat.categoria}
+                    <span style={{ paddingLeft: `${cat.nivel * 16}px` }}>
+                      {cat.categoria}
+                    </span>
                   </SelectItem>
                 ))}
               </SelectContent>

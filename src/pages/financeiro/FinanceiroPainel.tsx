@@ -68,6 +68,7 @@ import { toast } from "sonner";
 import { maskCurrency } from "@/features/estoque/utils/masks";
 import { MovimentoDialog } from "@/features/financeiro/components/MovimentoDialog";
 import { cn } from "@/lib/utils";
+import { organizarCategoriasHierarquicamente } from "@/features/financeiro/utils/categoryHierarchy";
 
 interface Conta {
   id: string;
@@ -80,6 +81,7 @@ interface Categoria {
   id: string;
   categoria: string;
   operacao: string;
+  id_categoria_pai: string | null;
 }
 
 interface Pessoa {
@@ -916,9 +918,11 @@ export default function FinanceiroPainel() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="__all__">Todas</SelectItem>
-                      {categorias.map((c) => (
+                      {organizarCategoriasHierarquicamente(categorias).map((c) => (
                         <SelectItem key={c.id} value={c.id}>
-                          {c.categoria}
+                          <span style={{ paddingLeft: `${c.nivel * 16}px` }}>
+                            {c.categoria}
+                          </span>
                         </SelectItem>
                       ))}
                     </SelectContent>

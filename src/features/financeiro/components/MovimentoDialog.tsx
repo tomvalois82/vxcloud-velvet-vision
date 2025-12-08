@@ -46,6 +46,7 @@ import {
   generateRecorrenciaId,
   formatarDescricaoRecorrente,
 } from "../utils/recorrenciaUtils";
+import { organizarCategoriasHierarquicamente } from "../utils/categoryHierarchy";
 
 // Generate competencia options from 01/2019 to current month/year
 const gerarOpcoesCompetencia = (): { value: string; label: string }[] => {
@@ -99,6 +100,7 @@ interface Categoria {
   id: string;
   categoria: string;
   operacao: string;
+  id_categoria_pai: string | null;
 }
 
 interface FormaPagamento {
@@ -314,13 +316,15 @@ export function MovimentoDialog({
     }
   }, [open, movimento, defaultTipo, form]);
 
-  const filteredCategorias = categorias.filter((cat) => {
-    if (tipoMovimento === "Receber") {
-      return cat.operacao === "Receber";
-    } else {
-      return cat.operacao === "Pagar";
-    }
-  });
+  const filteredCategorias = organizarCategoriasHierarquicamente(
+    categorias.filter((cat) => {
+      if (tipoMovimento === "Receber") {
+        return cat.operacao === "Receber";
+      } else {
+        return cat.operacao === "Pagar";
+      }
+    })
+  );
 
   const getContaDisplayName = (conta: Conta) => {
     return conta.descricao ? `${conta.banco} - ${conta.descricao}` : conta.banco;
@@ -757,7 +761,9 @@ export function MovimentoDialog({
                       <SelectContent>
                         {filteredCategorias.map((cat) => (
                           <SelectItem key={cat.id} value={cat.id}>
-                            {cat.categoria}
+                            <span style={{ paddingLeft: `${cat.nivel * 16}px` }}>
+                              {cat.categoria}
+                            </span>
                           </SelectItem>
                         ))}
                       </SelectContent>
