@@ -4,13 +4,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import {
   Dialog,
   DialogContent,
   DialogHeader,
@@ -20,7 +13,7 @@ import {
 } from '@/components/ui/dialog';
 import { maskCurrency, unmaskCurrency } from '@/features/estoque/utils/masks';
 import { toast } from 'sonner';
-import { organizarCategoriasHierarquicamente } from '@/features/financeiro/utils/categoryHierarchy';
+import { CategoriaAutocomplete } from '@/features/financeiro/components/CategoriaAutocomplete';
 import type { ServicoProdutoEntry, CategoriaFinanceira } from '../types';
 
 interface ServicoProdutoDialogProps {
@@ -136,20 +129,12 @@ export function ServicoProdutoDialog({
           {/* Categoria */}
           <div className="space-y-2">
             <Label>Categoria *</Label>
-            <Select value={idCategoria} onValueChange={setIdCategoria}>
-              <SelectTrigger>
-                <SelectValue placeholder="Selecione a categoria" />
-              </SelectTrigger>
-              <SelectContent>
-                {organizarCategoriasHierarquicamente(categorias).map(cat => (
-                  <SelectItem key={cat.id} value={cat.id}>
-                    <span style={{ paddingLeft: `${cat.nivel * 16}px` }}>
-                      {cat.categoria}
-                    </span>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <CategoriaAutocomplete
+              categorias={categorias}
+              value={idCategoria}
+              onValueChange={setIdCategoria}
+              placeholder="Selecione a categoria"
+            />
           </div>
         </div>
 

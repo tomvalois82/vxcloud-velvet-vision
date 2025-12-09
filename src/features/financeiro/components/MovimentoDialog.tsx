@@ -46,7 +46,7 @@ import {
   generateRecorrenciaId,
   formatarDescricaoRecorrente,
 } from "../utils/recorrenciaUtils";
-import { organizarCategoriasHierarquicamente } from "../utils/categoryHierarchy";
+import { CategoriaAutocomplete } from "./CategoriaAutocomplete";
 
 // Generate competencia options from 01/2019 to current month/year
 const gerarOpcoesCompetencia = (): { value: string; label: string }[] => {
@@ -315,16 +315,6 @@ export function MovimentoDialog({
       }
     }
   }, [open, movimento, defaultTipo, form]);
-
-  const filteredCategorias = organizarCategoriasHierarquicamente(
-    categorias.filter((cat) => {
-      if (tipoMovimento === "Receber") {
-        return cat.operacao === "Receber";
-      } else {
-        return cat.operacao === "Pagar";
-      }
-    })
-  );
 
   const getContaDisplayName = (conta: Conta) => {
     return conta.descricao ? `${conta.banco} - ${conta.descricao}` : conta.banco;
@@ -752,22 +742,20 @@ export function MovimentoDialog({
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Categoria *</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <FormControl>
-                        <SelectTrigger className="bg-background/50 border-border/50">
-                          <SelectValue placeholder="Selecione a categoria" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {filteredCategorias.map((cat) => (
-                          <SelectItem key={cat.id} value={cat.id}>
-                            <span style={{ paddingLeft: `${cat.nivel * 16}px` }}>
-                              {cat.categoria}
-                            </span>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <FormControl>
+                      <CategoriaAutocomplete
+                        categorias={categorias.filter((cat) => {
+                          if (tipoMovimento === "Receber") {
+                            return cat.operacao === "Receber";
+                          } else {
+                            return cat.operacao === "Pagar";
+                          }
+                        })}
+                        value={field.value}
+                        onValueChange={field.onChange}
+                        placeholder="Selecione a categoria"
+                      />
+                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}

@@ -28,7 +28,7 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
-import { organizarCategoriasHierarquicamente } from "../utils/categoryHierarchy";
+import { CategoriaAutocomplete } from "./CategoriaAutocomplete";
 
 const formSchema = z.object({
   categoria: z.string().min(1, "Nome da categoria é obrigatório"),
@@ -277,26 +277,16 @@ export function CategoriaDialog({
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Categoria Pai (opcional)</FormLabel>
-                    <Select
-                      onValueChange={(value) => field.onChange(value === "none" ? null : value)}
-                      value={field.value || "none"}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecione a categoria pai" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="none">Nenhuma (Categoria Raiz)</SelectItem>
-                        {organizarCategoriasHierarquicamente(availableParents).map((cat) => (
-                          <SelectItem key={cat.id} value={cat.id}>
-                            <span style={{ paddingLeft: `${cat.nivel * 16}px` }}>
-                              {cat.categoria}
-                            </span>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <FormControl>
+                      <CategoriaAutocomplete
+                        categorias={availableParents}
+                        value={field.value || "__none__"}
+                        onValueChange={(value) => field.onChange(value === "__none__" ? null : value)}
+                        placeholder="Selecione a categoria pai"
+                        includeAllOption
+                        allOptionLabel="Nenhuma (Categoria Raiz)"
+                      />
+                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
