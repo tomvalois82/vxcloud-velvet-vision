@@ -68,7 +68,7 @@ import { toast } from "sonner";
 import { maskCurrency } from "@/features/estoque/utils/masks";
 import { MovimentoDialog } from "@/features/financeiro/components/MovimentoDialog";
 import { cn } from "@/lib/utils";
-import { organizarCategoriasHierarquicamente } from "@/features/financeiro/utils/categoryHierarchy";
+import { CategoriaAutocomplete } from "@/features/financeiro/components/CategoriaAutocomplete";
 
 interface Conta {
   id: string;
@@ -909,24 +909,13 @@ export default function FinanceiroPainel() {
                 {/* Categoria */}
                 <div className="space-y-2">
                   <Label>Categoria</Label>
-                  <Select
+                  <CategoriaAutocomplete
+                    categorias={categorias}
                     value={filters.idCategoria}
                     onValueChange={(value) => setFilters(prev => ({ ...prev, idCategoria: value }))}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Todas" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="__all__">Todas</SelectItem>
-                      {organizarCategoriasHierarquicamente(categorias).map((c) => (
-                        <SelectItem key={c.id} value={c.id}>
-                          <span style={{ paddingLeft: `${c.nivel * 16}px` }}>
-                            {c.categoria}
-                          </span>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                    includeAllOption
+                    allOptionLabel="Todas"
+                  />
                 </div>
 
                 {/* Busca */}
