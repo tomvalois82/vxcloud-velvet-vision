@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
+import { useReactToPrint } from "react-to-print";
 import { PageHeader } from "@/components/PageHeader";
 import { EmptyState } from "@/components/EmptyState";
 import { Button } from "@/components/ui/button";
@@ -29,6 +30,7 @@ import {
   RefreshCw,
   Users,
   Car,
+  Printer,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
@@ -36,6 +38,7 @@ import { useToast } from "@/hooks/use-toast";
 import { maskCurrency } from "@/features/estoque/utils/masks";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import MargemReportPrint from "@/features/financeiro/components/MargemReportPrint";
 
 interface VendaAnalitica {
   id: string;
@@ -116,6 +119,25 @@ const FinanceiroMargemRelatorio = () => {
   
   const [vendasAnaliticas, setVendasAnaliticas] = useState<VendaAnalitica[]>([]);
   const [resumoSintetico, setResumoSintetico] = useState<ResumoSintetico | null>(null);
+  
+  const printRef = useRef<HTMLDivElement>(null);
+
+  const handlePrint = useReactToPrint({
+    contentRef: printRef,
+    documentTitle: `Relatório de Margem - ${tipoRelatorio === "sintetico" ? "Sintético" : "Analítico"} - ${mes}/${ano}`,
+    pageStyle: `
+      @page {
+        size: A4 landscape;
+        margin: 10mm;
+      }
+      @media print {
+        body {
+          -webkit-print-color-adjust: exact !important;
+          print-color-adjust: exact !important;
+        }
+      }
+    `,
+  });
 
   // Fetch vendedores (colaboradores)
   useEffect(() => {
@@ -349,10 +371,18 @@ const FinanceiroMargemRelatorio = () => {
         title="Relatório de Margem"
         description="Análise de lucratividade das vendas"
         action={
-          <Button variant="outline" onClick={fetchRelatorio} disabled={loading}>
-            <RefreshCw className={cn("w-4 h-4 mr-2", loading && "animate-spin")} />
-            Atualizar
-          </Button>
+          <div className="flex gap-2">
+            {resumoSintetico && vendasAnaliticas.length > 0 && (
+              <Button variant="outline" onClick={() => handlePrint()} disabled={loading}>
+                <Printer className="w-4 h-4 mr-2" />
+                Imprimir
+              </Button>
+            )}
+            <Button variant="outline" onClick={fetchRelatorio} disabled={loading}>
+              <RefreshCw className={cn("w-4 h-4 mr-2", loading && "animate-spin")} />
+              Atualizar
+            </Button>
+          </div>
         }
       />
 
@@ -734,6 +764,21 @@ const FinanceiroMargemRelatorio = () => {
             </div>
           )}
         </>
+      )}
+
+      {/* Hidden Print Component */}
+      {resumoSintetico && (
+        <div style={{ display: "none" }}>
+          <MargemReportPrint
+            ref={printRef}
+            tipoRelatorio={tipoRelatorio}
+            mesLabel={mesLabel}
+            ano={ano}
+            vendedorLabel={vendedorLabel}
+            resumoSintetico={resumoSintetico}
+            vendasAnaliticas={vendasAnaliticas}
+          />
+        </div>
       )}
     </div>
   );
