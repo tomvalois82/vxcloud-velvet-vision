@@ -1324,13 +1324,14 @@ export type Database = {
         Row: {
           acrescimo: number | null
           competencia: string | null
+          conciliado: boolean
           data_pagamento: string | null
           data_vencimento: string
           desconto: number | null
           descricao: string
           id: string
-          id_categoria: string
-          id_conta: string
+          id_categoria: string | null
+          id_conta: string | null
           id_conta_destino: string | null
           id_empresa: string
           id_estoque: number | null
@@ -1349,13 +1350,14 @@ export type Database = {
         Insert: {
           acrescimo?: number | null
           competencia?: string | null
+          conciliado?: boolean
           data_pagamento?: string | null
           data_vencimento: string
           desconto?: number | null
           descricao: string
           id?: string
-          id_categoria: string
-          id_conta: string
+          id_categoria?: string | null
+          id_conta?: string | null
           id_conta_destino?: string | null
           id_empresa: string
           id_estoque?: number | null
@@ -1374,13 +1376,14 @@ export type Database = {
         Update: {
           acrescimo?: number | null
           competencia?: string | null
+          conciliado?: boolean
           data_pagamento?: string | null
           data_vencimento?: string
           desconto?: number | null
           descricao?: string
           id?: string
-          id_categoria?: string
-          id_conta?: string
+          id_categoria?: string | null
+          id_conta?: string | null
           id_conta_destino?: string | null
           id_empresa?: string
           id_estoque?: number | null
@@ -1504,7 +1507,7 @@ export type Database = {
           bairro: string | null
           cep: string | null
           complemento: string | null
-          cpf_cnpj: string
+          cpf_cnpj: string | null
           criado_em: string
           descricao: string | null
           eh_cliente: boolean
@@ -1519,14 +1522,14 @@ export type Database = {
           numero: string | null
           ponto_referencia: string | null
           telefone: string | null
-          tipo_cadastro: string
+          tipo_cadastro: string | null
         }
         Insert: {
           atualizado_em?: string
           bairro?: string | null
           cep?: string | null
           complemento?: string | null
-          cpf_cnpj: string
+          cpf_cnpj?: string | null
           criado_em?: string
           descricao?: string | null
           eh_cliente?: boolean
@@ -1541,14 +1544,14 @@ export type Database = {
           numero?: string | null
           ponto_referencia?: string | null
           telefone?: string | null
-          tipo_cadastro: string
+          tipo_cadastro?: string | null
         }
         Update: {
           atualizado_em?: string
           bairro?: string | null
           cep?: string | null
           complemento?: string | null
-          cpf_cnpj?: string
+          cpf_cnpj?: string | null
           criado_em?: string
           descricao?: string | null
           eh_cliente?: boolean
@@ -1563,7 +1566,7 @@ export type Database = {
           numero?: string | null
           ponto_referencia?: string | null
           telefone?: string | null
-          tipo_cadastro?: string
+          tipo_cadastro?: string | null
         }
         Relationships: []
       }
