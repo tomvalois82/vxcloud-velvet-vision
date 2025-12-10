@@ -792,9 +792,9 @@ const FinanceiroPagar = () => {
                     <TableHead className="text-foreground font-semibold">Descrição</TableHead>
                     <TableHead className="text-foreground font-semibold">Valor</TableHead>
                     <TableHead className="text-foreground font-semibold">Vencimento</TableHead>
+                    <TableHead className="text-foreground font-semibold">Pagamento</TableHead>
                     <TableHead className="text-foreground font-semibold">Competência</TableHead>
                     <TableHead className="text-foreground font-semibold">Conta</TableHead>
-                    <TableHead className="text-foreground font-semibold">Categoria</TableHead>
                     <TableHead className="text-foreground font-semibold">Status</TableHead>
                     <TableHead className="text-foreground font-semibold w-[130px]">Ações</TableHead>
                   </TableRow>
@@ -844,13 +844,13 @@ const FinanceiroPagar = () => {
                             {format(new Date(mov.data_vencimento + "T00:00:00"), "dd/MM/yyyy", { locale: ptBR })}
                           </TableCell>
                           <TableCell className="text-muted-foreground">
+                            {mov.data_pagamento ? format(new Date(mov.data_pagamento + "T00:00:00"), "dd/MM/yyyy", { locale: ptBR }) : "-"}
+                          </TableCell>
+                          <TableCell className="text-muted-foreground">
                             {mov.competencia || "-"}
                           </TableCell>
                           <TableCell className="text-muted-foreground">
                             {getContaDisplayName(mov)}
-                          </TableCell>
-                          <TableCell className="text-muted-foreground">
-                            {mov.vx_fin_categoria?.categoria || "-"}
                           </TableCell>
                           <TableCell>
                             {getStatusBadge(mov.status, mov.data_vencimento)}
