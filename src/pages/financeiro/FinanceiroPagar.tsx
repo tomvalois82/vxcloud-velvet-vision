@@ -1,20 +1,10 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect } from "react";
 import { format, isPast, isToday, addMonths } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { PageHeader } from "@/components/PageHeader";
 import { EmptyState } from "@/components/EmptyState";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
-import { Checkbox } from "@/components/ui/checkbox";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import {
   Select,
   SelectContent,
@@ -42,15 +32,11 @@ import {
   Plus,
   ArrowDownCircle,
   Search,
-  Pencil,
-  Trash2,
   Loader2,
   CalendarIcon,
   X,
   Car,
-  Repeat,
   CheckCircle2,
-  RotateCcw,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
@@ -60,6 +46,7 @@ import { MovimentoDialog } from "@/features/financeiro/components/MovimentoDialo
 import { RecorrenciaActionDialog } from "@/features/financeiro/components/RecorrenciaActionDialog";
 import { BaixaLoteDialog } from "@/features/financeiro/components/BaixaLoteDialog";
 import { BaixaIndividualDialog } from "@/features/financeiro/components/BaixaIndividualDialog";
+import { MovimentoGroupedList } from "@/features/financeiro/components/MovimentoGroupedList";
 import { atualizarSaldoConta, calcularValorFinal } from "@/features/financeiro/utils/saldoUtils";
 
 interface Movimento {
@@ -565,31 +552,6 @@ const FinanceiroPagar = () => {
     }
   };
 
-  const getStatusBadge = (status: string, dataVencimento: string) => {
-    const vencimentoDate = new Date(dataVencimento + "T00:00:00");
-    const isVencido = isPast(vencimentoDate) && !isToday(vencimentoDate) && status === "Pendente";
-
-    if (isVencido) {
-      return <Badge variant="destructive">Vencido</Badge>;
-    }
-
-    switch (status) {
-      case "Pago":
-        return <Badge className="bg-green-500/20 text-green-400 border-green-500/30">Pago</Badge>;
-      case "Cancelado":
-        return <Badge variant="secondary">Cancelado</Badge>;
-      default:
-        return <Badge className="bg-yellow-500/20 text-yellow-400 border-yellow-500/30">Pendente</Badge>;
-    }
-  };
-
-  const getContaDisplayName = (movimento: Movimento) => {
-    if (!movimento.vx_fin_conta) return "-";
-    return movimento.vx_fin_conta.descricao
-      ? `${movimento.vx_fin_conta.banco} - ${movimento.vx_fin_conta.descricao}`
-      : movimento.vx_fin_conta.banco;
-  };
-
   const isRowVencido = (status: string, dataVencimento: string) => {
     const vencimentoDate = new Date(dataVencimento + "T00:00:00");
     return isPast(vencimentoDate) && !isToday(vencimentoDate) && status === "Pendente";
@@ -635,10 +597,6 @@ const FinanceiroPagar = () => {
 
     return matchesSearch && matchesStatus && matchesDate && matchesVeiculo && matchesCompetencia;
   });
-
-  const pendingMovimentos = filteredMovimentos.filter((mov) => mov.status !== "Pago");
-  const allPendingSelected = pendingMovimentos.length > 0 && pendingMovimentos.every((mov) => selectedIds.has(mov.id));
-  const somePendingSelected = pendingMovimentos.some((mov) => selectedIds.has(mov.id));
 
   const selectedMovimentosForBaixa = filteredMovimentos.filter(
     (mov) => selectedIds.has(mov.id) && mov.status !== "Pago"
@@ -776,147 +734,18 @@ const FinanceiroPagar = () => {
               )}
             </div>
 
-            {/* Table */}
-            <div className="rounded-lg border border-border/50 overflow-hidden">
-              <Table>
-                <TableHeader>
-                  <TableRow className="border-border/50 hover:bg-transparent">
-                    <TableHead className="w-[50px]">
-                      <Checkbox
-                        checked={allPendingSelected}
-                        onCheckedChange={handleSelectAll}
-                        aria-label="Selecionar todos"
-                        className={somePendingSelected && !allPendingSelected ? "data-[state=checked]:bg-accent/50" : ""}
-                      />
-                    </TableHead>
-                    <TableHead className="text-foreground font-semibold">Descrição</TableHead>
-                    <TableHead className="text-foreground font-semibold">Valor</TableHead>
-                    <TableHead className="text-foreground font-semibold">Vencimento</TableHead>
-                    <TableHead className="text-foreground font-semibold">Pagamento</TableHead>
-                    <TableHead className="text-foreground font-semibold">Competência</TableHead>
-                    <TableHead className="text-foreground font-semibold">Conta</TableHead>
-                    <TableHead className="text-foreground font-semibold">Status</TableHead>
-                    <TableHead className="text-foreground font-semibold w-[130px]">Ações</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredMovimentos.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={9} className="text-center text-muted-foreground py-8">
-                        Nenhum lançamento encontrado
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    filteredMovimentos.map((mov) => {
-                      const isPago = mov.status === "Pago";
-                      return (
-                        <TableRow
-                          key={mov.id}
-                          className={cn(
-                            "border-border/50",
-                            isRowVencido(mov.status, mov.data_vencimento) && "bg-destructive/10",
-                            isPago && "opacity-60 bg-green-500/5"
-                          )}
-                        >
-                          <TableCell>
-                            <Checkbox
-                              checked={selectedIds.has(mov.id)}
-                              onCheckedChange={(checked) => handleSelectOne(mov.id, checked === true)}
-                              disabled={isPago}
-                              aria-label={`Selecionar ${mov.descricao}`}
-                            />
-                          </TableCell>
-                          <TableCell className="font-medium text-foreground">
-                            <div className="flex items-center gap-2">
-                              {isPago && <CheckCircle2 className="w-4 h-4 text-green-500" />}
-                              {mov.descricao}
-                              {mov.recorrencia_id && (
-                                <span title="Lançamento recorrente">
-                                  <Repeat className="w-3 h-3 text-accent" />
-                                </span>
-                              )}
-                            </div>
-                          </TableCell>
-                          <TableCell className="text-foreground">
-                            {maskCurrency(mov.valor_bruto)}
-                          </TableCell>
-                          <TableCell className="text-foreground">
-                            {format(new Date(mov.data_vencimento + "T00:00:00"), "dd/MM/yyyy", { locale: ptBR })}
-                          </TableCell>
-                          <TableCell className="text-muted-foreground">
-                            {mov.data_pagamento ? format(new Date(mov.data_pagamento + "T00:00:00"), "dd/MM/yyyy", { locale: ptBR }) : "-"}
-                          </TableCell>
-                          <TableCell className="text-muted-foreground">
-                            {mov.competencia || "-"}
-                          </TableCell>
-                          <TableCell className="text-muted-foreground">
-                            {getContaDisplayName(mov)}
-                          </TableCell>
-                          <TableCell>
-                            {getStatusBadge(mov.status, mov.data_vencimento)}
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex items-center gap-1">
-                              {isPago ? (
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-8 w-8 hover:bg-orange-500/20 text-orange-500"
-                                  onClick={() => handleEstornoClick(mov)}
-                                  title="Estornar/Reabrir"
-                                >
-                                  <RotateCcw className="w-4 h-4" />
-                                </Button>
-                              ) : (
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-8 w-8 hover:bg-green-500/20 text-green-500"
-                                  onClick={() => handleBaixaIndividual(mov)}
-                                  title="Baixar"
-                                >
-                                  <CheckCircle2 className="w-4 h-4" />
-                                </Button>
-                              )}
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className={cn(
-                                  "h-8 w-8",
-                                  isPago
-                                    ? "opacity-50 cursor-not-allowed"
-                                    : "hover:bg-accent/20"
-                                )}
-                                onClick={() => handleEdit(mov)}
-                                disabled={isPago}
-                                title={isPago ? "Estorne para editar" : "Editar"}
-                              >
-                                <Pencil className="w-4 h-4" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className={cn(
-                                  "h-8 w-8",
-                                  isPago
-                                    ? "opacity-50 cursor-not-allowed"
-                                    : "hover:bg-destructive/20 text-destructive"
-                                )}
-                                onClick={() => handleDeleteClick(mov)}
-                                disabled={isPago}
-                                title={isPago ? "Estorne para excluir" : "Excluir"}
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </Button>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })
-                  )}
-                </TableBody>
-              </Table>
-            </div>
+            {/* Grouped List */}
+            <MovimentoGroupedList
+              movimentos={filteredMovimentos}
+              selectedIds={selectedIds}
+              onSelectAll={handleSelectAll}
+              onSelectOne={handleSelectOne}
+              onEdit={handleEdit}
+              onDelete={handleDeleteClick}
+              onBaixa={handleBaixaIndividual}
+              onEstorno={handleEstornoClick}
+              tipoMovimento="Pagar"
+            />
           </div>
         )}
       </div>
