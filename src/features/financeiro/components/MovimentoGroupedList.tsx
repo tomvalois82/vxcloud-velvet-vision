@@ -25,6 +25,7 @@ import {
   Repeat,
   ChevronDown,
   ChevronRight,
+  CheckCheck,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { maskCurrency } from "@/features/estoque/utils/masks";
@@ -51,6 +52,7 @@ interface Movimento {
   desconto: number | null;
   acrescimo: number | null;
   motivo_ajuste: string | null;
+  conciliado: boolean;
   vx_fin_conta: { banco: string; descricao: string | null } | null;
   vx_fin_categoria: { categoria: string } | null;
 }
@@ -71,6 +73,7 @@ interface MovimentoGroupedListProps {
   onDelete: (movimento: Movimento) => void;
   onBaixa: (movimento: Movimento) => void;
   onEstorno: (movimento: Movimento) => void;
+  onConciliar: (movimento: Movimento) => void;
   tipoMovimento: "Pagar" | "Receber";
 }
 
@@ -83,6 +86,7 @@ export const MovimentoGroupedList = ({
   onDelete,
   onBaixa,
   onEstorno,
+  onConciliar,
   tipoMovimento,
 }: MovimentoGroupedListProps) => {
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
@@ -292,15 +296,33 @@ export const MovimentoGroupedList = ({
                           <TableCell>
                             <div className="flex items-center gap-1">
                               {isPago ? (
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-8 w-8 hover:bg-orange-500/20 text-orange-500"
-                                  onClick={() => onEstorno(mov)}
-                                  title="Estornar/Reabrir"
-                                >
-                                  <RotateCcw className="w-4 h-4" />
-                                </Button>
+                                <>
+                                  {/* Conciliar button - only for paid items */}
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className={cn(
+                                      "h-8 w-8",
+                                      mov.conciliado 
+                                        ? "text-[#0DCAF0] cursor-default" 
+                                        : "hover:bg-[#0DCAF0]/20 text-[#0DCAF0]"
+                                    )}
+                                    onClick={() => !mov.conciliado && onConciliar(mov)}
+                                    disabled={mov.conciliado}
+                                    title={mov.conciliado ? "Conciliado" : "Conciliar"}
+                                  >
+                                    <CheckCheck className="w-4 h-4" />
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8 hover:bg-orange-500/20 text-orange-500"
+                                    onClick={() => onEstorno(mov)}
+                                    title="Estornar/Reabrir"
+                                  >
+                                    <RotateCcw className="w-4 h-4" />
+                                  </Button>
+                                </>
                               ) : (
                                 <Button
                                   variant="ghost"
