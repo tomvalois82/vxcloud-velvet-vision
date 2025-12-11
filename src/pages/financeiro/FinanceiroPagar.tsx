@@ -74,6 +74,7 @@ interface Movimento {
   desconto: number | null;
   acrescimo: number | null;
   motivo_ajuste: string | null;
+  conciliado: boolean;
   vx_fin_conta: { banco: string; descricao: string | null } | null;
   vx_fin_categoria: { categoria: string } | null;
 }
@@ -505,6 +506,32 @@ const FinanceiroPagar = () => {
     setSelectedIds(newSelected);
   };
 
+  // Conciliação handler
+  const handleConciliar = async (movimento: Movimento) => {
+    if (movimento.status !== "Pago" || movimento.conciliado) return;
+    
+    try {
+      const { error } = await supabase
+        .from("vx_fin_movimento")
+        .update({ conciliado: true })
+        .eq("id", movimento.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Título conciliado",
+        description: "O título foi marcado como conciliado com sucesso.",
+      });
+      fetchMovimentos();
+    } catch (error: any) {
+      toast({
+        title: "Erro ao conciliar",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
+
   // Estorno handlers
   const handleEstornoClick = (movimento: Movimento) => {
     if (movimento.status !== "Pago") return;
@@ -752,6 +779,7 @@ const FinanceiroPagar = () => {
                 onDelete={handleDeleteClick}
                 onBaixa={handleBaixaIndividual}
                 onEstorno={handleEstornoClick}
+                onConciliar={handleConciliar}
                 tipoMovimento="Pagar"
               />
             )}
