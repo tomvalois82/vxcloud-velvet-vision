@@ -47,6 +47,7 @@ import {
   formatarDescricaoRecorrente,
 } from "../utils/recorrenciaUtils";
 import { CategoriaAutocomplete } from "./CategoriaAutocomplete";
+import { AnexosManager } from "./AnexosManager";
 
 // Generate competencia options from 01/2019 to current month/year
 const gerarOpcoesCompetencia = (): { value: string; label: string }[] => {
@@ -958,6 +959,13 @@ export function MovimentoDialog({
                   </FormItem>
                 )}
               />
+
+              {/* Anexos Section - Only for existing movements */}
+              {movimento && (
+                <div className="border border-border/50 rounded-lg p-4 bg-background/30">
+                  <AnexosManager movimentoId={movimento.id} />
+                </div>
+              )}
 
               <div className="flex justify-end gap-3 pt-4">
                 <Button

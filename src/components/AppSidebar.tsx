@@ -12,7 +12,8 @@ import {
   ArrowLeftRight,
   FolderTree,
   ChevronDown,
-  LogOut
+  LogOut,
+  CreditCard
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
@@ -70,6 +71,7 @@ const menuItems: MenuItem[] = [
     items: [
       { title: "Painel", url: "/financeiro", icon: LayoutDashboard },
       { title: "Contas", url: "/financeiro/contas", icon: Wallet },
+      { title: "Cartões", url: "/financeiro/cartoes", icon: CreditCard },
       { title: "Categorias", url: "/financeiro/categorias", icon: FolderTree },
       { title: "A Pagar", url: "/financeiro/pagar", icon: ArrowDownCircle },
       { title: "A Receber", url: "/financeiro/receber", icon: ArrowUpCircle },

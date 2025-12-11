@@ -52,6 +52,7 @@ import { BaixaLoteDialog } from "@/features/financeiro/components/BaixaLoteDialo
 import { BaixaIndividualDialog } from "@/features/financeiro/components/BaixaIndividualDialog";
 import { MovimentoGroupedList } from "@/features/financeiro/components/MovimentoGroupedList";
 import { atualizarSaldoConta, calcularValorFinal } from "@/features/financeiro/utils/saldoUtils";
+import { deleteAnexosDoMovimento, deleteAnexosDeMovimentos } from "@/features/financeiro/utils/anexosUtils";
 
 interface Movimento {
   id: string;
@@ -323,6 +324,9 @@ const FinanceiroPagar = () => {
 
     setDeleting(true);
     try {
+      // Delete attachments first
+      await deleteAnexosDoMovimento(movimentoToDelete.id);
+
       const { error } = await supabase
         .from("vx_fin_movimento")
         .delete()
@@ -354,6 +358,9 @@ const FinanceiroPagar = () => {
     setDeleting(true);
     try {
       if (scope === "single") {
+        // Delete attachments first
+        await deleteAnexosDoMovimento(movimentoToDelete.id);
+
         const { error } = await supabase
           .from("vx_fin_movimento")
           .delete()
@@ -366,6 +373,18 @@ const FinanceiroPagar = () => {
           description: "A ocorrência foi excluída com sucesso.",
         });
       } else {
+        // Get all IDs to delete
+        const { data: idsToDelete } = await supabase
+          .from("vx_fin_movimento")
+          .select("id")
+          .eq("recorrencia_id", movimentoToDelete.recorrencia_id)
+          .gte("ordem_ocorrencia", movimentoToDelete.ordem_ocorrencia || 0);
+
+        // Delete attachments for all movements
+        if (idsToDelete) {
+          await deleteAnexosDeMovimentos(idsToDelete.map(m => m.id));
+        }
+
         // Delete this and all future occurrences
         const { error } = await supabase
           .from("vx_fin_movimento")
