@@ -40,6 +40,7 @@ import {
   CheckCircle2,
   ChevronLeft,
   ChevronRight,
+  CheckCheck,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
@@ -159,6 +160,9 @@ const FinanceiroPagar = () => {
   const [estornoDialogOpen, setEstornoDialogOpen] = useState(false);
   const [movimentoEstorno, setMovimentoEstorno] = useState<Movimento | null>(null);
   const [estornando, setEstornando] = useState(false);
+
+  // Conciliação em lote state
+  const [conciliandoLote, setConciliandoLote] = useState(false);
 
   const fetchMovimentos = async () => {
     setLoading(true);
@@ -532,6 +536,40 @@ const FinanceiroPagar = () => {
     }
   };
 
+  // Conciliação em lote handler
+  const handleConciliarLote = async () => {
+    const idsParaConciliar = movimentos
+      .filter((mov) => selectedIds.has(mov.id) && mov.status === "Pago" && !mov.conciliado)
+      .map((mov) => mov.id);
+
+    if (idsParaConciliar.length === 0) return;
+
+    setConciliandoLote(true);
+    try {
+      const { error } = await supabase
+        .from("vx_fin_movimento")
+        .update({ conciliado: true })
+        .in("id", idsParaConciliar);
+
+      if (error) throw error;
+
+      toast({
+        title: "Títulos conciliados",
+        description: `${idsParaConciliar.length} título(s) conciliado(s) com sucesso.`,
+      });
+      setSelectedIds(new Set());
+      fetchMovimentos();
+    } catch (error: any) {
+      toast({
+        title: "Erro ao conciliar títulos",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setConciliandoLote(false);
+    }
+  };
+
   // Estorno handlers
   const handleEstornoClick = (movimento: Movimento) => {
     if (movimento.status !== "Pago") return;
@@ -595,6 +633,11 @@ const FinanceiroPagar = () => {
     (mov) => selectedIds.has(mov.id) && mov.status !== "Pago"
   );
 
+  // Movimentos selecionados elegíveis para conciliação (pagos e não conciliados)
+  const selectedMovimentosForConciliacao = movimentos.filter(
+    (mov) => selectedIds.has(mov.id) && mov.status === "Pago" && !mov.conciliado
+  );
+
   // Pagination calculations
   const totalPages = Math.ceil(totalCount / pageSize);
   const hasFiltersActive = dateFilter || contaFilter !== "todos" || formaPagamentoFilter !== "todos" || competenciaFilter !== getCompetenciaAtual() || statusFilter !== "todos" || searchTerm;
@@ -615,7 +658,22 @@ const FinanceiroPagar = () => {
         description="Gerencie despesas e pagamentos"
         action={
           <div className="flex items-center gap-2">
-            {selectedIds.size > 0 && (
+            {selectedMovimentosForConciliacao.length > 0 && (
+              <Button
+                onClick={handleConciliarLote}
+                disabled={conciliandoLote}
+                style={{ backgroundColor: '#0DCAF0' }}
+                className="hover:opacity-90 text-black"
+              >
+                {conciliandoLote ? (
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                ) : (
+                  <CheckCheck className="w-4 h-4 mr-2" />
+                )}
+                Conciliar Selecionados ({selectedMovimentosForConciliacao.length})
+              </Button>
+            )}
+            {selectedMovimentosForBaixa.length > 0 && (
               <Button
                 className="bg-green-600 hover:bg-green-700"
                 onClick={() => setBaixaLoteDialogOpen(true)}
