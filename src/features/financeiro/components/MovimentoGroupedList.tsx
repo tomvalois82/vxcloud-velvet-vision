@@ -162,9 +162,8 @@ export const MovimentoGroupedList = ({
       : movimento.vx_fin_conta.banco;
   };
 
-  const pendingMovimentos = movimentos.filter((mov) => mov.status !== "Pago");
-  const allPendingSelected = pendingMovimentos.length > 0 && pendingMovimentos.every((mov) => selectedIds.has(mov.id));
-  const somePendingSelected = pendingMovimentos.some((mov) => selectedIds.has(mov.id));
+  const allSelected = movimentos.length > 0 && movimentos.every((mov) => selectedIds.has(mov.id));
+  const someSelected = movimentos.some((mov) => selectedIds.has(mov.id));
 
   if (movimentos.length === 0) {
     return (
@@ -179,10 +178,10 @@ export const MovimentoGroupedList = ({
       {/* Header with select all */}
       <div className="flex items-center gap-4 px-4 py-2 border-b border-border/30">
         <Checkbox
-          checked={allPendingSelected}
+          checked={allSelected}
           onCheckedChange={onSelectAll}
           aria-label="Selecionar todos"
-          className={somePendingSelected && !allPendingSelected ? "data-[state=checked]:bg-accent/50" : ""}
+          className={someSelected && !allSelected ? "data-[state=checked]:bg-accent/50" : ""}
         />
         <span className="text-sm text-muted-foreground">Selecionar todos</span>
       </div>
@@ -258,7 +257,6 @@ export const MovimentoGroupedList = ({
                             <Checkbox
                               checked={selectedIds.has(mov.id)}
                               onCheckedChange={(checked) => onSelectOne(mov.id, checked === true)}
-                              disabled={isPago}
                               aria-label={`Selecionar ${mov.descricao}`}
                             />
                           </TableCell>

@@ -491,10 +491,8 @@ const FinanceiroPagar = () => {
 
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
-      const pendingIds = movimentos
-        .filter((mov) => mov.status !== "Pago")
-        .map((mov) => mov.id);
-      setSelectedIds(new Set(pendingIds));
+      const allIds = movimentos.map((mov) => mov.id);
+      setSelectedIds(new Set(allIds));
     } else {
       setSelectedIds(new Set());
     }
@@ -628,14 +626,20 @@ const FinanceiroPagar = () => {
     return isPast(vencimentoDate) && !isToday(vencimentoDate) && status === "Pendente";
   };
 
-  // Data is now filtered server-side, no client-side filtering needed
-  const selectedMovimentosForBaixa = movimentos.filter(
-    (mov) => selectedIds.has(mov.id) && mov.status !== "Pago"
-  );
-
+  // Get selected movimentos
+  const selectedMovimentos = movimentos.filter((mov) => selectedIds.has(mov.id));
+  
+  // Check if ALL selected are pending (for baixa em lote)
+  const allSelectedArePending = selectedMovimentos.length > 0 && 
+    selectedMovimentos.every((mov) => mov.status !== "Pago");
+  
+  // Check if ALL selected are paid (for conciliação em lote)
+  const allSelectedArePaid = selectedMovimentos.length > 0 && 
+    selectedMovimentos.every((mov) => mov.status === "Pago");
+  
   // Movimentos selecionados elegíveis para conciliação (pagos e não conciliados)
-  const selectedMovimentosForConciliacao = movimentos.filter(
-    (mov) => selectedIds.has(mov.id) && mov.status === "Pago" && !mov.conciliado
+  const selectedMovimentosForConciliacao = selectedMovimentos.filter(
+    (mov) => mov.status === "Pago" && !mov.conciliado
   );
 
   // Pagination calculations
@@ -658,7 +662,7 @@ const FinanceiroPagar = () => {
         description="Gerencie despesas e pagamentos"
         action={
           <div className="flex items-center gap-2">
-            {selectedMovimentosForConciliacao.length > 0 && (
+            {allSelectedArePaid && selectedMovimentosForConciliacao.length > 0 && (
               <Button
                 onClick={handleConciliarLote}
                 disabled={conciliandoLote}
@@ -673,13 +677,13 @@ const FinanceiroPagar = () => {
                 Conciliar Selecionados ({selectedMovimentosForConciliacao.length})
               </Button>
             )}
-            {selectedMovimentosForBaixa.length > 0 && (
+            {allSelectedArePending && selectedMovimentos.length > 0 && (
               <Button
                 className="bg-green-600 hover:bg-green-700"
                 onClick={() => setBaixaLoteDialogOpen(true)}
               >
                 <CheckCircle2 className="w-4 h-4 mr-2" />
-                Baixar Selecionados ({selectedMovimentosForBaixa.length})
+                Baixar Selecionados ({selectedMovimentos.length})
               </Button>
             )}
             <Button className="bg-accent hover:bg-accent/90" onClick={handleNew}>
@@ -948,7 +952,7 @@ const FinanceiroPagar = () => {
       <BaixaLoteDialog
         open={baixaLoteDialogOpen}
         onOpenChange={setBaixaLoteDialogOpen}
-        movimentosSelecionados={selectedMovimentosForBaixa.map((mov) => ({
+        movimentosSelecionados={selectedMovimentos.filter((mov) => mov.status !== "Pago").map((mov) => ({
           id: mov.id,
           descricao: mov.descricao,
           valor_bruto: mov.valor_bruto,
