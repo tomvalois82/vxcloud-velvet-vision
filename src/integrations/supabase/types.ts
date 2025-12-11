@@ -1382,11 +1382,13 @@ export type Database = {
           acrescimo: number | null
           competencia: string | null
           conciliado: boolean
+          data_compra: string | null
           data_pagamento: string | null
           data_vencimento: string
           desconto: number | null
           descricao: string
           id: string
+          id_cartao: string | null
           id_categoria: string | null
           id_conta: string | null
           id_conta_destino: string | null
@@ -1408,11 +1410,13 @@ export type Database = {
           acrescimo?: number | null
           competencia?: string | null
           conciliado?: boolean
+          data_compra?: string | null
           data_pagamento?: string | null
           data_vencimento: string
           desconto?: number | null
           descricao: string
           id?: string
+          id_cartao?: string | null
           id_categoria?: string | null
           id_conta?: string | null
           id_conta_destino?: string | null
@@ -1434,11 +1438,13 @@ export type Database = {
           acrescimo?: number | null
           competencia?: string | null
           conciliado?: boolean
+          data_compra?: string | null
           data_pagamento?: string | null
           data_vencimento?: string
           desconto?: number | null
           descricao?: string
           id?: string
+          id_cartao?: string | null
           id_categoria?: string | null
           id_conta?: string | null
           id_conta_destino?: string | null
@@ -1457,6 +1463,13 @@ export type Database = {
           valor_liquido?: number
         }
         Relationships: [
+          {
+            foreignKeyName: "vx_fin_movimento_id_cartao_fkey"
+            columns: ["id_cartao"]
+            isOneToOne: false
+            referencedRelation: "vx_fin_cartao"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "vx_fin_movimento_id_categoria_fkey"
             columns: ["id_categoria"]
