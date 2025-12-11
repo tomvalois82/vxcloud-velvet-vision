@@ -1267,6 +1267,60 @@ export type Database = {
           },
         ]
       }
+      vx_fin_cartao: {
+        Row: {
+          ativo: boolean
+          bandeira: string
+          dia_fechamento: number
+          dia_vencimento: number
+          final: string
+          id: string
+          id_empresa: string
+          id_forma_pagamento: string
+          limite: number
+          nome_impresso: string
+        }
+        Insert: {
+          ativo: boolean
+          bandeira: string
+          dia_fechamento: number
+          dia_vencimento: number
+          final: string
+          id?: string
+          id_empresa: string
+          id_forma_pagamento: string
+          limite: number
+          nome_impresso: string
+        }
+        Update: {
+          ativo?: boolean
+          bandeira?: string
+          dia_fechamento?: number
+          dia_vencimento?: number
+          final?: string
+          id?: string
+          id_empresa?: string
+          id_forma_pagamento?: string
+          limite?: number
+          nome_impresso?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vx_fin_cartao_id_empresa_fkey"
+            columns: ["id_empresa"]
+            isOneToOne: false
+            referencedRelation: "empresa"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vx_fin_cartao_id_forma_pagamento_fkey"
+            columns: ["id_forma_pagamento"]
+            isOneToOne: false
+            referencedRelation: "vx_forma_pagamento"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       vx_fin_categoria: {
         Row: {
           ativo: boolean

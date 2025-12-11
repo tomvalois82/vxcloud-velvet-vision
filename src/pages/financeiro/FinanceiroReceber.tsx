@@ -35,7 +35,8 @@ import {
   Loader2,
   CalendarIcon,
   X,
-  Car,
+  Landmark,
+  CreditCard,
   CheckCircle2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -106,25 +107,16 @@ const gerarOpcoesCompetencia = (): { value: string; label: string }[] => {
 
 const opcoesCompetencia = gerarOpcoesCompetencia();
 
-interface Veiculo {
-  id: number;
-  fabricante: string | null;
-  modelo: string | null;
-  placa: string | null;
-  ano: string | null;
-  status: string | null;
-}
-
 const FinanceiroReceber = () => {
   const { toast } = useToast();
   const [movimentos, setMovimentos] = useState<Movimento[]>([]);
-  const [veiculos, setVeiculos] = useState<Veiculo[]>([]);
   const [contas, setContas] = useState<Conta[]>([]);
   const [formasPagamento, setFormasPagamento] = useState<FormaPagamento[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("todos");
-  const [veiculoFilter, setVeiculoFilter] = useState<string>("todos");
+  const [contaFilter, setContaFilter] = useState<string>("todos");
+  const [formaPagamentoFilter, setFormaPagamentoFilter] = useState<string>("todos");
   const [competenciaFilter, setCompetenciaFilter] = useState<string>("todos");
   const [dateFilter, setDateFilter] = useState<Date | undefined>(undefined);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -205,53 +197,8 @@ const FinanceiroReceber = () => {
     }
   };
 
-  const fetchVeiculos = async () => {
-    try {
-      const tresMesesAtras = new Date();
-      tresMesesAtras.setMonth(tresMesesAtras.getMonth() - 3);
-
-      const [veiculosEstoqueRes, vendasRecentesRes] = await Promise.all([
-        supabase
-          .from("estoque")
-          .select("id, fabricante, modelo, placa, ano, status")
-          .neq("status", "Vendido")
-          .order("fabricante")
-          .order("modelo"),
-        supabase
-          .from("vx_vendas")
-          .select(`
-            id_veiculo_vendido,
-            estoque!id_veiculo_vendido (id, fabricante, modelo, placa, ano, status)
-          `)
-          .eq("fechada", true)
-          .gte("data_venda", tresMesesAtras.toISOString()),
-      ]);
-
-      const veiculosEmEstoque = (veiculosEstoqueRes.data || []) as Veiculo[];
-      const veiculosVendidosRecentes = (vendasRecentesRes.data || [])
-        .map((v: any) => v.estoque)
-        .filter((v: any): v is Veiculo => v !== null);
-
-      const todosVeiculosMap = new Map<number, Veiculo>();
-      veiculosEmEstoque.forEach((v) => todosVeiculosMap.set(v.id, v));
-      veiculosVendidosRecentes.forEach((v) => {
-        if (!todosVeiculosMap.has(v.id)) {
-          todosVeiculosMap.set(v.id, v);
-        }
-      });
-
-      const todosVeiculos = Array.from(todosVeiculosMap.values())
-        .sort((a, b) => (a.fabricante || '').localeCompare(b.fabricante || ''));
-
-      setVeiculos(todosVeiculos);
-    } catch (error) {
-      console.error("Erro ao carregar veículos:", error);
-    }
-  };
-
   useEffect(() => {
     fetchMovimentos();
-    fetchVeiculos();
     fetchContas();
     fetchFormasPagamento();
   }, []);
@@ -259,7 +206,11 @@ const FinanceiroReceber = () => {
   // Clear selection when filtered list changes
   useEffect(() => {
     setSelectedIds(new Set());
-  }, [searchTerm, statusFilter, veiculoFilter, competenciaFilter, dateFilter]);
+  }, [searchTerm, statusFilter, contaFilter, formaPagamentoFilter, competenciaFilter, dateFilter]);
+
+  const getContaDisplayName = (conta: Conta) => {
+    return conta.descricao ? `${conta.banco} - ${conta.descricao}` : conta.banco;
+  };
 
   const handleEdit = (movimento: Movimento) => {
     if (movimento.status === "Pago") return;
@@ -557,13 +508,6 @@ const FinanceiroReceber = () => {
     return isPast(vencimentoDate) && !isToday(vencimentoDate) && status === "Pendente";
   };
 
-  const getVeiculoDisplayName = (veiculo: Veiculo) => {
-    const parts = [veiculo.fabricante, veiculo.modelo, veiculo.ano].filter(Boolean);
-    const base = parts.join(" ") || "Veículo sem nome";
-    const withPlaca = veiculo.placa ? `${base} - ${veiculo.placa}` : base;
-    return veiculo.status === "Vendido" ? `${withPlaca} [Vendido]` : withPlaca;
-  };
-
   const filteredMovimentos = movimentos.filter((mov) => {
     const matchesSearch = mov.descricao.toLowerCase().includes(searchTerm.toLowerCase());
     
@@ -585,9 +529,14 @@ const FinanceiroReceber = () => {
         movDate.getDate() === dateFilter.getDate();
     }
 
-    let matchesVeiculo = true;
-    if (veiculoFilter !== "todos") {
-      matchesVeiculo = mov.id_estoque === parseInt(veiculoFilter);
+    let matchesConta = true;
+    if (contaFilter !== "todos") {
+      matchesConta = mov.id_conta === contaFilter;
+    }
+
+    let matchesFormaPagamento = true;
+    if (formaPagamentoFilter !== "todos") {
+      matchesFormaPagamento = mov.id_forma_pagamento === formaPagamentoFilter;
     }
 
     let matchesCompetencia = true;
@@ -595,7 +544,7 @@ const FinanceiroReceber = () => {
       matchesCompetencia = mov.competencia === competenciaFilter;
     }
 
-    return matchesSearch && matchesStatus && matchesDate && matchesVeiculo && matchesCompetencia;
+    return matchesSearch && matchesStatus && matchesDate && matchesConta && matchesFormaPagamento && matchesCompetencia;
   });
 
   const selectedMovimentosForBaixa = filteredMovimentos.filter(
@@ -664,16 +613,31 @@ const FinanceiroReceber = () => {
                 </SelectContent>
               </Select>
 
-              <Select value={veiculoFilter} onValueChange={setVeiculoFilter}>
+              <Select value={contaFilter} onValueChange={setContaFilter}>
                 <SelectTrigger className="w-[220px] bg-background/50 border-border/50">
-                  <Car className="mr-2 h-4 w-4" />
-                  <SelectValue placeholder="Filtrar veículo" />
+                  <Landmark className="mr-2 h-4 w-4" />
+                  <SelectValue placeholder="Filtrar conta" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="todos">Todos os veículos</SelectItem>
-                  {veiculos.map((v) => (
-                    <SelectItem key={v.id} value={v.id.toString()}>
-                      {getVeiculoDisplayName(v)}
+                  <SelectItem value="todos">Todas as contas</SelectItem>
+                  {contas.map((c) => (
+                    <SelectItem key={c.id} value={c.id}>
+                      {getContaDisplayName(c)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <Select value={formaPagamentoFilter} onValueChange={setFormaPagamentoFilter}>
+                <SelectTrigger className="w-[200px] bg-background/50 border-border/50">
+                  <CreditCard className="mr-2 h-4 w-4" />
+                  <SelectValue placeholder="Forma pagamento" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="todos">Todas as formas</SelectItem>
+                  {formasPagamento.map((fp) => (
+                    <SelectItem key={fp.id} value={fp.id}>
+                      {fp.descricao}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -717,13 +681,14 @@ const FinanceiroReceber = () => {
                 </PopoverContent>
               </Popover>
 
-              {(dateFilter || veiculoFilter !== "todos" || competenciaFilter !== "todos") && (
+              {(dateFilter || contaFilter !== "todos" || formaPagamentoFilter !== "todos" || competenciaFilter !== "todos") && (
                 <Button
                   variant="ghost"
                   size="icon"
                   onClick={() => {
                     setDateFilter(undefined);
-                    setVeiculoFilter("todos");
+                    setContaFilter("todos");
+                    setFormaPagamentoFilter("todos");
                     setCompetenciaFilter("todos");
                   }}
                   className="h-10 w-10"
