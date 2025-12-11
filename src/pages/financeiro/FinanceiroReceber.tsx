@@ -38,6 +38,8 @@ import {
   Landmark,
   CreditCard,
   CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
@@ -107,9 +109,20 @@ const gerarOpcoesCompetencia = (): { value: string; label: string }[] => {
 
 const opcoesCompetencia = gerarOpcoesCompetencia();
 
+// Get current month/year competencia
+const getCompetenciaAtual = (): string => {
+  const now = new Date();
+  const mes = String(now.getMonth() + 1).padStart(2, '0');
+  const ano = now.getFullYear();
+  return `${mes}/${ano}`;
+};
+
+const PAGE_SIZE_OPTIONS = [25, 50, 100, 200];
+
 const FinanceiroReceber = () => {
   const { toast } = useToast();
   const [movimentos, setMovimentos] = useState<Movimento[]>([]);
+  const [totalCount, setTotalCount] = useState(0);
   const [contas, setContas] = useState<Conta[]>([]);
   const [formasPagamento, setFormasPagamento] = useState<FormaPagamento[]>([]);
   const [loading, setLoading] = useState(true);
@@ -117,13 +130,17 @@ const FinanceiroReceber = () => {
   const [statusFilter, setStatusFilter] = useState<string>("todos");
   const [contaFilter, setContaFilter] = useState<string>("todos");
   const [formaPagamentoFilter, setFormaPagamentoFilter] = useState<string>("todos");
-  const [competenciaFilter, setCompetenciaFilter] = useState<string>("todos");
+  const [competenciaFilter, setCompetenciaFilter] = useState<string>(getCompetenciaAtual());
   const [dateFilter, setDateFilter] = useState<Date | undefined>(undefined);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedMovimento, setSelectedMovimento] = useState<Movimento | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [movimentoToDelete, setMovimentoToDelete] = useState<Movimento | null>(null);
   const [deleting, setDeleting] = useState(false);
+
+  // Pagination states
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(50);
 
   // Recurrence action states
   const [recorrenciaEditDialogOpen, setRecorrenciaEditDialogOpen] = useState(false);
@@ -145,18 +162,51 @@ const FinanceiroReceber = () => {
   const fetchMovimentos = async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase
+      let query = supabase
         .from("vx_fin_movimento")
         .select(`
           *,
           vx_fin_conta!id_conta (banco, descricao),
           vx_fin_categoria (categoria)
-        `)
-        .eq("tipo_movimento", "Receber")
-        .order("data_vencimento", { ascending: true });
+        `, { count: 'exact' })
+        .eq("tipo_movimento", "Receber");
+
+      // Apply filters at database level
+      if (competenciaFilter && competenciaFilter !== "todos") {
+        query = query.eq("competencia", competenciaFilter);
+      }
+      if (contaFilter && contaFilter !== "todos") {
+        query = query.eq("id_conta", contaFilter);
+      }
+      if (formaPagamentoFilter && formaPagamentoFilter !== "todos") {
+        query = query.eq("id_forma_pagamento", formaPagamentoFilter);
+      }
+      if (statusFilter === "pago") {
+        query = query.eq("status", "Pago");
+      } else if (statusFilter === "pendente") {
+        query = query.eq("status", "Pendente");
+      }
+      if (dateFilter) {
+        const dateStr = format(dateFilter, "yyyy-MM-dd");
+        query = query.eq("data_vencimento", dateStr);
+      }
+      if (searchTerm) {
+        query = query.ilike("descricao", `%${searchTerm}%`);
+      }
+
+      // Order by data_vencimento DESC
+      query = query.order("data_vencimento", { ascending: false });
+
+      // Apply pagination
+      const from = (currentPage - 1) * pageSize;
+      const to = from + pageSize - 1;
+      query = query.range(from, to);
+
+      const { data, error, count } = await query;
 
       if (error) throw error;
       setMovimentos((data as unknown as Movimento[]) || []);
+      setTotalCount(count || 0);
     } catch (error: any) {
       toast({
         title: "Erro ao carregar lançamentos",
@@ -198,15 +248,20 @@ const FinanceiroReceber = () => {
   };
 
   useEffect(() => {
-    fetchMovimentos();
     fetchContas();
     fetchFormasPagamento();
   }, []);
 
-  // Clear selection when filtered list changes
+  // Fetch movimentos when filters or pagination changes
   useEffect(() => {
+    fetchMovimentos();
     setSelectedIds(new Set());
-  }, [searchTerm, statusFilter, contaFilter, formaPagamentoFilter, competenciaFilter, dateFilter]);
+  }, [searchTerm, statusFilter, contaFilter, formaPagamentoFilter, competenciaFilter, dateFilter, currentPage, pageSize]);
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, statusFilter, contaFilter, formaPagamentoFilter, competenciaFilter, dateFilter, pageSize]);
 
   const getContaDisplayName = (conta: Conta) => {
     return conta.descricao ? `${conta.banco} - ${conta.descricao}` : conta.banco;
@@ -382,16 +437,16 @@ const FinanceiroReceber = () => {
   };
 
   const handleBaixaLoteConfirm = async (dataPagamento: string, contaId: string, formaPagamentoId: string | null) => {
-    const selectedMovimentos = filteredMovimentos.filter(
+    const selectedMovimentosLote = movimentos.filter(
       (mov) => selectedIds.has(mov.id) && mov.status !== "Pago"
     );
 
-    if (selectedMovimentos.length === 0) return;
+    if (selectedMovimentosLote.length === 0) return;
 
     try {
       let totalAtualizado = 0;
       
-      for (const mov of selectedMovimentos) {
+      for (const mov of selectedMovimentosLote) {
         const dataFinal = dataPagamento || mov.data_vencimento;
         
         const { error } = await supabase
@@ -415,7 +470,7 @@ const FinanceiroReceber = () => {
 
       toast({
         title: "Títulos baixados",
-        description: `${selectedMovimentos.length} título(s) baixado(s) e saldo atualizado com sucesso.`,
+        description: `${selectedMovimentosLote.length} título(s) baixado(s) e saldo atualizado com sucesso.`,
       });
       setSelectedIds(new Set());
       fetchMovimentos();
@@ -431,7 +486,7 @@ const FinanceiroReceber = () => {
 
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
-      const pendingIds = filteredMovimentos
+      const pendingIds = movimentos
         .filter((mov) => mov.status !== "Pago")
         .map((mov) => mov.id);
       setSelectedIds(new Set(pendingIds));
@@ -508,48 +563,23 @@ const FinanceiroReceber = () => {
     return isPast(vencimentoDate) && !isToday(vencimentoDate) && status === "Pendente";
   };
 
-  const filteredMovimentos = movimentos.filter((mov) => {
-    const matchesSearch = mov.descricao.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    let matchesStatus = true;
-    if (statusFilter === "pendente") {
-      matchesStatus = mov.status === "Pendente";
-    } else if (statusFilter === "pago") {
-      matchesStatus = mov.status === "Pago";
-    } else if (statusFilter === "vencido") {
-      matchesStatus = isRowVencido(mov.status, mov.data_vencimento);
-    }
-
-    let matchesDate = true;
-    if (dateFilter) {
-      const movDate = new Date(mov.data_vencimento + "T00:00:00");
-      matchesDate =
-        movDate.getFullYear() === dateFilter.getFullYear() &&
-        movDate.getMonth() === dateFilter.getMonth() &&
-        movDate.getDate() === dateFilter.getDate();
-    }
-
-    let matchesConta = true;
-    if (contaFilter !== "todos") {
-      matchesConta = mov.id_conta === contaFilter;
-    }
-
-    let matchesFormaPagamento = true;
-    if (formaPagamentoFilter !== "todos") {
-      matchesFormaPagamento = mov.id_forma_pagamento === formaPagamentoFilter;
-    }
-
-    let matchesCompetencia = true;
-    if (competenciaFilter !== "todos") {
-      matchesCompetencia = mov.competencia === competenciaFilter;
-    }
-
-    return matchesSearch && matchesStatus && matchesDate && matchesConta && matchesFormaPagamento && matchesCompetencia;
-  });
-
-  const selectedMovimentosForBaixa = filteredMovimentos.filter(
+  // Data is now filtered server-side, no client-side filtering needed
+  const selectedMovimentosForBaixa = movimentos.filter(
     (mov) => selectedIds.has(mov.id) && mov.status !== "Pago"
   );
+
+  // Pagination calculations
+  const totalPages = Math.ceil(totalCount / pageSize);
+  const hasFiltersActive = dateFilter || contaFilter !== "todos" || formaPagamentoFilter !== "todos" || competenciaFilter !== getCompetenciaAtual() || statusFilter !== "todos" || searchTerm;
+
+  const handleClearFilters = () => {
+    setDateFilter(undefined);
+    setContaFilter("todos");
+    setFormaPagamentoFilter("todos");
+    setCompetenciaFilter(getCompetenciaAtual());
+    setStatusFilter("todos");
+    setSearchTerm("");
+  };
 
   return (
     <div className="animate-fade-in">
@@ -581,12 +611,6 @@ const FinanceiroReceber = () => {
             <Loader2 className="w-8 h-8 animate-spin text-accent" />
             <span className="ml-3 text-muted-foreground">Carregando lançamentos...</span>
           </div>
-        ) : movimentos.length === 0 ? (
-          <EmptyState
-            icon={ArrowUpCircle}
-            title="Nenhuma conta a receber"
-            description="Não há recebimentos ou cobranças cadastradas no momento."
-          />
         ) : (
           <div className="space-y-4">
             {/* Filters */}
@@ -681,36 +705,106 @@ const FinanceiroReceber = () => {
                 </PopoverContent>
               </Popover>
 
-              {(dateFilter || contaFilter !== "todos" || formaPagamentoFilter !== "todos" || competenciaFilter !== "todos") && (
+              {hasFiltersActive && (
                 <Button
                   variant="ghost"
                   size="icon"
-                  onClick={() => {
-                    setDateFilter(undefined);
-                    setContaFilter("todos");
-                    setFormaPagamentoFilter("todos");
-                    setCompetenciaFilter("todos");
-                  }}
+                  onClick={handleClearFilters}
                   className="h-10 w-10"
                   title="Limpar filtros"
                 >
                   <X className="h-4 w-4" />
                 </Button>
               )}
+
+              {/* Page Size Selector */}
+              <div className="flex items-center gap-2 ml-auto">
+                <span className="text-sm text-muted-foreground">Registros por página:</span>
+                <Select value={String(pageSize)} onValueChange={(v) => setPageSize(Number(v))}>
+                  <SelectTrigger className="w-[80px] bg-background/50 border-border/50">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {PAGE_SIZE_OPTIONS.map((size) => (
+                      <SelectItem key={size} value={String(size)}>
+                        {size}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
 
             {/* Grouped List */}
-            <MovimentoGroupedList
-              movimentos={filteredMovimentos}
-              selectedIds={selectedIds}
-              onSelectAll={handleSelectAll}
-              onSelectOne={handleSelectOne}
-              onEdit={handleEdit}
-              onDelete={handleDeleteClick}
-              onBaixa={handleBaixaIndividual}
-              onEstorno={handleEstornoClick}
-              tipoMovimento="Receber"
-            />
+            {movimentos.length === 0 ? (
+              <EmptyState
+                icon={ArrowUpCircle}
+                title="Nenhum registro encontrado"
+                description="Não há lançamentos para os filtros selecionados."
+              />
+            ) : (
+              <MovimentoGroupedList
+                movimentos={movimentos}
+                selectedIds={selectedIds}
+                onSelectAll={handleSelectAll}
+                onSelectOne={handleSelectOne}
+                onEdit={handleEdit}
+                onDelete={handleDeleteClick}
+                onBaixa={handleBaixaIndividual}
+                onEstorno={handleEstornoClick}
+                tipoMovimento="Receber"
+              />
+            )}
+
+            {/* Pagination Controls */}
+            {totalPages > 0 && (
+              <div className="flex items-center justify-between pt-4 border-t border-border/30">
+                <span className="text-sm text-muted-foreground">
+                  Mostrando {Math.min((currentPage - 1) * pageSize + 1, totalCount)} a {Math.min(currentPage * pageSize, totalCount)} de {totalCount} registros
+                </span>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCurrentPage(1)}
+                    disabled={currentPage === 1 || loading}
+                    className="bg-background/50"
+                  >
+                    Primeira
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                    disabled={currentPage === 1 || loading}
+                    className="bg-background/50"
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </Button>
+                  <span className="text-sm px-3">
+                    Página {currentPage} de {totalPages}
+                  </span>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                    disabled={currentPage === totalPages || loading}
+                    className="bg-background/50"
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCurrentPage(totalPages)}
+                    disabled={currentPage === totalPages || loading}
+                    className="bg-background/50"
+                  >
+                    Última
+                  </Button>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>
