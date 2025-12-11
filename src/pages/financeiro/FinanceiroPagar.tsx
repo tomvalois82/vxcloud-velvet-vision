@@ -190,6 +190,9 @@ const FinanceiroPagar = () => {
         query = query.eq("status", "Pago");
       } else if (statusFilter === "pendente") {
         query = query.eq("status", "Pendente");
+      } else if (statusFilter === "vencido") {
+        const today = format(new Date(), "yyyy-MM-dd");
+        query = query.eq("status", "Pendente").lt("data_vencimento", today);
       }
       if (dateFilter) {
         const dateStr = format(dateFilter, "yyyy-MM-dd");
