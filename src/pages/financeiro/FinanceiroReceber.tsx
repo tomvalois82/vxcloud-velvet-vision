@@ -130,6 +130,7 @@ const FinanceiroReceber = () => {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("todos");
+  const [conciliacaoFilter, setConciliacaoFilter] = useState<string>("todos");
   const [contaFilter, setContaFilter] = useState<string>("todos");
   const [formaPagamentoFilter, setFormaPagamentoFilter] = useState<string>("todos");
   const [competenciaFilter, setCompetenciaFilter] = useState<string>(getCompetenciaAtual());
@@ -193,6 +194,11 @@ const FinanceiroReceber = () => {
       } else if (statusFilter === "vencido") {
         const today = format(new Date(), "yyyy-MM-dd");
         query = query.eq("status", "Pendente").lt("data_vencimento", today);
+      }
+      if (conciliacaoFilter === "conciliado") {
+        query = query.eq("conciliado", true);
+      } else if (conciliacaoFilter === "a_conciliar") {
+        query = query.eq("conciliado", false);
       }
       if (dateFilter) {
         const dateStr = format(dateFilter, "yyyy-MM-dd");
@@ -264,12 +270,12 @@ const FinanceiroReceber = () => {
   useEffect(() => {
     fetchMovimentos();
     setSelectedIds(new Set());
-  }, [searchTerm, statusFilter, contaFilter, formaPagamentoFilter, competenciaFilter, dateFilter, currentPage, pageSize]);
+  }, [searchTerm, statusFilter, conciliacaoFilter, contaFilter, formaPagamentoFilter, competenciaFilter, dateFilter, currentPage, pageSize]);
 
   // Reset to page 1 when filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, statusFilter, contaFilter, formaPagamentoFilter, competenciaFilter, dateFilter, pageSize]);
+  }, [searchTerm, statusFilter, conciliacaoFilter, contaFilter, formaPagamentoFilter, competenciaFilter, dateFilter, pageSize]);
 
   const getContaDisplayName = (conta: Conta) => {
     return conta.descricao ? `${conta.banco} - ${conta.descricao}` : conta.banco;
@@ -647,7 +653,7 @@ const FinanceiroReceber = () => {
 
   // Pagination calculations
   const totalPages = Math.ceil(totalCount / pageSize);
-  const hasFiltersActive = dateFilter || contaFilter !== "todos" || formaPagamentoFilter !== "todos" || competenciaFilter !== getCompetenciaAtual() || statusFilter !== "todos" || searchTerm;
+  const hasFiltersActive = dateFilter || contaFilter !== "todos" || formaPagamentoFilter !== "todos" || competenciaFilter !== getCompetenciaAtual() || statusFilter !== "todos" || conciliacaoFilter !== "todos" || searchTerm;
 
   const handleClearFilters = () => {
     setDateFilter(undefined);
@@ -655,6 +661,7 @@ const FinanceiroReceber = () => {
     setFormaPagamentoFilter("todos");
     setCompetenciaFilter(getCompetenciaAtual());
     setStatusFilter("todos");
+    setConciliacaoFilter("todos");
     setSearchTerm("");
   };
 
@@ -726,6 +733,17 @@ const FinanceiroReceber = () => {
                   <SelectItem value="pendente">Pendente</SelectItem>
                   <SelectItem value="pago">Recebido</SelectItem>
                   <SelectItem value="vencido">Vencido</SelectItem>
+                </SelectContent>
+              </Select>
+
+              <Select value={conciliacaoFilter} onValueChange={setConciliacaoFilter}>
+                <SelectTrigger className="w-[150px] bg-background/50 border-border/50">
+                  <SelectValue placeholder="Conciliação" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="todos">Todos</SelectItem>
+                  <SelectItem value="conciliado">Conciliado</SelectItem>
+                  <SelectItem value="a_conciliar">A Conciliar</SelectItem>
                 </SelectContent>
               </Select>
 
