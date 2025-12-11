@@ -17,6 +17,7 @@ import VendasRelatorios from "./pages/vendas/VendasRelatorios";
 import VendaVeiculo from "./pages/vendas/VendaVeiculo";
 import VendaEditar from "./pages/vendas/VendaEditar";
 import FinanceiroContas from "./pages/financeiro/FinanceiroContas";
+import FinanceiroCartoes from "./pages/financeiro/FinanceiroCartoes";
 import FinanceiroPagar from "./pages/financeiro/FinanceiroPagar";
 import FinanceiroReceber from "./pages/financeiro/FinanceiroReceber";
 import FinanceiroTransferencias from "./pages/financeiro/FinanceiroTransferencias";
@@ -62,6 +63,7 @@ const App = () => (
                             <Route path="/vendas/relatorios" element={<VendasRelatorios />} />
                             <Route path="/financeiro" element={<FinanceiroPainel />} />
                             <Route path="/financeiro/contas" element={<FinanceiroContas />} />
+                            <Route path="/financeiro/cartoes" element={<FinanceiroCartoes />} />
                             <Route path="/financeiro/pagar" element={<FinanceiroPagar />} />
                             <Route path="/financeiro/receber" element={<FinanceiroReceber />} />
                             <Route path="/financeiro/transferencias" element={<FinanceiroTransferencias />} />

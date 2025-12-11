@@ -1271,6 +1271,7 @@ export type Database = {
         Row: {
           ativo: boolean
           bandeira: string
+          descricao: string | null
           dia_fechamento: number
           dia_vencimento: number
           final: string
@@ -1283,6 +1284,7 @@ export type Database = {
         Insert: {
           ativo: boolean
           bandeira: string
+          descricao?: string | null
           dia_fechamento: number
           dia_vencimento: number
           final: string
@@ -1295,6 +1297,7 @@ export type Database = {
         Update: {
           ativo?: boolean
           bandeira?: string
+          descricao?: string | null
           dia_fechamento?: number
           dia_vencimento?: number
           final?: string

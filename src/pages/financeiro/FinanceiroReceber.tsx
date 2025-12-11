@@ -52,6 +52,7 @@ import { BaixaLoteDialog } from "@/features/financeiro/components/BaixaLoteDialo
 import { BaixaIndividualDialog } from "@/features/financeiro/components/BaixaIndividualDialog";
 import { MovimentoGroupedList } from "@/features/financeiro/components/MovimentoGroupedList";
 import { atualizarSaldoConta, calcularValorFinal } from "@/features/financeiro/utils/saldoUtils";
+import { deleteAnexosDoMovimento, deleteAnexosDeMovimentos } from "@/features/financeiro/utils/anexosUtils";
 
 interface Movimento {
   id: string;
@@ -323,6 +324,8 @@ const FinanceiroReceber = () => {
 
     setDeleting(true);
     try {
+      await deleteAnexosDoMovimento(movimentoToDelete.id);
+
       const { error } = await supabase
         .from("vx_fin_movimento")
         .delete()
@@ -354,6 +357,8 @@ const FinanceiroReceber = () => {
     setDeleting(true);
     try {
       if (scope === "single") {
+        await deleteAnexosDoMovimento(movimentoToDelete.id);
+
         const { error } = await supabase
           .from("vx_fin_movimento")
           .delete()
@@ -366,7 +371,16 @@ const FinanceiroReceber = () => {
           description: "A ocorrência foi excluída com sucesso.",
         });
       } else {
-        // Delete this and all future occurrences
+        const { data: idsToDelete } = await supabase
+          .from("vx_fin_movimento")
+          .select("id")
+          .eq("recorrencia_id", movimentoToDelete.recorrencia_id)
+          .gte("ordem_ocorrencia", movimentoToDelete.ordem_ocorrencia || 0);
+
+        if (idsToDelete) {
+          await deleteAnexosDeMovimentos(idsToDelete.map(m => m.id));
+        }
+
         const { error } = await supabase
           .from("vx_fin_movimento")
           .delete()
