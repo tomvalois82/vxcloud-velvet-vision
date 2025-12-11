@@ -172,6 +172,7 @@ export function MovimentoDialog({
   const [numeroOcorrencias, setNumeroOcorrencias] = useState(12);
   const [intervaloDias, setIntervaloDias] = useState(30);
   const [diaFixoMes, setDiaFixoMes] = useState(10);
+  const [valorOcorrenciaDiaMes, setValorOcorrenciaDiaMes] = useState("");
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -294,6 +295,7 @@ export function MovimentoDialog({
         setNumeroOcorrencias(12);
         setIntervaloDias(30);
         setDiaFixoMes(10);
+        setValorOcorrenciaDiaMes("");
       } else {
         form.reset({
           tipo_movimento: defaultTipo,
@@ -313,6 +315,7 @@ export function MovimentoDialog({
         setNumeroOcorrencias(12);
         setIntervaloDias(30);
         setDiaFixoMes(10);
+        setValorOcorrenciaDiaMes("");
       }
     }
   }, [open, movimento, defaultTipo, form]);
@@ -621,6 +624,131 @@ export function MovimentoDialog({
                 )}
               />
 
+              {/* Recurrence Section - Only for new entries - Moved here after Descrição */}
+              {!isEditing && (
+                <div className="space-y-4 border border-border/50 rounded-lg p-4 bg-background/30">
+                  <div className="flex items-center gap-2 text-foreground font-medium">
+                    <Repeat className="w-4 h-4" />
+                    Lançamento Recorrente
+                  </div>
+
+                  <Select
+                    value={tipoRecorrencia}
+                    onValueChange={(v) => {
+                      setTipoRecorrencia(v as TipoRecorrencia);
+                      if (v !== "dia_mes") {
+                        setValorOcorrenciaDiaMes("");
+                      }
+                    }}
+                  >
+                    <SelectTrigger className="bg-background/50 border-border/50">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="nao_recorrente">Não recorrente</SelectItem>
+                      <SelectItem value="por_ocorrencias">Repetir por número de ocorrências</SelectItem>
+                      <SelectItem value="intervalo_dias">Repetir a cada X dias</SelectItem>
+                      <SelectItem value="dia_mes">Repetir todo dia X do mês</SelectItem>
+                    </SelectContent>
+                  </Select>
+
+                  {tipoRecorrencia !== "nao_recorrente" && (
+                    <div className="space-y-3">
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <Label className="text-sm">Quantidade de ocorrências</Label>
+                          <Input
+                            type="number"
+                            min={2}
+                            max={120}
+                            value={numeroOcorrencias}
+                            onChange={(e) => setNumeroOcorrencias(Math.max(2, parseInt(e.target.value) || 2))}
+                            className="bg-background/50 border-border/50 mt-1"
+                          />
+                        </div>
+
+                        {(tipoRecorrencia === "por_ocorrencias" || tipoRecorrencia === "intervalo_dias") && (
+                          <div>
+                            <Label className="text-sm">Intervalo em dias</Label>
+                            <Input
+                              type="number"
+                              min={1}
+                              max={365}
+                              value={intervaloDias}
+                              onChange={(e) => setIntervaloDias(Math.max(1, parseInt(e.target.value) || 1))}
+                              className="bg-background/50 border-border/50 mt-1"
+                            />
+                          </div>
+                        )}
+
+                        {tipoRecorrencia === "dia_mes" && (
+                          <div>
+                            <Label className="text-sm">Dia do mês</Label>
+                            <Input
+                              type="number"
+                              min={1}
+                              max={31}
+                              value={diaFixoMes}
+                              onChange={(e) => setDiaFixoMes(Math.min(31, Math.max(1, parseInt(e.target.value) || 1)))}
+                              className="bg-background/50 border-border/50 mt-1"
+                            />
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Valor de cada ocorrência - Only for dia_mes */}
+                      {tipoRecorrencia === "dia_mes" && (
+                        <div>
+                          <Label className="text-sm">Valor de cada ocorrência</Label>
+                          <Input
+                            placeholder="R$ 0,00"
+                            value={valorOcorrenciaDiaMes}
+                            onChange={(e) => {
+                              const masked = maskCurrency(e.target.value);
+                              setValorOcorrenciaDiaMes(masked);
+                              // Sincronizar com o campo Valor do formulário
+                              form.setValue("valor_bruto", masked);
+                            }}
+                            className="bg-background/50 border-border/50 mt-1"
+                          />
+                        </div>
+                      )}
+
+                      {/* Preview */}
+                      {previewDatas.length > 0 && (
+                        <div className="text-xs text-muted-foreground space-y-1 pt-2 border-t border-border/30">
+                          <p className="font-medium">Prévia das primeiras datas:</p>
+                          <div className="flex flex-wrap gap-2">
+                            {previewDatas.map((d, i) => (
+                              <span key={i} className="bg-accent/10 text-accent px-2 py-1 rounded">
+                                {format(d, "dd/MM/yyyy", { locale: ptBR })}
+                              </span>
+                            ))}
+                            {numeroOcorrencias > 5 && (
+                              <span className="text-muted-foreground">
+                                ... +{numeroOcorrencias - 5} mais
+                              </span>
+                            )}
+                          </div>
+
+                          {/* Valor total de ocorrências - Only for dia_mes */}
+                          {tipoRecorrencia === "dia_mes" && valorOcorrenciaDiaMes && (
+                            <div className="pt-2 mt-2 border-t border-border/30">
+                              <p className="font-medium text-foreground">
+                                Valor total de ocorrências:{" "}
+                                <span className="text-accent">
+                                  {maskCurrency(unmaskCurrency(valorOcorrenciaDiaMes) * numeroOcorrencias)}
+                                </span>
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+
               <FormField
                 control={form.control}
                 name="valor_bruto"
@@ -635,6 +763,10 @@ export function MovimentoDialog({
                         onChange={(e) => {
                           const masked = maskCurrency(e.target.value);
                           field.onChange(masked);
+                          // Sincronizar com valorOcorrenciaDiaMes se estiver no modo dia_mes
+                          if (tipoRecorrencia === "dia_mes") {
+                            setValorOcorrenciaDiaMes(masked);
+                          }
                         }}
                       />
                     </FormControl>
@@ -809,96 +941,6 @@ export function MovimentoDialog({
                   </FormItem>
                 )}
               />
-
-              {/* Recurrence Section - Only for new entries */}
-              {!isEditing && (
-                <div className="space-y-4 border border-border/50 rounded-lg p-4 bg-background/30">
-                  <div className="flex items-center gap-2 text-foreground font-medium">
-                    <Repeat className="w-4 h-4" />
-                    Lançamento Recorrente
-                  </div>
-
-                  <Select
-                    value={tipoRecorrencia}
-                    onValueChange={(v) => setTipoRecorrencia(v as TipoRecorrencia)}
-                  >
-                    <SelectTrigger className="bg-background/50 border-border/50">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="nao_recorrente">Não recorrente</SelectItem>
-                      <SelectItem value="por_ocorrencias">Repetir por número de ocorrências</SelectItem>
-                      <SelectItem value="intervalo_dias">Repetir a cada X dias</SelectItem>
-                      <SelectItem value="dia_mes">Repetir todo dia X do mês</SelectItem>
-                    </SelectContent>
-                  </Select>
-
-                  {tipoRecorrencia !== "nao_recorrente" && (
-                    <div className="space-y-3">
-                      <div className="grid grid-cols-2 gap-3">
-                        <div>
-                          <Label className="text-sm">Quantidade de ocorrências</Label>
-                          <Input
-                            type="number"
-                            min={2}
-                            max={120}
-                            value={numeroOcorrencias}
-                            onChange={(e) => setNumeroOcorrencias(Math.max(2, parseInt(e.target.value) || 2))}
-                            className="bg-background/50 border-border/50 mt-1"
-                          />
-                        </div>
-
-                        {(tipoRecorrencia === "por_ocorrencias" || tipoRecorrencia === "intervalo_dias") && (
-                          <div>
-                            <Label className="text-sm">Intervalo em dias</Label>
-                            <Input
-                              type="number"
-                              min={1}
-                              max={365}
-                              value={intervaloDias}
-                              onChange={(e) => setIntervaloDias(Math.max(1, parseInt(e.target.value) || 1))}
-                              className="bg-background/50 border-border/50 mt-1"
-                            />
-                          </div>
-                        )}
-
-                        {tipoRecorrencia === "dia_mes" && (
-                          <div>
-                            <Label className="text-sm">Dia do mês</Label>
-                            <Input
-                              type="number"
-                              min={1}
-                              max={31}
-                              value={diaFixoMes}
-                              onChange={(e) => setDiaFixoMes(Math.min(31, Math.max(1, parseInt(e.target.value) || 1)))}
-                              className="bg-background/50 border-border/50 mt-1"
-                            />
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Preview */}
-                      {previewDatas.length > 0 && (
-                        <div className="text-xs text-muted-foreground space-y-1 pt-2 border-t border-border/30">
-                          <p className="font-medium">Prévia das primeiras datas:</p>
-                          <div className="flex flex-wrap gap-2">
-                            {previewDatas.map((d, i) => (
-                              <span key={i} className="bg-accent/10 text-accent px-2 py-1 rounded">
-                                {format(d, "dd/MM/yyyy", { locale: ptBR })}
-                              </span>
-                            ))}
-                            {numeroOcorrencias > 5 && (
-                              <span className="text-muted-foreground">
-                                ... +{numeroOcorrencias - 5} mais
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-              )}
 
               {/* Vincular a Veículo */}
               <div className="space-y-3">
