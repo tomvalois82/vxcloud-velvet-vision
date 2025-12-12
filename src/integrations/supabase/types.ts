@@ -1643,6 +1643,69 @@ export type Database = {
         }
         Relationships: []
       }
+      vx_veiculos_consultados: {
+        Row: {
+          ano_fabricacao: number | null
+          ano_modelo: number | null
+          chassi: string
+          codigo_fipe: string | null
+          combustivel: string | null
+          cor: string | null
+          data_consulta: string
+          fabricante: string | null
+          id: string
+          json_completo: Json | null
+          modelo: string | null
+          municipio: string | null
+          placa: string
+          situacao_restricao: string | null
+          situacao_veiculo: string | null
+          uf: string | null
+          valor_fipe: number | null
+          versao: string | null
+        }
+        Insert: {
+          ano_fabricacao?: number | null
+          ano_modelo?: number | null
+          chassi: string
+          codigo_fipe?: string | null
+          combustivel?: string | null
+          cor?: string | null
+          data_consulta: string
+          fabricante?: string | null
+          id?: string
+          json_completo?: Json | null
+          modelo?: string | null
+          municipio?: string | null
+          placa: string
+          situacao_restricao?: string | null
+          situacao_veiculo?: string | null
+          uf?: string | null
+          valor_fipe?: number | null
+          versao?: string | null
+        }
+        Update: {
+          ano_fabricacao?: number | null
+          ano_modelo?: number | null
+          chassi?: string
+          codigo_fipe?: string | null
+          combustivel?: string | null
+          cor?: string | null
+          data_consulta?: string
+          fabricante?: string | null
+          id?: string
+          json_completo?: Json | null
+          modelo?: string | null
+          municipio?: string | null
+          placa?: string
+          situacao_restricao?: string | null
+          situacao_veiculo?: string | null
+          uf?: string | null
+          valor_fipe?: number | null
+          versao?: string | null
+        }
+        Relationships: []
+      }
       vx_vendas: {
         Row: {
           data_venda: string
