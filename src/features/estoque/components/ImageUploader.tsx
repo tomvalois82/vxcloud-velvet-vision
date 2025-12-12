@@ -6,7 +6,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { validateImageFile, compressImage, createThumbnail } from '../utils/imageCompression';
 import { StorageManager, uploadWithRetry, PhotoMetadata } from '../utils/storageManager';
 import { toast } from '@/hooks/use-toast';
-
+import { supabase } from '@/integrations/supabase/client';
 interface ImageUploaderProps {
   vehicleId: number;
   onUploadComplete: (photos: PhotoMetadata[]) => void;
@@ -137,6 +137,24 @@ export function ImageUploader({ vehicleId, onUploadComplete, maxFiles = 20 }: Im
         vehicleId,
         photos: uploaded,
       });
+
+      // Save photo URLs to estoque.fotos field
+      const photoUrls = uploaded.map(photo => photo.url);
+      
+      // Get existing photos from database and merge
+      const { data: vehicleData } = await supabase
+        .from('estoque')
+        .select('fotos')
+        .eq('id', vehicleId)
+        .single();
+      
+      const existingPhotos = (vehicleData?.fotos as string[] | null) || [];
+      const allPhotos = [...existingPhotos, ...photoUrls];
+      
+      await supabase
+        .from('estoque')
+        .update({ fotos: allPhotos })
+        .eq('id', vehicleId);
 
       onUploadComplete(uploaded);
       toast({
