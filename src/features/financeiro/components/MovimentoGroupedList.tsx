@@ -103,8 +103,18 @@ export const MovimentoGroupedList = ({
   tipoMovimento,
 }: MovimentoGroupedListProps) => {
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
-  const [groupBy, setGroupBy] = useState<GroupByOption>("data_compra");
+  
+  // Persist groupBy preference per tipoMovimento
+  const storageKey = `financeiro-groupBy-${tipoMovimento}`;
+  const [groupBy, setGroupBy] = useState<GroupByOption>(() => {
+    const saved = localStorage.getItem(storageKey);
+    return (saved as GroupByOption) || "data_compra";
+  });
 
+  const handleGroupByChange = (value: GroupByOption) => {
+    setGroupBy(value);
+    localStorage.setItem(storageKey, value);
+  };
   // Group movimentos by selected date field
   const groupedMovimentos = useMemo(() => {
     const groups = new Map<string, DateGroup>();
@@ -217,7 +227,7 @@ export const MovimentoGroupedList = ({
         
         <div className="flex items-center gap-2">
           <span className="text-sm text-muted-foreground">Agrupar por:</span>
-          <Select value={groupBy} onValueChange={(value: GroupByOption) => setGroupBy(value)}>
+          <Select value={groupBy} onValueChange={handleGroupByChange}>
             <SelectTrigger className="w-[180px] h-8 bg-background/50 border-border/50">
               <SelectValue />
             </SelectTrigger>
