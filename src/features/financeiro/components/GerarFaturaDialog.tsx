@@ -59,6 +59,7 @@ export function GerarFaturaDialog({
   const [gerando, setGerando] = useState(false);
   const [cartoes, setCartoes] = useState<Cartao[]>([]);
   const [selectedCartaoId, setSelectedCartaoId] = useState<string>("");
+  const [selectedCompetencia, setSelectedCompetencia] = useState<string>("");
   const [lancamentos, setLancamentos] = useState<LancamentoFatura[]>([]);
   const [loadingLancamentos, setLoadingLancamentos] = useState(false);
   const [faturaInfo, setFaturaInfo] = useState<{
@@ -66,6 +67,18 @@ export function GerarFaturaDialog({
     dataVencimento: string;
     total: number;
   } | null>(null);
+
+  // Gerar opções de competência (últimos 6 meses + próximos 3)
+  const competenciaOptions = (() => {
+    const options: string[] = [];
+    const hoje = new Date();
+    for (let i = -6; i <= 3; i++) {
+      const date = addMonths(hoje, i);
+      const comp = `${String(date.getMonth() + 1).padStart(2, "0")}/${date.getFullYear()}`;
+      options.push(comp);
+    }
+    return options;
+  })();
 
   // Fetch cartões when dialog opens
   useEffect(() => {
@@ -77,20 +90,44 @@ export function GerarFaturaDialog({
     } else {
       // Reset state when closing
       setSelectedCartaoId("");
+      setSelectedCompetencia("");
       setLancamentos([]);
       setFaturaInfo(null);
     }
   }, [open, cartaoIdProp]);
 
-  // Fetch lancamentos when cartao is selected
+  // Set default competencia when cartao is selected
   useEffect(() => {
-    if (selectedCartaoId) {
+    if (selectedCartaoId && !selectedCompetencia) {
+      const cartao = cartoes.find((c) => c.id === selectedCartaoId);
+      if (cartao) {
+        const hoje = new Date();
+        const diaAtual = hoje.getDate();
+        let mesFatura = hoje.getMonth();
+        let anoFatura = hoje.getFullYear();
+
+        if (diaAtual > cartao.dia_fechamento) {
+          mesFatura += 1;
+          if (mesFatura > 11) {
+            mesFatura = 0;
+            anoFatura += 1;
+          }
+        }
+        const competenciaDefault = `${String(mesFatura + 1).padStart(2, "0")}/${anoFatura}`;
+        setSelectedCompetencia(competenciaDefault);
+      }
+    }
+  }, [selectedCartaoId, cartoes]);
+
+  // Fetch lancamentos when cartao or competencia changes
+  useEffect(() => {
+    if (selectedCartaoId && selectedCompetencia) {
       fetchLancamentosCartao();
     } else {
       setLancamentos([]);
       setFaturaInfo(null);
     }
-  }, [selectedCartaoId]);
+  }, [selectedCartaoId, selectedCompetencia]);
 
   const fetchCartoes = async () => {
     setLoading(true);
@@ -115,29 +152,17 @@ export function GerarFaturaDialog({
   };
 
   const fetchLancamentosCartao = async () => {
-    if (!selectedCartaoId) return;
+    if (!selectedCartaoId || !selectedCompetencia) return;
 
     setLoadingLancamentos(true);
     try {
       const cartao = cartoes.find((c) => c.id === selectedCartaoId);
       if (!cartao) return;
 
-      // Calcular a próxima competência da fatura
-      const hoje = new Date();
-      const diaAtual = hoje.getDate();
-      let mesFatura = hoje.getMonth();
-      let anoFatura = hoje.getFullYear();
-
-      // Se já passou do dia de fechamento, a fatura é do próximo mês
-      if (diaAtual > cartao.dia_fechamento) {
-        mesFatura += 1;
-        if (mesFatura > 11) {
-          mesFatura = 0;
-          anoFatura += 1;
-        }
-      }
-
-      const competencia = `${String(mesFatura + 1).padStart(2, "0")}/${anoFatura}`;
+      // Usar a competência selecionada
+      const [mesStr, anoStr] = selectedCompetencia.split("/");
+      const mesFatura = parseInt(mesStr, 10) - 1; // 0-indexed
+      const anoFatura = parseInt(anoStr, 10);
 
       // Calcular data de vencimento
       const ultimoDiaMes = lastDayOfMonth(new Date(anoFatura, mesFatura, 1)).getDate();
@@ -145,15 +170,14 @@ export function GerarFaturaDialog({
       const dataVencimento = new Date(anoFatura, mesFatura, diaVencimentoReal);
 
       // Buscar lançamentos pendentes deste cartão para esta competência
-      // que ainda não fazem parte de uma fatura (não têm recorrencia_id de fatura)
       const { data, error } = await supabase
         .from("vx_fin_movimento")
         .select("id, descricao, valor_bruto, data_compra, competencia")
         .eq("id_cartao", selectedCartaoId)
         .eq("tipo_movimento", "Pagar")
         .eq("status", "Pendente")
-        .eq("competencia", competencia)
-        .is("recorrencia_id", null) // Lançamentos individuais, não parte de uma série recorrente
+        .eq("competencia", selectedCompetencia)
+        .is("recorrencia_id", null)
         .order("data_compra", { ascending: true });
 
       if (error) throw error;
@@ -163,7 +187,7 @@ export function GerarFaturaDialog({
 
       setLancamentos(lancamentosData);
       setFaturaInfo({
-        competencia,
+        competencia: selectedCompetencia,
         dataVencimento: format(dataVencimento, "yyyy-MM-dd"),
         total,
       });
@@ -290,6 +314,25 @@ export function GerarFaturaDialog({
                 </div>
               )}
 
+              {/* Seleção de competência */}
+              {selectedCartaoId && (
+                <div className="space-y-2">
+                  <Label>Competência da Fatura</Label>
+                  <Select value={selectedCompetencia} onValueChange={setSelectedCompetencia}>
+                    <SelectTrigger className="bg-background/50 border-border/50">
+                      <SelectValue placeholder="Selecione a competência..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {competenciaOptions.map((comp) => (
+                        <SelectItem key={comp} value={comp}>
+                          {comp}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+
               {/* Informações da fatura */}
               {loadingLancamentos ? (
                 <div className="flex items-center justify-center py-6">
@@ -298,17 +341,11 @@ export function GerarFaturaDialog({
                 </div>
               ) : faturaInfo && (
                 <div className="space-y-3">
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="bg-background/50 rounded-lg p-3">
-                      <p className="text-xs text-muted-foreground">Competência</p>
-                      <p className="font-semibold">{faturaInfo.competencia}</p>
-                    </div>
-                    <div className="bg-background/50 rounded-lg p-3">
-                      <p className="text-xs text-muted-foreground">Vencimento</p>
-                      <p className="font-semibold">
-                        {format(new Date(faturaInfo.dataVencimento + "T00:00:00"), "dd/MM/yyyy", { locale: ptBR })}
-                      </p>
-                    </div>
+                  <div className="bg-background/50 rounded-lg p-3">
+                    <p className="text-xs text-muted-foreground">Vencimento</p>
+                    <p className="font-semibold">
+                      {format(new Date(faturaInfo.dataVencimento + "T00:00:00"), "dd/MM/yyyy", { locale: ptBR })}
+                    </p>
                   </div>
 
                   {lancamentos.length === 0 ? (
