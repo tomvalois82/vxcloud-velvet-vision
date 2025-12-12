@@ -41,6 +41,7 @@ import {
   ChevronLeft,
   ChevronRight,
   CheckCheck,
+  FileText,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
@@ -51,6 +52,7 @@ import { RecorrenciaActionDialog } from "@/features/financeiro/components/Recorr
 import { BaixaLoteDialog } from "@/features/financeiro/components/BaixaLoteDialog";
 import { BaixaIndividualDialog } from "@/features/financeiro/components/BaixaIndividualDialog";
 import { MovimentoGroupedList } from "@/features/financeiro/components/MovimentoGroupedList";
+import { GerarFaturaDialog } from "@/features/financeiro/components/GerarFaturaDialog";
 import { atualizarSaldoConta, calcularValorFinal } from "@/features/financeiro/utils/saldoUtils";
 import { deleteAnexosDoMovimento, deleteAnexosDeMovimentos } from "@/features/financeiro/utils/anexosUtils";
 
@@ -177,6 +179,9 @@ const FinanceiroPagar = () => {
 
   // Conciliação em lote state
   const [conciliandoLote, setConciliandoLote] = useState(false);
+
+  // Gerar fatura dialog state
+  const [faturaDialogOpen, setFaturaDialogOpen] = useState(false);
 
   const fetchMovimentos = async () => {
     setLoading(true);
@@ -758,6 +763,14 @@ const FinanceiroPagar = () => {
                 Baixar Selecionados ({selectedMovimentos.length})
               </Button>
             )}
+            <Button 
+              variant="outline" 
+              className="border-accent/50 hover:bg-accent/10"
+              onClick={() => setFaturaDialogOpen(true)}
+            >
+              <FileText className="w-4 h-4 mr-2" />
+              Gerar Fatura
+            </Button>
             <Button className="bg-accent hover:bg-accent/90" onClick={handleNew}>
               <Plus className="w-4 h-4 mr-2" />
               Nova Despesa
@@ -1098,6 +1111,12 @@ const FinanceiroPagar = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <GerarFaturaDialog
+        open={faturaDialogOpen}
+        onOpenChange={setFaturaDialogOpen}
+        onSuccess={fetchMovimentos}
+      />
     </div>
   );
 };

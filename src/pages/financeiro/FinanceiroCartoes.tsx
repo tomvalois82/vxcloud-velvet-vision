@@ -23,10 +23,11 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
-import { Plus, CreditCard, Search, Pencil, Trash2, Loader2 } from "lucide-react";
+import { Plus, CreditCard, Search, Pencil, Trash2, Loader2, FileText } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { CartaoDialog } from "@/features/financeiro/components/CartaoDialog";
+import { GerarFaturaDialog } from "@/features/financeiro/components/GerarFaturaDialog";
 import { maskCurrency } from "@/features/estoque/utils/masks";
 
 interface Cartao {
@@ -54,6 +55,8 @@ const FinanceiroCartoes = () => {
   const [cartaoToDelete, setCartaoToDelete] = useState<Cartao | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [togglingStatus, setTogglingStatus] = useState<string | null>(null);
+  const [faturaDialogOpen, setFaturaDialogOpen] = useState(false);
+  const [cartaoFaturaId, setCartaoFaturaId] = useState<string | null>(null);
 
   const fetchCartoes = async () => {
     setLoading(true);
@@ -88,6 +91,11 @@ const FinanceiroCartoes = () => {
   const handleNew = () => {
     setSelectedCartao(null);
     setDialogOpen(true);
+  };
+
+  const handleGerarFatura = (cartao: Cartao) => {
+    setCartaoFaturaId(cartao.id);
+    setFaturaDialogOpen(true);
   };
 
   const handleDeleteClick = (cartao: Cartao) => {
@@ -277,6 +285,15 @@ const FinanceiroCartoes = () => {
                               variant="ghost"
                               size="icon"
                               className="h-8 w-8 hover:bg-accent/20"
+                              onClick={() => handleGerarFatura(cartao)}
+                              title="Gerar Fatura"
+                            >
+                              <FileText className="w-4 h-4 text-accent" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 hover:bg-accent/20"
                               onClick={() => handleEdit(cartao)}
                             >
                               <Pencil className="w-4 h-4" />
@@ -336,6 +353,13 @@ const FinanceiroCartoes = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <GerarFaturaDialog
+        open={faturaDialogOpen}
+        onOpenChange={setFaturaDialogOpen}
+        cartaoId={cartaoFaturaId}
+        onSuccess={fetchCartoes}
+      />
     </div>
   );
 };
