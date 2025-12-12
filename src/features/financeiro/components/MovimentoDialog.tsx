@@ -116,6 +116,8 @@ interface Cartao {
   final: string;
   id_forma_pagamento: string;
   ativo: boolean;
+  dia_fechamento: number;
+  dia_vencimento: number;
 }
 
 interface Veiculo {
@@ -135,6 +137,7 @@ interface Movimento {
   valor_liquido: number;
   data_vencimento: string;
   data_pagamento: string | null;
+  data_compra: string | null;
   id_conta: string;
   id_categoria: string;
   id_empresa: string;
@@ -184,6 +187,7 @@ export function MovimentoDialog({
   const [intervaloDias, setIntervaloDias] = useState(30);
   const [diaFixoMes, setDiaFixoMes] = useState(10);
   const [valorOcorrenciaDiaMes, setValorOcorrenciaDiaMes] = useState("");
+  const [dataCompra, setDataCompra] = useState<Date | undefined>(undefined);
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -223,7 +227,7 @@ export function MovimentoDialog({
           supabase.from("vx_fin_conta").select("*").order("banco"),
           supabase.from("vx_fin_categoria").select("*").eq("ativo", true).order("categoria"),
           supabase.from("vx_forma_pagamento").select("*").eq("ativa", true).order("descricao"),
-          supabase.from("vx_fin_cartao").select("id, descricao, final, id_forma_pagamento, ativo").eq("ativo", true).order("descricao"),
+          supabase.from("vx_fin_cartao").select("id, descricao, final, id_forma_pagamento, ativo, dia_fechamento, dia_vencimento").eq("ativo", true).order("descricao"),
           supabase
             .from("estoque")
             .select("id, fabricante, modelo, placa, ano, status")
@@ -313,6 +317,8 @@ export function MovimentoDialog({
         }
         // Set cartao if exists
         setCartaoSelecionado(movimento.id_cartao || "");
+        // Set data_compra if exists
+        setDataCompra(movimento.data_compra ? new Date(movimento.data_compra + "T00:00:00") : undefined);
         // Reset recurrence fields when editing
         setTipoRecorrencia("nao_recorrente");
         setNumeroOcorrencias(12);
@@ -335,6 +341,7 @@ export function MovimentoDialog({
         setVincularVeiculo(false);
         setVeiculoSelecionado("");
         setCartaoSelecionado("");
+        setDataCompra(undefined);
         setTipoRecorrencia("nao_recorrente");
         setNumeroOcorrencias(12);
         setIntervaloDias(30);
@@ -359,12 +366,59 @@ export function MovimentoDialog({
     return `${cartao.descricao || "Cartão"} - ${cartao.final}`;
   };
 
-  // Limpar seleção de cartão quando forma de pagamento mudar e não tiver cartões vinculados
+  // Limpar seleção de cartão e data_compra quando forma de pagamento mudar e não tiver cartões vinculados
   useEffect(() => {
     if (!temCartoesVinculados) {
       setCartaoSelecionado("");
+      setDataCompra(undefined);
     }
   }, [formaPagamentoSelecionada, temCartoesVinculados]);
+
+  // Obter o cartão selecionado atual
+  const cartaoAtual = cartoesDisponiveis.find(c => c.id === cartaoSelecionado);
+
+  // Calcular competência da fatura baseado na data de compra e dia de fechamento
+  const calcularCompetenciaFatura = (dataCompraValue: Date, diaFechamento: number): { competencia: string; dataVencimento: Date } => {
+    const diaCompra = dataCompraValue.getDate();
+    let mesCompetencia = dataCompraValue.getMonth();
+    let anoCompetencia = dataCompraValue.getFullYear();
+    
+    // Se a compra for após o dia de fechamento, vai para a fatura do mês seguinte
+    if (diaCompra > diaFechamento) {
+      mesCompetencia += 1;
+      if (mesCompetencia > 11) {
+        mesCompetencia = 0;
+        anoCompetencia += 1;
+      }
+    }
+    
+    // A fatura é do mês seguinte à competência
+    let mesFatura = mesCompetencia + 1;
+    let anoFatura = anoCompetencia;
+    if (mesFatura > 11) {
+      mesFatura = 0;
+      anoFatura += 1;
+    }
+    
+    const competencia = `${String(mesFatura + 1).padStart(2, '0')}/${anoFatura}`;
+    
+    // Data de vencimento = dia_vencimento do cartão no mês da fatura
+    const cartaoVencimento = cartaoAtual?.dia_vencimento || 10;
+    const ultimoDiaMesFatura = lastDayOfMonth(new Date(anoFatura, mesFatura, 1)).getDate();
+    const diaVencimentoReal = Math.min(cartaoVencimento, ultimoDiaMesFatura);
+    const dataVencimento = new Date(anoFatura, mesFatura, diaVencimentoReal);
+    
+    return { competencia, dataVencimento };
+  };
+
+  // Atualizar competência e data_vencimento quando data_compra ou cartão mudar
+  useEffect(() => {
+    if (cartaoSelecionado && dataCompra && cartaoAtual) {
+      const { competencia, dataVencimento } = calcularCompetenciaFatura(dataCompra, cartaoAtual.dia_fechamento);
+      form.setValue("competencia", competencia);
+      form.setValue("data_vencimento", dataVencimento);
+    }
+  }, [dataCompra, cartaoSelecionado, cartaoAtual]);
 
   // Generate recurrence dates
   const gerarDatasRecorrencia = (dataInicial: Date): Date[] => {
@@ -427,6 +481,7 @@ export function MovimentoDialog({
           id_categoria: data.id_categoria,
           id_forma_pagamento: data.id_forma_pagamento || null,
           id_cartao: cartaoSelecionado || null,
+          data_compra: dataCompra ? format(dataCompra, "yyyy-MM-dd") : null,
           id_empresa: empresaData.id,
           observacoes: data.observacoes || null,
           competencia: data.competencia || null,
@@ -528,6 +583,7 @@ export function MovimentoDialog({
             id_categoria: data.id_categoria,
             id_forma_pagamento: data.id_forma_pagamento || null,
             id_cartao: cartaoSelecionado || null,
+            data_compra: dataCompra ? format(dataCompra, "yyyy-MM-dd") : null,
             id_empresa: empresaData.id,
             observacoes: data.observacoes || null,
             status: data.status,
@@ -563,6 +619,7 @@ export function MovimentoDialog({
             id_categoria: data.id_categoria,
             id_forma_pagamento: data.id_forma_pagamento || null,
             id_cartao: cartaoSelecionado || null,
+            data_compra: dataCompra ? format(dataCompra, "yyyy-MM-dd") : null,
             id_empresa: empresaData.id,
             observacoes: data.observacoes || null,
             status: "Pendente",
@@ -966,23 +1023,64 @@ export function MovimentoDialog({
 
               {/* Seleção de Cartão de Crédito - apenas se a forma de pagamento tiver cartões vinculados */}
               {temCartoesVinculados && (
-                <div className="space-y-2">
-                  <Label>Cartão de Crédito</Label>
-                  <Select 
-                    value={cartaoSelecionado} 
-                    onValueChange={setCartaoSelecionado}
-                  >
-                    <SelectTrigger className="bg-background/50 border-border/50">
-                      <SelectValue placeholder="Selecione o cartão" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {cartoesDisponiveis.map((cartao) => (
-                        <SelectItem key={cartao.id} value={cartao.id}>
-                          {getCartaoDisplayName(cartao)}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                <div className="space-y-4 border border-border/50 rounded-lg p-4 bg-background/30">
+                  <div className="space-y-2">
+                    <Label>Cartão de Crédito</Label>
+                    <Select 
+                      value={cartaoSelecionado} 
+                      onValueChange={setCartaoSelecionado}
+                    >
+                      <SelectTrigger className="bg-background/50 border-border/50">
+                        <SelectValue placeholder="Selecione o cartão" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {cartoesDisponiveis.map((cartao) => (
+                          <SelectItem key={cartao.id} value={cartao.id}>
+                            {getCartaoDisplayName(cartao)}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Data da Compra - apenas quando um cartão estiver selecionado */}
+                  {cartaoSelecionado && (
+                    <div className="space-y-2">
+                      <Label>Data da Compra</Label>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant="outline"
+                            className={cn(
+                              "w-full justify-start text-left font-normal bg-background/50 border-border/50",
+                              !dataCompra && "text-muted-foreground"
+                            )}
+                          >
+                            <CalendarIcon className="mr-2 h-4 w-4" />
+                            {dataCompra ? (
+                              format(dataCompra, "dd/MM/yyyy", { locale: ptBR })
+                            ) : (
+                              <span>Selecione a data da compra</span>
+                            )}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <Calendar
+                            mode="single"
+                            selected={dataCompra}
+                            onSelect={setDataCompra}
+                            initialFocus
+                            className="pointer-events-auto"
+                          />
+                        </PopoverContent>
+                      </Popover>
+                      {cartaoAtual && dataCompra && (
+                        <p className="text-xs text-muted-foreground">
+                          Fechamento dia {cartaoAtual.dia_fechamento} • Vencimento dia {cartaoAtual.dia_vencimento}
+                        </p>
+                      )}
+                    </div>
+                  )}
                 </div>
               )}
 

@@ -62,6 +62,7 @@ interface Movimento {
   valor_liquido: number;
   data_vencimento: string;
   data_pagamento: string | null;
+  data_compra: string | null;
   id_conta: string;
   id_categoria: string;
   id_empresa: string;
