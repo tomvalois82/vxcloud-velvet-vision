@@ -31,6 +31,10 @@ interface FormaPagamento {
   descricao: string;
   ativa: boolean;
   id_conta_padrao: string | null;
+  conta_padrao?: {
+    banco: string;
+    descricao: string | null;
+  } | null;
 }
 
 const FormasPagamento = () => {
@@ -49,7 +53,10 @@ const FormasPagamento = () => {
     try {
       const { data, error } = await supabase
         .from("vx_forma_pagamento")
-        .select("*")
+        .select(`
+          *,
+          conta_padrao:vx_fin_conta!id_conta_padrao(banco, descricao)
+        `)
         .order("descricao");
 
       if (error) throw error;
@@ -181,6 +188,7 @@ const FormasPagamento = () => {
               <TableHeader>
                 <TableRow className="border-border/50 hover:bg-transparent">
                   <TableHead className="text-muted-foreground">Nome</TableHead>
+                  <TableHead className="text-muted-foreground">Conta Padrão</TableHead>
                   <TableHead className="text-muted-foreground">Status</TableHead>
                   <TableHead className="text-muted-foreground text-right">
                     Ações
@@ -195,6 +203,16 @@ const FormasPagamento = () => {
                   >
                     <TableCell className="font-medium text-foreground">
                       {forma.descricao}
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {forma.conta_padrao ? (
+                        <span>
+                          {forma.conta_padrao.banco}
+                          {forma.conta_padrao.descricao && ` - ${forma.conta_padrao.descricao}`}
+                        </span>
+                      ) : (
+                        <span className="text-muted-foreground/50">—</span>
+                      )}
                     </TableCell>
                     <TableCell>
                       <Badge
