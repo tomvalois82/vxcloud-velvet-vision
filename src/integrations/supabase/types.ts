@@ -1583,6 +1583,7 @@ export type Database = {
           eh_cliente: boolean
           eh_colaborador: boolean
           eh_fornecedor: boolean
+          eh_investidor: boolean
           email: string | null
           estado: string | null
           id: string
@@ -1605,6 +1606,7 @@ export type Database = {
           eh_cliente?: boolean
           eh_colaborador?: boolean
           eh_fornecedor?: boolean
+          eh_investidor?: boolean
           email?: string | null
           estado?: string | null
           id?: string
@@ -1627,6 +1629,7 @@ export type Database = {
           eh_cliente?: boolean
           eh_colaborador?: boolean
           eh_fornecedor?: boolean
+          eh_investidor?: boolean
           email?: string | null
           estado?: string | null
           id?: string

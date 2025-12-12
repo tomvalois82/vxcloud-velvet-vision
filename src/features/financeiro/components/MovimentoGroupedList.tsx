@@ -39,6 +39,7 @@ interface Movimento {
   valor_liquido: number;
   data_vencimento: string;
   data_pagamento: string | null;
+  data_compra: string | null;
   id_conta: string;
   id_categoria: string;
   id_empresa: string;
@@ -238,7 +239,7 @@ export const MovimentoGroupedList = ({
                       <TableHead className="text-foreground font-semibold">Valor</TableHead>
                       <TableHead className="text-foreground font-semibold">Vencimento</TableHead>
                       <TableHead className="text-foreground font-semibold">Pagamento</TableHead>
-                      <TableHead className="text-foreground font-semibold">Competência</TableHead>
+                      <TableHead className="text-foreground font-semibold">{tipoMovimento === "Pagar" ? "Compra" : "Receita"}</TableHead>
                       <TableHead className="text-foreground font-semibold">Conta</TableHead>
                       <TableHead className="text-foreground font-semibold">Status</TableHead>
                       <TableHead className="text-foreground font-semibold w-[130px]">Ações</TableHead>
@@ -295,7 +296,9 @@ export const MovimentoGroupedList = ({
                               : "-"}
                           </TableCell>
                           <TableCell className="text-muted-foreground">
-                            {mov.competencia || "-"}
+                            {mov.data_compra 
+                              ? format(new Date(mov.data_compra + "T00:00:00"), "dd/MM/yyyy", { locale: ptBR }) 
+                              : "-"}
                           </TableCell>
                           <TableCell className="text-muted-foreground">
                             {getContaDisplayName(mov)}
