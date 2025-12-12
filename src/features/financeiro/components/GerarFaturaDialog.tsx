@@ -177,7 +177,6 @@ export function GerarFaturaDialog({
         .eq("tipo_movimento", "Pagar")
         .eq("status", "Pendente")
         .eq("competencia", selectedCompetencia)
-        .is("recorrencia_id", null)
         .order("data_compra", { ascending: true });
 
       if (error) throw error;
