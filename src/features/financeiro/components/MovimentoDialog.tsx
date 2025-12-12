@@ -378,28 +378,24 @@ export function MovimentoDialog({
   const cartaoAtual = cartoesDisponiveis.find(c => c.id === cartaoSelecionado);
 
   // Calcular competência da fatura baseado na data de compra e dia de fechamento
+  // Regra: Se dia_da_compra <= dia_de_fechamento: entra na fatura do mês ATUAL
+  //        Senão: entra na fatura do PRÓXIMO mês
   const calcularCompetenciaFatura = (dataCompraValue: Date, diaFechamento: number): { competencia: string; dataVencimento: Date } => {
     const diaCompra = dataCompraValue.getDate();
-    let mesCompetencia = dataCompraValue.getMonth();
-    let anoCompetencia = dataCompraValue.getFullYear();
+    let mesFatura = dataCompraValue.getMonth();
+    let anoFatura = dataCompraValue.getFullYear();
     
-    // Se a compra for após o dia de fechamento, vai para a fatura do mês seguinte
+    // Se a compra for APÓS o dia de fechamento, vai para a fatura do PRÓXIMO mês
     if (diaCompra > diaFechamento) {
-      mesCompetencia += 1;
-      if (mesCompetencia > 11) {
-        mesCompetencia = 0;
-        anoCompetencia += 1;
+      mesFatura += 1;
+      if (mesFatura > 11) {
+        mesFatura = 0;
+        anoFatura += 1;
       }
     }
+    // Se diaCompra <= diaFechamento, permanece no mês atual
     
-    // A fatura é do mês seguinte à competência
-    let mesFatura = mesCompetencia + 1;
-    let anoFatura = anoCompetencia;
-    if (mesFatura > 11) {
-      mesFatura = 0;
-      anoFatura += 1;
-    }
-    
+    // Competência = mês/ano da fatura (1-indexed para exibição)
     const competencia = `${String(mesFatura + 1).padStart(2, '0')}/${anoFatura}`;
     
     // Data de vencimento = dia_vencimento do cartão no mês da fatura
