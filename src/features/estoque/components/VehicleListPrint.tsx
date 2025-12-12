@@ -17,12 +17,27 @@ interface Vehicle {
   cambio?: string;
 }
 
+interface Empresa {
+  foto_url: string | null;
+  nome_fantasia: string;
+  logradouro: string;
+  numero: string;
+  complemento: string | null;
+  bairro: string;
+  municipio: string;
+  estado: string;
+  cep: string;
+  telefone: string | null;
+  site: string | null;
+}
+
 interface VehicleListPrintProps {
   vehicles: Vehicle[];
+  empresa?: Empresa | null;
 }
 
 export const VehicleListPrint = forwardRef<HTMLDivElement, VehicleListPrintProps>(
-  ({ vehicles }, ref) => {
+  ({ vehicles, empresa }, ref) => {
     // Agrupar veículos por fabricante (marca)
     const vehiclesByBrand = vehicles.reduce((acc, vehicle) => {
       const brand = vehicle.fabricante || 'Sem Marca';
@@ -41,9 +56,44 @@ export const VehicleListPrint = forwardRef<HTMLDivElement, VehicleListPrintProps
     const currentDate = format(new Date(), "dd 'de' MMMM 'de' yyyy", { locale: ptBR });
     const totalVehicles = vehicles.length;
 
+    // Montar endereço completo
+    const formatEndereco = () => {
+      if (!empresa) return '';
+      const parts = [
+        empresa.logradouro,
+        empresa.numero,
+        empresa.complemento,
+        empresa.bairro,
+        `${empresa.municipio} - ${empresa.estado}`,
+        empresa.cep,
+      ].filter(Boolean);
+      return parts.join(', ');
+    };
+
     return (
       <div ref={ref} className="p-8 bg-white text-black min-h-screen print:p-4">
-        {/* Header */}
+        {/* Timbre da Empresa */}
+        {empresa && (
+          <div className="flex items-center gap-4 mb-4 pb-4 border-b-2 border-gray-300">
+            {empresa.foto_url && (
+              <img 
+                src={empresa.foto_url} 
+                alt="Logo da empresa" 
+                className="h-16 w-auto object-contain"
+              />
+            )}
+            <div className="flex-1">
+              <h1 className="text-xl font-bold uppercase">{empresa.nome_fantasia}</h1>
+              <p className="text-xs text-gray-600">{formatEndereco()}</p>
+              <div className="flex gap-4 text-xs text-gray-600 mt-1">
+                {empresa.telefone && <span>Tel: {empresa.telefone}</span>}
+                {empresa.site && <span>{empresa.site}</span>}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Header do Relatório */}
         <div className="text-center mb-6 border-b-2 border-black pb-4">
           <h1 className="text-2xl font-bold uppercase">Listagem de Veículos em Estoque</h1>
           <p className="text-sm text-gray-600 mt-1">
