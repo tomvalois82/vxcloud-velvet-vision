@@ -1,10 +1,11 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { differenceInDays, differenceInMonths, format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { 
   Car, Calendar, Gauge, Palette, CreditCard, FileText, 
-  Clock, Edit, MapPin, Hash, Settings, Fuel, TrendingUp, Receipt
+  Clock, Edit, MapPin, Hash, Settings, Fuel, TrendingUp, Receipt, Printer
 } from 'lucide-react';
+import { useReactToPrint } from 'react-to-print';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -16,13 +17,18 @@ import { useVehicleFinancials } from '@/features/estoque/hooks/useVehicleFinanci
 import { maskCurrency, maskKm } from '@/features/estoque/utils/masks';
 import { PhotoCarousel } from './PhotoCarousel';
 import { StorageManager, PhotoMetadata } from '@/features/estoque/utils/storageManager';
+import { VehicleReportPrint } from './VehicleReportPrint';
 
 interface VehicleCost {
   id: string;
   descricao: string;
   data_vencimento: string;
   data_pagamento: string | null;
+  data_compra: string | null;
   valor_liquido: number;
+  pessoa?: {
+    nome: string;
+  } | null;
 }
 
 interface VehicleDetail {
@@ -93,6 +99,20 @@ function DetailRow({ icon: Icon, label, value }: { icon: React.ElementType; labe
   );
 }
 
+interface Empresa {
+  foto_url: string | null;
+  nome_fantasia: string;
+  logradouro: string;
+  numero: string;
+  complemento: string | null;
+  bairro: string;
+  municipio: string;
+  estado: string;
+  cep: string;
+  telefone: string | null;
+  site: string | null;
+}
+
 export function VehicleDetailDialog({ open, onOpenChange, vehicleId, onEdit }: VehicleDetailDialogProps) {
   const [vehicle, setVehicle] = useState<VehicleDetail | null>(null);
   const [loading, setLoading] = useState(false);
@@ -100,12 +120,21 @@ export function VehicleDetailDialog({ open, onOpenChange, vehicleId, onEdit }: V
   const [carouselOpen, setCarouselOpen] = useState(false);
   const [carouselIndex, setCarouselIndex] = useState(0);
   const [vehicleCosts, setVehicleCosts] = useState<VehicleCost[]>([]);
+  const [empresa, setEmpresa] = useState<Empresa | null>(null);
+  const [dataVenda, setDataVenda] = useState<string | null>(null);
+  
+  const printRef = useRef<HTMLDivElement>(null);
   
   const { mainPhoto } = useVehicleMainPhoto(vehicleId, vehicle?.foto || null);
   const { custos, valorVenda, margem, loading: financialsLoading } = useVehicleFinancials(
     vehicleId,
     vehicle?.valor_aquisicao || null
   );
+  
+  const handlePrint = useReactToPrint({
+    contentRef: printRef,
+    documentTitle: `Relatório - ${vehicle?.fabricante || ''} ${vehicle?.modelo || ''}`,
+  });
 
   const loadVehicleCosts = useCallback(async () => {
     if (!vehicleId) return;
@@ -113,13 +142,20 @@ export function VehicleDetailDialog({ open, onOpenChange, vehicleId, onEdit }: V
     try {
       const { data, error } = await supabase
         .from('vx_fin_movimento')
-        .select('id, descricao, data_vencimento, data_pagamento, valor_liquido')
+        .select('id, descricao, data_vencimento, data_pagamento, data_compra, valor_liquido, id_pessoa, vx_pessoa(nome)')
         .eq('id_estoque', vehicleId)
         .eq('tipo_movimento', 'Pagar')
         .order('data_vencimento', { ascending: true });
 
       if (error) throw error;
-      setVehicleCosts(data || []);
+      
+      // Transform data to match interface
+      const transformedData = (data || []).map(item => ({
+        ...item,
+        pessoa: item.vx_pessoa ? { nome: item.vx_pessoa.nome } : null
+      }));
+      
+      setVehicleCosts(transformedData);
     } catch (error) {
       console.error('Error loading vehicle costs:', error);
     }
@@ -130,12 +166,49 @@ export function VehicleDetailDialog({ open, onOpenChange, vehicleId, onEdit }: V
       loadVehicle();
       loadPhotos();
       loadVehicleCosts();
+      loadEmpresa();
+      loadDataVenda();
     } else {
       setVehicle(null);
       setPhotos([]);
       setVehicleCosts([]);
+      setDataVenda(null);
     }
   }, [open, vehicleId]);
+  
+  const loadEmpresa = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('empresa')
+        .select('foto_url, nome_fantasia, logradouro, numero, complemento, bairro, municipio, estado, cep, telefone, site')
+        .limit(1)
+        .single();
+
+      if (!error && data) {
+        setEmpresa(data);
+      }
+    } catch (error) {
+      console.error('Error loading empresa:', error);
+    }
+  };
+  
+  const loadDataVenda = async () => {
+    if (!vehicleId) return;
+    
+    try {
+      const { data, error } = await supabase
+        .from('vx_vendas')
+        .select('data_venda')
+        .eq('id_veiculo_vendido', vehicleId)
+        .maybeSingle();
+
+      if (!error && data) {
+        setDataVenda(data.data_venda);
+      }
+    } catch (error) {
+      console.error('Error loading data venda:', error);
+    }
+  };
 
   useEffect(() => {
     if (!open || !vehicleId) return;
@@ -244,6 +317,10 @@ export function VehicleDetailDialog({ open, onOpenChange, vehicleId, onEdit }: V
               )}
             </DialogTitle>
             <div className="flex items-center gap-2">
+              <Button variant="outline" size="sm" onClick={() => handlePrint()}>
+                <Printer className="w-4 h-4 mr-1" />
+                Imprimir
+              </Button>
               <Button variant="outline" size="sm" onClick={handleEditClick}>
                 <Edit className="w-4 h-4 mr-1" />
                 Editar
@@ -472,6 +549,20 @@ export function VehicleDetailDialog({ open, onOpenChange, vehicleId, onEdit }: V
           initialIndex={carouselIndex}
           onClose={() => setCarouselOpen(false)}
         />
+      )}
+      
+      {/* Componente de Impressão (oculto) */}
+      {vehicle && (
+        <div className="hidden">
+          <VehicleReportPrint 
+            ref={printRef} 
+            vehicle={vehicle}
+            costs={vehicleCosts}
+            valorVenda={valorVenda}
+            empresa={empresa}
+            dataVenda={dataVenda}
+          />
+        </div>
       )}
     </>
   );
