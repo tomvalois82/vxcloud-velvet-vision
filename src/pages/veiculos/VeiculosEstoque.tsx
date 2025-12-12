@@ -1,6 +1,7 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Search, Car, Trash2, Handshake, Eye, EyeOff } from 'lucide-react';
+import { Plus, Search, Car, Trash2, Handshake, Eye, EyeOff, Printer } from 'lucide-react';
+import { useReactToPrint } from 'react-to-print';
 import { useVehicleMainPhoto } from '@/features/estoque/hooks/useVehicleMainPhoto';
 import { PageHeader } from '@/components/PageHeader';
 import { Button } from '@/components/ui/button';
@@ -31,12 +32,14 @@ import {
 } from '@/components/ui/select';
 import { StorageManager } from '@/features/estoque/utils/storageManager';
 import { maskCurrency } from '@/features/estoque/utils/masks';
+import { VehicleListPrint } from '@/features/estoque/components/VehicleListPrint';
 
 interface Vehicle {
   id: number;
   modelo: string;
   fabricante: string;
   ano: string;
+  ano_fabricacao?: string;
   valor: string;
   valor_aquisicao: number;
   km: string;
@@ -45,6 +48,8 @@ interface Vehicle {
   placa: string | null;
   status: string | null;
   tipo_aquisicao: string;
+  motor?: string;
+  cambio?: string;
 }
 
 interface VehicleCosts {
@@ -143,7 +148,12 @@ const VeiculosEstoque = () => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [vehicleToDelete, setVehicleToDelete] = useState<Vehicle | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const printRef = useRef<HTMLDivElement>(null);
 
+  const handlePrint = useReactToPrint({
+    contentRef: printRef,
+    documentTitle: 'Listagem de Veículos',
+  });
   useEffect(() => {
     loadVehicles();
   }, []);
@@ -152,7 +162,7 @@ const VeiculosEstoque = () => {
     try {
       const { data, error } = await supabase
         .from('estoque')
-        .select('id, modelo, fabricante, ano, valor, valor_aquisicao, km, cor, foto, placa, status, tipo_aquisicao')
+        .select('id, modelo, fabricante, ano, ano_fabricacao, valor, valor_aquisicao, km, cor, foto, placa, status, tipo_aquisicao, motor, cambio')
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -335,10 +345,16 @@ const VeiculosEstoque = () => {
         title="Estoque"
         description="Controle de estoque de veículos"
         action={
-          <Button onClick={handleNew} className="bg-accent hover:bg-accent/90">
-            <Plus className="w-4 h-4 mr-2" />
-            Novo Veículo
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={() => handlePrint()}>
+              <Printer className="w-4 h-4 mr-2" />
+              Imprimir Listagem
+            </Button>
+            <Button onClick={handleNew} className="bg-accent hover:bg-accent/90">
+              <Plus className="w-4 h-4 mr-2" />
+              Novo Veículo
+            </Button>
+          </div>
         }
       />
 
@@ -543,6 +559,11 @@ const VeiculosEstoque = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Componente de Impressão (oculto) */}
+      <div className="hidden">
+        <VehicleListPrint ref={printRef} vehicles={filteredVehicles} />
+      </div>
     </div>
   );
 };
