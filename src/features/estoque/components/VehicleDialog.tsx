@@ -420,11 +420,20 @@ export function VehicleDialog({ open, onOpenChange, vehicleId, onSuccess }: Vehi
         }
       }
 
+      // Mapear tipo_veiculo do banco para tipo_veiculo_fipe
+      const tipoVeiculoMap: Record<string, TipoVeiculo> = {
+        'Carros': 'carros',
+        'Motos': 'motos',
+        'Caminhões': 'caminhoes',
+      };
+      const tipoFipe = tipoVeiculoMap[data.tipo_veiculo || ''] || 'carros';
+      setTipoVeiculoFipe(tipoFipe);
+
       form.reset({
         placa: data.placa ? maskPlaca(data.placa) : '',
         renavan: data.renavan ? String(data.renavan) : '',
         chassi: data.chassi || '',
-        tipo_veiculo_fipe: 'carros', // Default, pode ser ajustado se tiver no banco
+        tipo_veiculo_fipe: tipoFipe,
         modelo: data.modelo || '',
         fabricante: data.fabricante || '',
         ano: data.ano || '',
@@ -433,12 +442,13 @@ export function VehicleDialog({ open, onOpenChange, vehicleId, onSuccess }: Vehi
         valor_compra: data.valor_aquisicao ? maskCurrency(data.valor_aquisicao) : '',
         km: data.km ? maskKm(data.km) : '',
         cor: data.cor || '',
-        carroceria: data.tipo_veiculo || '',
+        carroceria: data.categoria || '',
         motor: data.motor || '',
         cambio: data.cambio || '',
         tipo_aquisicao: data.tipo_aquisicao || 'Próprio',
         data_aquisicao: data.data_aquisicao || new Date().toISOString().split('T')[0],
         adquirido_de: data.adquirido_de || '',
+        status: data.status || 'Em estoque',
         observacao: data.observacao || '',
       });
 
@@ -511,13 +521,22 @@ export function VehicleDialog({ open, onOpenChange, vehicleId, onSuccess }: Vehi
       const kmNumerico = data.km ? unmaskKm(data.km) : '';
       const placaNormalizada = data.placa ? normalizePlaca(data.placa) : null;
 
+      // Mapear tipo_veiculo_fipe para valor a ser salvo no banco
+      const tipoVeiculoDbMap: Record<string, string> = {
+        'carros': 'Carros',
+        'motos': 'Motos',
+        'caminhoes': 'Caminhões',
+      };
+
       const vehicleData = {
         modelo: data.modelo,
         fabricante: data.fabricante,
         ano: data.ano,
         ano_fabricacao: data.ano_fabricacao,
         cor: data.cor,
-        tipo_veiculo: data.carroceria, // Mapear carroceria para tipo_veiculo no banco
+        tipo_veiculo: tipoVeiculoDbMap[data.tipo_veiculo_fipe] || 'Carros',
+        categoria: data.carroceria || null,
+        status: data.status || 'Em estoque',
         motor: data.motor,
         cambio: data.cambio,
         observacao: data.observacao,
