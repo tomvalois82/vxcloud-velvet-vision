@@ -32,6 +32,16 @@ import {
 } from '@/components/ui/alert-dialog';
 import { toast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+import { supabase } from '@/integrations/supabase/client';
+
+// Helper function to sync photo URLs to estoque.fotos
+async function syncPhotosToDatabase(vehicleId: number, photos: PhotoMetadata[]) {
+  const photoUrls = photos.map(photo => photo.url);
+  await supabase
+    .from('estoque')
+    .update({ fotos: photoUrls })
+    .eq('id', vehicleId);
+}
 
 interface PhotoManagerProps {
   vehicleId: number;
@@ -136,13 +146,15 @@ export function PhotoManager({ vehicleId, photos, onPhotosChange }: PhotoManager
         const newIndex = items.findIndex((item) => item.key === over.id);
         const newItems = arrayMove(items, oldIndex, newIndex);
 
-        // Save to storage
+        // Save to storage and database
         const storageManager = new StorageManager(vehicleId);
-        storageManager
-          .saveMetadata({
+        Promise.all([
+          storageManager.saveMetadata({
             vehicleId,
             photos: newItems,
-          })
+          }),
+          syncPhotosToDatabase(vehicleId, newItems)
+        ])
           .then(() => {
             onPhotosChange(newItems);
             toast({
@@ -219,10 +231,15 @@ export function PhotoManager({ vehicleId, photos, onPhotosChange }: PhotoManager
       }
 
       setItems(newItems);
-      await storageManager.saveMetadata({
-        vehicleId,
-        photos: newItems,
-      });
+      
+      // Save to storage and database
+      await Promise.all([
+        storageManager.saveMetadata({
+          vehicleId,
+          photos: newItems,
+        }),
+        syncPhotosToDatabase(vehicleId, newItems)
+      ]);
 
       onPhotosChange(newItems);
       toast({
