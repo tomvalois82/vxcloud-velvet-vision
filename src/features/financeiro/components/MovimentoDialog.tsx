@@ -110,6 +110,14 @@ interface FormaPagamento {
   ativa: boolean;
 }
 
+interface Cartao {
+  id: string;
+  descricao: string | null;
+  final: string;
+  id_forma_pagamento: string;
+  ativo: boolean;
+}
+
 interface Veiculo {
   id: number;
   fabricante: string | null;
@@ -131,6 +139,7 @@ interface Movimento {
   id_categoria: string;
   id_empresa: string;
   id_forma_pagamento: string | null;
+  id_cartao: string | null;
   observacoes: string | null;
   status: string;
   id_estoque: number | null;
@@ -162,10 +171,12 @@ export function MovimentoDialog({
   const [contas, setContas] = useState<Conta[]>([]);
   const [categorias, setCategorias] = useState<Categoria[]>([]);
   const [formasPagamento, setFormasPagamento] = useState<FormaPagamento[]>([]);
+  const [cartoes, setCartoes] = useState<Cartao[]>([]);
   const [veiculos, setVeiculos] = useState<Veiculo[]>([]);
   const [loadingData, setLoadingData] = useState(true);
   const [vincularVeiculo, setVincularVeiculo] = useState(false);
   const [veiculoSelecionado, setVeiculoSelecionado] = useState<string>("");
+  const [cartaoSelecionado, setCartaoSelecionado] = useState<string>("");
 
   // Recurrence state
   const [tipoRecorrencia, setTipoRecorrencia] = useState<TipoRecorrencia>("nao_recorrente");
@@ -191,7 +202,14 @@ export function MovimentoDialog({
   });
 
   const tipoMovimento = form.watch("tipo_movimento");
+  const formaPagamentoSelecionada = form.watch("id_forma_pagamento");
   const isEditing = !!movimento;
+
+  // Filtra cartões ativos vinculados à forma de pagamento selecionada
+  const cartoesDisponiveis = cartoes.filter(
+    (c) => c.id_forma_pagamento === formaPagamentoSelecionada && c.ativo
+  );
+  const temCartoesVinculados = cartoesDisponiveis.length > 0;
 
   // Fetch contas, categorias e veículos
   useEffect(() => {
@@ -201,10 +219,11 @@ export function MovimentoDialog({
         const tresMesesAtras = new Date();
         tresMesesAtras.setMonth(tresMesesAtras.getMonth() - 3);
 
-        const [contasRes, categoriasRes, formasPagamentoRes, veiculosEstoqueRes, vendasRecentesRes] = await Promise.all([
+        const [contasRes, categoriasRes, formasPagamentoRes, cartoesRes, veiculosEstoqueRes, vendasRecentesRes] = await Promise.all([
           supabase.from("vx_fin_conta").select("*").order("banco"),
           supabase.from("vx_fin_categoria").select("*").eq("ativo", true).order("categoria"),
           supabase.from("vx_forma_pagamento").select("*").eq("ativa", true).order("descricao"),
+          supabase.from("vx_fin_cartao").select("id, descricao, final, id_forma_pagamento, ativo").eq("ativo", true).order("descricao"),
           supabase
             .from("estoque")
             .select("id, fabricante, modelo, placa, ano, status")
@@ -223,6 +242,7 @@ export function MovimentoDialog({
 
         if (contasRes.error) throw contasRes.error;
         if (formasPagamentoRes.error) throw formasPagamentoRes.error;
+        if (cartoesRes.error) throw cartoesRes.error;
         if (categoriasRes.error) throw categoriasRes.error;
         if (veiculosEstoqueRes.error) throw veiculosEstoqueRes.error;
         if (vendasRecentesRes.error) throw vendasRecentesRes.error;
@@ -250,6 +270,7 @@ export function MovimentoDialog({
         setContas(contasRes.data || []);
         setCategorias(categoriasRes.data || []);
         setFormasPagamento(formasPagamentoRes.data || []);
+        setCartoes((cartoesRes.data || []) as Cartao[]);
         setVeiculos(todosVeiculos);
       } catch (error: any) {
         toast({
@@ -290,6 +311,8 @@ export function MovimentoDialog({
           setVincularVeiculo(false);
           setVeiculoSelecionado("");
         }
+        // Set cartao if exists
+        setCartaoSelecionado(movimento.id_cartao || "");
         // Reset recurrence fields when editing
         setTipoRecorrencia("nao_recorrente");
         setNumeroOcorrencias(12);
@@ -311,6 +334,7 @@ export function MovimentoDialog({
         });
         setVincularVeiculo(false);
         setVeiculoSelecionado("");
+        setCartaoSelecionado("");
         setTipoRecorrencia("nao_recorrente");
         setNumeroOcorrencias(12);
         setIntervaloDias(30);
@@ -330,6 +354,17 @@ export function MovimentoDialog({
     const withPlaca = veiculo.placa ? `${base} - ${veiculo.placa}` : base;
     return veiculo.status === "Vendido" ? `${withPlaca} [Vendido]` : withPlaca;
   };
+
+  const getCartaoDisplayName = (cartao: Cartao) => {
+    return `${cartao.descricao || "Cartão"} - ${cartao.final}`;
+  };
+
+  // Limpar seleção de cartão quando forma de pagamento mudar e não tiver cartões vinculados
+  useEffect(() => {
+    if (!temCartoesVinculados) {
+      setCartaoSelecionado("");
+    }
+  }, [formaPagamentoSelecionada, temCartoesVinculados]);
 
   // Generate recurrence dates
   const gerarDatasRecorrencia = (dataInicial: Date): Date[] => {
@@ -391,6 +426,7 @@ export function MovimentoDialog({
           id_conta: data.id_conta,
           id_categoria: data.id_categoria,
           id_forma_pagamento: data.id_forma_pagamento || null,
+          id_cartao: cartaoSelecionado || null,
           id_empresa: empresaData.id,
           observacoes: data.observacoes || null,
           competencia: data.competencia || null,
@@ -491,6 +527,7 @@ export function MovimentoDialog({
             id_conta: data.id_conta,
             id_categoria: data.id_categoria,
             id_forma_pagamento: data.id_forma_pagamento || null,
+            id_cartao: cartaoSelecionado || null,
             id_empresa: empresaData.id,
             observacoes: data.observacoes || null,
             status: data.status,
@@ -525,6 +562,7 @@ export function MovimentoDialog({
             id_conta: data.id_conta,
             id_categoria: data.id_categoria,
             id_forma_pagamento: data.id_forma_pagamento || null,
+            id_cartao: cartaoSelecionado || null,
             id_empresa: empresaData.id,
             observacoes: data.observacoes || null,
             status: "Pendente",
@@ -900,7 +938,14 @@ export function MovimentoDialog({
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Forma de Pagamento</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
+                    <Select 
+                      onValueChange={(value) => {
+                        field.onChange(value);
+                        // Limpar cartão quando forma de pagamento mudar
+                        setCartaoSelecionado("");
+                      }} 
+                      value={field.value}
+                    >
                       <FormControl>
                         <SelectTrigger className="bg-background/50 border-border/50">
                           <SelectValue placeholder="Selecione a forma de pagamento" />
@@ -918,6 +963,28 @@ export function MovimentoDialog({
                   </FormItem>
                 )}
               />
+
+              {/* Seleção de Cartão de Crédito - apenas se a forma de pagamento tiver cartões vinculados */}
+              {temCartoesVinculados && (
+                <div className="space-y-2">
+                  <Label>Cartão de Crédito</Label>
+                  <Select 
+                    value={cartaoSelecionado} 
+                    onValueChange={setCartaoSelecionado}
+                  >
+                    <SelectTrigger className="bg-background/50 border-border/50">
+                      <SelectValue placeholder="Selecione o cartão" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {cartoesDisponiveis.map((cartao) => (
+                        <SelectItem key={cartao.id} value={cartao.id}>
+                          {getCartaoDisplayName(cartao)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
 
               <FormField
                 control={form.control}
