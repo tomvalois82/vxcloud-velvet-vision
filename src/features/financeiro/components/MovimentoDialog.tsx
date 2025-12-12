@@ -416,6 +416,46 @@ export function MovimentoDialog({
     }
   }, [dataCompra, cartaoSelecionado, cartaoAtual]);
 
+  // Gerar datas de vencimento para parcelas de cartão de crédito
+  // Cada parcela vai para a fatura do mês seguinte
+  const gerarDatasVencimentoCartao = (dataCompraValue: Date, diaFechamento: number, diaVencimento: number, numParcelas: number): Date[] => {
+    const datas: Date[] = [];
+    const diaCompra = dataCompraValue.getDate();
+    
+    // Determinar o mês da primeira fatura
+    let mesFatura = dataCompraValue.getMonth();
+    let anoFatura = dataCompraValue.getFullYear();
+    
+    // Se compra APÓS fechamento, primeira parcela vai para próximo mês
+    if (diaCompra > diaFechamento) {
+      mesFatura += 1;
+      if (mesFatura > 11) {
+        mesFatura = 0;
+        anoFatura += 1;
+      }
+    }
+    
+    // Gerar data de vencimento para cada parcela
+    for (let i = 0; i < numParcelas; i++) {
+      let mesVencimento = mesFatura + i;
+      let anoVencimento = anoFatura;
+      
+      // Ajustar ano se ultrapassar dezembro
+      while (mesVencimento > 11) {
+        mesVencimento -= 12;
+        anoVencimento += 1;
+      }
+      
+      // Usar dia_vencimento do cartão, respeitando último dia do mês
+      const ultimoDiaMes = lastDayOfMonth(new Date(anoVencimento, mesVencimento, 1)).getDate();
+      const diaVencimentoReal = Math.min(diaVencimento, ultimoDiaMes);
+      
+      datas.push(new Date(anoVencimento, mesVencimento, diaVencimentoReal));
+    }
+    
+    return datas;
+  };
+
   // Generate recurrence dates
   const gerarDatasRecorrencia = (dataInicial: Date): Date[] => {
     if (tipoRecorrencia === "nao_recorrente") {
@@ -600,32 +640,51 @@ export function MovimentoDialog({
           });
         } else {
           // Multiple entries (recurrence)
-          const datas = gerarDatasRecorrencia(data.data_vencimento);
+          // Se tiver cartão selecionado, usar datas específicas de cartão
+          let datas: Date[];
+          if (cartaoSelecionado && dataCompra && cartaoAtual) {
+            datas = gerarDatasVencimentoCartao(
+              dataCompra, 
+              cartaoAtual.dia_fechamento, 
+              cartaoAtual.dia_vencimento, 
+              numeroOcorrencias
+            );
+          } else {
+            datas = gerarDatasRecorrencia(data.data_vencimento);
+          }
+          
           const recorrenciaId = generateRecorrenciaId();
           const totalOcorrencias = datas.length;
 
-          const movimentosParaInserir = datas.map((dataOcorrencia, index) => ({
-            tipo_movimento: data.tipo_movimento,
-            descricao: formatarDescricaoRecorrente(data.descricao, index + 1, totalOcorrencias),
-            valor_bruto: valorNumerico,
-            valor_liquido: valorNumerico,
-            data_vencimento: format(dataOcorrencia, "yyyy-MM-dd"),
-            competencia: data.competencia || null,
-            id_conta: data.id_conta,
-            id_categoria: data.id_categoria,
-            id_forma_pagamento: data.id_forma_pagamento || null,
-            id_cartao: cartaoSelecionado || null,
-            data_compra: dataCompra ? format(dataCompra, "yyyy-MM-dd") : null,
-            id_empresa: empresaData.id,
-            observacoes: data.observacoes || null,
-            status: "Pendente",
-            id_estoque: vincularVeiculo && veiculoSelecionado
-              ? parseInt(veiculoSelecionado)
-              : null,
-            recorrencia_id: recorrenciaId,
-            ordem_ocorrencia: index + 1,
-            total_ocorrencias: totalOcorrencias,
-          }));
+          const movimentosParaInserir = datas.map((dataOcorrencia, index) => {
+            // Calcular competência para cada parcela (mês/ano da fatura)
+            const competenciaParcela = cartaoSelecionado 
+              ? `${String(dataOcorrencia.getMonth() + 1).padStart(2, '0')}/${dataOcorrencia.getFullYear()}`
+              : data.competencia || null;
+            
+            return {
+              tipo_movimento: data.tipo_movimento,
+              descricao: formatarDescricaoRecorrente(data.descricao, index + 1, totalOcorrencias),
+              valor_bruto: valorNumerico,
+              valor_liquido: valorNumerico,
+              data_vencimento: format(dataOcorrencia, "yyyy-MM-dd"),
+              competencia: competenciaParcela,
+              id_conta: data.id_conta,
+              id_categoria: data.id_categoria,
+              id_forma_pagamento: data.id_forma_pagamento || null,
+              id_cartao: cartaoSelecionado || null,
+              data_compra: dataCompra ? format(dataCompra, "yyyy-MM-dd") : null,
+              id_empresa: empresaData.id,
+              observacoes: data.observacoes || null,
+              status: "Pendente",
+              id_estoque: vincularVeiculo && veiculoSelecionado
+                ? parseInt(veiculoSelecionado)
+                : null,
+              recorrencia_id: recorrenciaId,
+              ordem_ocorrencia: index + 1,
+              total_ocorrencias: totalOcorrencias,
+            };
+          });
 
           const { error } = await supabase
             .from("vx_fin_movimento")
