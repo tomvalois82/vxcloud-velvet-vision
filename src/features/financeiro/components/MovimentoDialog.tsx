@@ -187,7 +187,7 @@ export function MovimentoDialog({
   const [intervaloDias, setIntervaloDias] = useState(30);
   const [diaFixoMes, setDiaFixoMes] = useState(10);
   const [valorOcorrenciaDiaMes, setValorOcorrenciaDiaMes] = useState("");
-  const [dataCompra, setDataCompra] = useState<Date | undefined>(undefined);
+  const [dataCompra, setDataCompra] = useState<Date | undefined>(new Date());
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -317,8 +317,8 @@ export function MovimentoDialog({
         }
         // Set cartao if exists
         setCartaoSelecionado(movimento.id_cartao || "");
-        // Set data_compra if exists
-        setDataCompra(movimento.data_compra ? new Date(movimento.data_compra + "T00:00:00") : undefined);
+        // Set data_compra if exists - default to current date if not set
+        setDataCompra(movimento.data_compra ? new Date(movimento.data_compra + "T00:00:00") : new Date());
         // Reset recurrence fields when editing
         setTipoRecorrencia("nao_recorrente");
         setNumeroOcorrencias(12);
@@ -341,7 +341,7 @@ export function MovimentoDialog({
         setVincularVeiculo(false);
         setVeiculoSelecionado("");
         setCartaoSelecionado("");
-        setDataCompra(undefined);
+        setDataCompra(new Date());
         setTipoRecorrencia("nao_recorrente");
         setNumeroOcorrencias(12);
         setIntervaloDias(30);
@@ -367,16 +367,11 @@ export function MovimentoDialog({
   };
 
   // Limpar seleção de cartão quando forma de pagamento mudar e não tiver cartões vinculados
-  // Mantém data_compra original ao editar para não perder o valor
   useEffect(() => {
     if (!temCartoesVinculados) {
       setCartaoSelecionado("");
-      // Só limpa data_compra se NÃO estiver editando ou se o movimento original não tinha data_compra
-      if (!movimento || !movimento.data_compra) {
-        setDataCompra(undefined);
-      }
     }
-  }, [formaPagamentoSelecionada, temCartoesVinculados, movimento]);
+  }, [formaPagamentoSelecionada, temCartoesVinculados]);
 
   // Obter o cartão selecionado atual
   const cartaoAtual = cartoesDisponiveis.find(c => c.id === cartaoSelecionado);
@@ -486,6 +481,18 @@ export function MovimentoDialog({
   };
 
   const onSubmit = async (data: FormData) => {
+    // Validar data_compra obrigatória
+    if (!dataCompra) {
+      toast({
+        title: "Campo obrigatório",
+        description: tipoMovimento === "Pagar" 
+          ? "Data da Compra/Despesa é obrigatória." 
+          : "Data da Venda/Receita é obrigatória.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setSaving(true);
     try {
       const { data: userData } = await supabase.auth.getUser();
@@ -928,6 +935,42 @@ export function MovimentoDialog({
                   </FormItem>
                 )}
               />
+
+              {/* Campo Data da Compra/Despesa ou Data da Venda/Receita - sempre visível */}
+              <div className="flex flex-col space-y-2">
+                <Label>
+                  {tipoMovimento === "Pagar" 
+                    ? "Data da Compra/Despesa *" 
+                    : "Data da Venda/Receita *"}
+                </Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "w-full justify-start text-left font-normal bg-background/50 border-border/50",
+                        !dataCompra && "text-muted-foreground"
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {dataCompra ? (
+                        format(dataCompra, "dd/MM/yyyy", { locale: ptBR })
+                      ) : (
+                        <span>Selecione a data</span>
+                      )}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={dataCompra}
+                      onSelect={(date) => setDataCompra(date || new Date())}
+                      initialFocus
+                      className="pointer-events-auto"
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
 
               <FormField
                 control={form.control}
