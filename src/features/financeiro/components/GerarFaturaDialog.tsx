@@ -59,7 +59,7 @@ export function GerarFaturaDialog({
   const [gerando, setGerando] = useState(false);
   const [cartoes, setCartoes] = useState<Cartao[]>([]);
   const [selectedCartaoId, setSelectedCartaoId] = useState<string>("");
-  const [selectedCompetencia, setSelectedCompetencia] = useState<string>("");
+  const [selectedDataVencimento, setSelectedDataVencimento] = useState<string>("");
   const [lancamentos, setLancamentos] = useState<LancamentoFatura[]>([]);
   const [loadingLancamentos, setLoadingLancamentos] = useState(false);
   const [faturaInfo, setFaturaInfo] = useState<{
@@ -68,15 +68,10 @@ export function GerarFaturaDialog({
     total: number;
   } | null>(null);
 
-  // Gerar opções de competência (últimos 6 meses + próximos 3)
-  const competenciaOptions = (() => {
-    const options: string[] = [];
+  // Gerar opções de data de vencimento (últimos 6 meses + próximos 3)
+  const vencimentoOptions = (() => {
+    const options: { value: string; label: string; competencia: string }[] = [];
     const hoje = new Date();
-    for (let i = -6; i <= 3; i++) {
-      const date = addMonths(hoje, i);
-      const comp = `${String(date.getMonth() + 1).padStart(2, "0")}/${date.getFullYear()}`;
-      options.push(comp);
-    }
     return options;
   })();
 
@@ -90,15 +85,40 @@ export function GerarFaturaDialog({
     } else {
       // Reset state when closing
       setSelectedCartaoId("");
-      setSelectedCompetencia("");
+      setSelectedDataVencimento("");
       setLancamentos([]);
       setFaturaInfo(null);
     }
   }, [open, cartaoIdProp]);
 
-  // Set default competencia when cartao is selected
+  // Gerar opções de vencimento baseadas no cartão selecionado
+  const getVencimentoOptions = (cartao: Cartao) => {
+    const options: { value: string; label: string; competencia: string }[] = [];
+    const hoje = new Date();
+    
+    for (let i = -6; i <= 3; i++) {
+      const date = addMonths(hoje, i);
+      const mes = date.getMonth();
+      const ano = date.getFullYear();
+      
+      const ultimoDiaMes = lastDayOfMonth(new Date(ano, mes, 1)).getDate();
+      const diaVencimentoReal = Math.min(cartao.dia_vencimento, ultimoDiaMes);
+      const dataVenc = new Date(ano, mes, diaVencimentoReal);
+      const dataVencStr = format(dataVenc, "yyyy-MM-dd");
+      const competencia = `${String(mes + 1).padStart(2, "0")}/${ano}`;
+      
+      options.push({
+        value: dataVencStr,
+        label: format(dataVenc, "dd/MM/yyyy", { locale: ptBR }),
+        competencia,
+      });
+    }
+    return options;
+  };
+
+  // Set default vencimento when cartao is selected
   useEffect(() => {
-    if (selectedCartaoId && !selectedCompetencia) {
+    if (selectedCartaoId && !selectedDataVencimento) {
       const cartao = cartoes.find((c) => c.id === selectedCartaoId);
       if (cartao) {
         const hoje = new Date();
@@ -113,21 +133,24 @@ export function GerarFaturaDialog({
             anoFatura += 1;
           }
         }
-        const competenciaDefault = `${String(mesFatura + 1).padStart(2, "0")}/${anoFatura}`;
-        setSelectedCompetencia(competenciaDefault);
+        
+        const ultimoDiaMes = lastDayOfMonth(new Date(anoFatura, mesFatura, 1)).getDate();
+        const diaVencimentoReal = Math.min(cartao.dia_vencimento, ultimoDiaMes);
+        const dataVencDefault = format(new Date(anoFatura, mesFatura, diaVencimentoReal), "yyyy-MM-dd");
+        setSelectedDataVencimento(dataVencDefault);
       }
     }
   }, [selectedCartaoId, cartoes]);
 
-  // Fetch lancamentos when cartao or competencia changes
+  // Fetch lancamentos when cartao or data vencimento changes
   useEffect(() => {
-    if (selectedCartaoId && selectedCompetencia) {
+    if (selectedCartaoId && selectedDataVencimento) {
       fetchLancamentosCartao();
     } else {
       setLancamentos([]);
       setFaturaInfo(null);
     }
-  }, [selectedCartaoId, selectedCompetencia]);
+  }, [selectedCartaoId, selectedDataVencimento]);
 
   const fetchCartoes = async () => {
     setLoading(true);
@@ -152,31 +175,25 @@ export function GerarFaturaDialog({
   };
 
   const fetchLancamentosCartao = async () => {
-    if (!selectedCartaoId || !selectedCompetencia) return;
+    if (!selectedCartaoId || !selectedDataVencimento) return;
 
     setLoadingLancamentos(true);
     try {
       const cartao = cartoes.find((c) => c.id === selectedCartaoId);
       if (!cartao) return;
 
-      // Usar a competência selecionada
-      const [mesStr, anoStr] = selectedCompetencia.split("/");
-      const mesFatura = parseInt(mesStr, 10) - 1; // 0-indexed
-      const anoFatura = parseInt(anoStr, 10);
+      // Calcular competência a partir da data de vencimento selecionada
+      const dataVenc = new Date(selectedDataVencimento + "T00:00:00");
+      const competencia = `${String(dataVenc.getMonth() + 1).padStart(2, "0")}/${dataVenc.getFullYear()}`;
 
-      // Calcular data de vencimento
-      const ultimoDiaMes = lastDayOfMonth(new Date(anoFatura, mesFatura, 1)).getDate();
-      const diaVencimentoReal = Math.min(cartao.dia_vencimento, ultimoDiaMes);
-      const dataVencimento = new Date(anoFatura, mesFatura, diaVencimentoReal);
-
-      // Buscar lançamentos pendentes deste cartão para esta competência
+      // Buscar lançamentos pendentes deste cartão para esta data de vencimento
       const { data, error } = await supabase
         .from("vx_fin_movimento")
         .select("id, descricao, valor_bruto, data_compra, competencia")
         .eq("id_cartao", selectedCartaoId)
         .eq("tipo_movimento", "Pagar")
         .eq("status", "Pendente")
-        .eq("competencia", selectedCompetencia)
+        .eq("data_vencimento", selectedDataVencimento)
         .order("data_compra", { ascending: true });
 
       if (error) throw error;
@@ -186,8 +203,8 @@ export function GerarFaturaDialog({
 
       setLancamentos(lancamentosData);
       setFaturaInfo({
-        competencia: selectedCompetencia,
-        dataVencimento: format(dataVencimento, "yyyy-MM-dd"),
+        competencia,
+        dataVencimento: selectedDataVencimento,
         total,
       });
     } catch (error: any) {
@@ -313,18 +330,18 @@ export function GerarFaturaDialog({
                 </div>
               )}
 
-              {/* Seleção de competência */}
-              {selectedCartaoId && (
+              {/* Seleção de data de vencimento */}
+              {selectedCartaoId && selectedCartao && (
                 <div className="space-y-2">
-                  <Label>Competência da Fatura</Label>
-                  <Select value={selectedCompetencia} onValueChange={setSelectedCompetencia}>
+                  <Label>Data de Vencimento da Fatura</Label>
+                  <Select value={selectedDataVencimento} onValueChange={setSelectedDataVencimento}>
                     <SelectTrigger className="bg-background/50 border-border/50">
-                      <SelectValue placeholder="Selecione a competência..." />
+                      <SelectValue placeholder="Selecione a data de vencimento..." />
                     </SelectTrigger>
                     <SelectContent>
-                      {competenciaOptions.map((comp) => (
-                        <SelectItem key={comp} value={comp}>
-                          {comp}
+                      {getVencimentoOptions(selectedCartao).map((opt) => (
+                        <SelectItem key={opt.value} value={opt.value}>
+                          {opt.label} ({opt.competencia})
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -340,18 +357,24 @@ export function GerarFaturaDialog({
                 </div>
               ) : faturaInfo && (
                 <div className="space-y-3">
-                  <div className="bg-background/50 rounded-lg p-3">
-                    <p className="text-xs text-muted-foreground">Vencimento</p>
-                    <p className="font-semibold">
-                      {format(new Date(faturaInfo.dataVencimento + "T00:00:00"), "dd/MM/yyyy", { locale: ptBR })}
-                    </p>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="bg-background/50 rounded-lg p-3">
+                      <p className="text-xs text-muted-foreground">Vencimento</p>
+                      <p className="font-semibold">
+                        {format(new Date(faturaInfo.dataVencimento + "T00:00:00"), "dd/MM/yyyy", { locale: ptBR })}
+                      </p>
+                    </div>
+                    <div className="bg-background/50 rounded-lg p-3">
+                      <p className="text-xs text-muted-foreground">Competência</p>
+                      <p className="font-semibold">{faturaInfo.competencia}</p>
+                    </div>
                   </div>
 
                   {lancamentos.length === 0 ? (
                     <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-4 text-center">
                       <AlertCircle className="w-6 h-6 text-yellow-500 mx-auto mb-2" />
                       <p className="text-sm text-muted-foreground">
-                        Não há lançamentos pendentes para esta competência.
+                        Não há lançamentos pendentes para esta data de vencimento.
                       </p>
                     </div>
                   ) : (
