@@ -92,6 +92,7 @@ const vehicleSchema = z.object({
   tipo_aquisicao: z.string().optional(),
   data_aquisicao: z.string().optional(),
   adquirido_de: z.string().optional(),
+  status: z.string().optional(),
   observacao: z.string().optional(),
 });
 
@@ -1105,11 +1106,35 @@ export function VehicleDialog({ open, onOpenChange, vehicleId, onSuccess }: Vehi
                   </div>
                 </div>
 
-                {/* Seção: Observações */}
+                {/* Seção: Status e Observações */}
                 <div className="space-y-4">
                   <h3 className="text-lg font-semibold text-foreground border-b border-border pb-2">
-                    Observações
+                    Status e Observações
                   </h3>
+                  
+                  <FormField
+                    control={form.control}
+                    name="status"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Status do Veículo</FormLabel>
+                        <Select value={field.value || 'Em estoque'} onValueChange={field.onChange}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Selecione o status" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="Em estoque">Em estoque</SelectItem>
+                            <SelectItem value="Reservado">Reservado</SelectItem>
+                            <SelectItem value="Fora de Estoque">Fora de Estoque</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
                   <FormField
                     control={form.control}
                     name="observacao"

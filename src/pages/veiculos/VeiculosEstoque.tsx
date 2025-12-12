@@ -412,6 +412,7 @@ const VeiculosEstoque = () => {
                 <SelectItem value="Em estoque">Em estoque</SelectItem>
                 <SelectItem value="Vendido">Vendido</SelectItem>
                 <SelectItem value="Reservado">Reservado</SelectItem>
+                <SelectItem value="Fora de Estoque">Fora de Estoque</SelectItem>
               </SelectContent>
             </Select>
           </div>
