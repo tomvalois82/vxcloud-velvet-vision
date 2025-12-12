@@ -26,6 +26,7 @@ import {
   ChevronDown,
   ChevronRight,
   CheckCheck,
+  CreditCard,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { maskCurrency } from "@/features/estoque/utils/masks";
@@ -42,6 +43,7 @@ interface Movimento {
   id_categoria: string;
   id_empresa: string;
   id_forma_pagamento: string | null;
+  id_cartao: string | null;
   observacoes: string | null;
   status: string;
   id_estoque: number | null;
@@ -55,6 +57,7 @@ interface Movimento {
   conciliado: boolean;
   vx_fin_conta: { banco: string; descricao: string | null } | null;
   vx_fin_categoria: { categoria: string } | null;
+  vx_fin_cartao: { descricao: string; final: string; bandeira: string } | null;
 }
 
 interface DateGroup {
@@ -267,6 +270,15 @@ export const MovimentoGroupedList = ({
                               {mov.recorrencia_id && (
                                 <span title="Lançamento recorrente">
                                   <Repeat className="w-3 h-3 text-accent" />
+                                </span>
+                              )}
+                              {mov.vx_fin_cartao && (
+                                <span 
+                                  title={`${mov.vx_fin_cartao.bandeira} - Final ${mov.vx_fin_cartao.final}`}
+                                  className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs bg-purple-500/20 text-purple-400 border border-purple-500/30"
+                                >
+                                  <CreditCard className="w-3 h-3" />
+                                  {mov.vx_fin_cartao.final}
                                 </span>
                               )}
                             </div>
