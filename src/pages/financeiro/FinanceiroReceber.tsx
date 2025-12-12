@@ -81,6 +81,7 @@ interface Movimento {
   conciliado: boolean;
   vx_fin_conta: { banco: string; descricao: string | null } | null;
   vx_fin_categoria: { categoria: string } | null;
+  vx_fin_cartao: { descricao: string; final: string; bandeira: string } | null;
 }
 
 interface Conta {
@@ -92,6 +93,13 @@ interface Conta {
 interface FormaPagamento {
   id: string;
   descricao: string;
+}
+
+interface Cartao {
+  id: string;
+  descricao: string;
+  final: string;
+  id_forma_pagamento: string;
 }
 
 // Generate competencia options from 01/2019 to current month/year
@@ -130,12 +138,14 @@ const FinanceiroReceber = () => {
   const [totalCount, setTotalCount] = useState(0);
   const [contas, setContas] = useState<Conta[]>([]);
   const [formasPagamento, setFormasPagamento] = useState<FormaPagamento[]>([]);
+  const [cartoes, setCartoes] = useState<Cartao[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("todos");
   const [conciliacaoFilter, setConciliacaoFilter] = useState<string>("todos");
   const [contaFilter, setContaFilter] = useState<string>("todos");
   const [formaPagamentoFilter, setFormaPagamentoFilter] = useState<string>("todos");
+  const [cartaoFilter, setCartaoFilter] = useState<string>("todos");
   const [competenciaFilter, setCompetenciaFilter] = useState<string>(getCompetenciaAtual());
   const [dateFilter, setDateFilter] = useState<Date | undefined>(undefined);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -176,7 +186,8 @@ const FinanceiroReceber = () => {
         .select(`
           *,
           vx_fin_conta!id_conta (banco, descricao),
-          vx_fin_categoria (categoria)
+          vx_fin_categoria (categoria),
+          vx_fin_cartao (descricao, final, bandeira)
         `, { count: 'exact' })
         .eq("tipo_movimento", "Receber");
 
@@ -189,6 +200,9 @@ const FinanceiroReceber = () => {
       }
       if (formaPagamentoFilter && formaPagamentoFilter !== "todos") {
         query = query.eq("id_forma_pagamento", formaPagamentoFilter);
+      }
+      if (cartaoFilter && cartaoFilter !== "todos") {
+        query = query.eq("id_cartao", cartaoFilter);
       }
       if (statusFilter === "pago") {
         query = query.eq("status", "Pago");
@@ -264,21 +278,47 @@ const FinanceiroReceber = () => {
     }
   };
 
+  const fetchCartoes = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("vx_fin_cartao")
+        .select("id, descricao, final, id_forma_pagamento")
+        .eq("ativo", true)
+        .order("descricao");
+
+      if (error) throw error;
+      setCartoes(data || []);
+    } catch (error) {
+      console.error("Erro ao carregar cartões:", error);
+    }
+  };
+
+  // Cartões filtrados pela forma de pagamento selecionada
+  const cartoesFiltrados = formaPagamentoFilter !== "todos" 
+    ? cartoes.filter(c => c.id_forma_pagamento === formaPagamentoFilter)
+    : [];
+
+  // Reset cartaoFilter when formaPagamentoFilter changes
+  useEffect(() => {
+    setCartaoFilter("todos");
+  }, [formaPagamentoFilter]);
+
   useEffect(() => {
     fetchContas();
     fetchFormasPagamento();
+    fetchCartoes();
   }, []);
 
   // Fetch movimentos when filters or pagination changes
   useEffect(() => {
     fetchMovimentos();
     setSelectedIds(new Set());
-  }, [searchTerm, statusFilter, conciliacaoFilter, contaFilter, formaPagamentoFilter, competenciaFilter, dateFilter, currentPage, pageSize]);
+  }, [searchTerm, statusFilter, conciliacaoFilter, contaFilter, formaPagamentoFilter, cartaoFilter, competenciaFilter, dateFilter, currentPage, pageSize]);
 
   // Reset to page 1 when filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, statusFilter, conciliacaoFilter, contaFilter, formaPagamentoFilter, competenciaFilter, dateFilter, pageSize]);
+  }, [searchTerm, statusFilter, conciliacaoFilter, contaFilter, formaPagamentoFilter, cartaoFilter, competenciaFilter, dateFilter, pageSize]);
 
   const getContaDisplayName = (conta: Conta) => {
     return conta.descricao ? `${conta.banco} - ${conta.descricao}` : conta.banco;
@@ -669,12 +709,13 @@ const FinanceiroReceber = () => {
 
   // Pagination calculations
   const totalPages = Math.ceil(totalCount / pageSize);
-  const hasFiltersActive = dateFilter || contaFilter !== "todos" || formaPagamentoFilter !== "todos" || competenciaFilter !== getCompetenciaAtual() || statusFilter !== "todos" || conciliacaoFilter !== "todos" || searchTerm;
+  const hasFiltersActive = dateFilter || contaFilter !== "todos" || formaPagamentoFilter !== "todos" || cartaoFilter !== "todos" || competenciaFilter !== getCompetenciaAtual() || statusFilter !== "todos" || conciliacaoFilter !== "todos" || searchTerm;
 
   const handleClearFilters = () => {
     setDateFilter(undefined);
     setContaFilter("todos");
     setFormaPagamentoFilter("todos");
+    setCartaoFilter("todos");
     setCompetenciaFilter(getCompetenciaAtual());
     setStatusFilter("todos");
     setConciliacaoFilter("todos");
@@ -792,6 +833,23 @@ const FinanceiroReceber = () => {
                   ))}
                 </SelectContent>
               </Select>
+
+              {cartoesFiltrados.length > 0 && (
+                <Select value={cartaoFilter} onValueChange={setCartaoFilter}>
+                  <SelectTrigger className="w-[180px] bg-background/50 border-border/50 border-purple-500/50">
+                    <CreditCard className="mr-2 h-4 w-4 text-purple-400" />
+                    <SelectValue placeholder="Cartão" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="todos">Todos os cartões</SelectItem>
+                    {cartoesFiltrados.map((c) => (
+                      <SelectItem key={c.id} value={c.id}>
+                        {c.descricao} - {c.final}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
 
               <Select value={competenciaFilter} onValueChange={setCompetenciaFilter}>
                 <SelectTrigger className="w-[150px] bg-background/50 border-border/50">
