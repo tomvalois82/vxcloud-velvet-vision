@@ -366,13 +366,17 @@ export function MovimentoDialog({
     return `${cartao.descricao || "Cartão"} - ${cartao.final}`;
   };
 
-  // Limpar seleção de cartão e data_compra quando forma de pagamento mudar e não tiver cartões vinculados
+  // Limpar seleção de cartão quando forma de pagamento mudar e não tiver cartões vinculados
+  // Mantém data_compra original ao editar para não perder o valor
   useEffect(() => {
     if (!temCartoesVinculados) {
       setCartaoSelecionado("");
-      setDataCompra(undefined);
+      // Só limpa data_compra se NÃO estiver editando ou se o movimento original não tinha data_compra
+      if (!movimento || !movimento.data_compra) {
+        setDataCompra(undefined);
+      }
     }
-  }, [formaPagamentoSelecionada, temCartoesVinculados]);
+  }, [formaPagamentoSelecionada, temCartoesVinculados, movimento]);
 
   // Obter o cartão selecionado atual
   const cartaoAtual = cartoesDisponiveis.find(c => c.id === cartaoSelecionado);
