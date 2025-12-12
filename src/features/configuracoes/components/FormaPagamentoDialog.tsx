@@ -9,6 +9,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -18,6 +25,12 @@ interface FormaPagamento {
   descricao: string;
   ativa: boolean;
   id_conta_padrao: string | null;
+}
+
+interface Conta {
+  id: string;
+  banco: string;
+  descricao: string | null;
 }
 
 interface FormaPagamentoDialogProps {
@@ -35,23 +48,46 @@ export const FormaPagamentoDialog = ({
 }: FormaPagamentoDialogProps) => {
   const [descricao, setDescricao] = useState("");
   const [ativa, setAtiva] = useState(true);
+  const [idContaPadrao, setIdContaPadrao] = useState<string | null>(null);
+  const [contas, setContas] = useState<Conta[]>([]);
   const [saving, setSaving] = useState(false);
+  const [loadingContas, setLoadingContas] = useState(false);
   const [error, setError] = useState("");
 
   const isEditing = !!formaPagamento;
 
   useEffect(() => {
     if (open) {
+      fetchContas();
       if (formaPagamento) {
         setDescricao(formaPagamento.descricao);
         setAtiva(formaPagamento.ativa);
+        setIdContaPadrao(formaPagamento.id_conta_padrao);
       } else {
         setDescricao("");
         setAtiva(true);
+        setIdContaPadrao(null);
       }
       setError("");
     }
   }, [open, formaPagamento]);
+
+  const fetchContas = async () => {
+    setLoadingContas(true);
+    try {
+      const { data, error } = await supabase
+        .from("vx_fin_conta")
+        .select("id, banco, descricao")
+        .order("banco");
+
+      if (error) throw error;
+      setContas(data || []);
+    } catch (err) {
+      console.error("Erro ao carregar contas:", err);
+    } finally {
+      setLoadingContas(false);
+    }
+  };
 
   const checkDuplicate = async (nome: string, excludeId?: string) => {
     let query = supabase
@@ -99,6 +135,7 @@ export const FormaPagamentoDialog = ({
           .update({
             descricao: trimmedDescricao,
             ativa,
+            id_conta_padrao: idContaPadrao,
           })
           .eq("id", formaPagamento.id);
 
@@ -110,6 +147,7 @@ export const FormaPagamentoDialog = ({
           .insert({
             descricao: trimmedDescricao,
             ativa,
+            id_conta_padrao: idContaPadrao,
           });
 
         if (insertError) throw insertError;
@@ -154,6 +192,32 @@ export const FormaPagamentoDialog = ({
             {error && (
               <p className="text-sm text-destructive">{error}</p>
             )}
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="conta_padrao" className="text-foreground">
+              Conta Padrão
+            </Label>
+            <Select
+              value={idContaPadrao || "none"}
+              onValueChange={(value) => setIdContaPadrao(value === "none" ? null : value)}
+              disabled={saving || loadingContas}
+            >
+              <SelectTrigger className="bg-background/50 border-border/50 text-foreground">
+                <SelectValue placeholder="Selecione uma conta (opcional)" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">Nenhuma</SelectItem>
+                {contas.map((conta) => (
+                  <SelectItem key={conta.id} value={conta.id}>
+                    {conta.banco}{conta.descricao ? ` - ${conta.descricao}` : ""}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">
+              Conta que será selecionada automaticamente ao usar esta forma de pagamento
+            </p>
           </div>
 
           <div className="flex items-center justify-between">
