@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { Loader2, Info, CalendarIcon } from 'lucide-react';
+import { Loader2, Info, CalendarIcon, Search } from 'lucide-react';
 import { format } from 'date-fns';
 import {
   Dialog,
@@ -36,6 +36,7 @@ import {
   parseFipeValor,
   TipoVeiculo,
 } from '../services/fipeService';
+import { consultarPlaca } from '../services/consultaPlacaService';
 import {
   maskPlaca,
   maskCurrency,
@@ -65,6 +66,12 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 
 const vehicleSchema = z.object({
   placa: z.string().optional(),
@@ -102,6 +109,7 @@ export function VehicleDialog({ open, onOpenChange, vehicleId, onSuccess }: Vehi
   const [photos, setPhotos] = useState<PhotoMetadata[]>([]);
   const [activeTab, setActiveTab] = useState('info');
   const [loadingFipe, setLoadingFipe] = useState(false);
+  const [loadingPlaca, setLoadingPlaca] = useState(false);
   const [marcasFipe, setMarcasFipe] = useState<any[]>([]);
   const [fipeValorSugerido, setFipeValorSugerido] = useState<string | null>(null);
   const [selectedMarcaCodigo, setSelectedMarcaCodigo] = useState<string>('');
@@ -249,6 +257,99 @@ export function VehicleDialog({ open, onOpenChange, vehicleId, onSuccess }: Vehi
         form.clearErrors('ano');
         form.clearErrors('ano_fabricacao');
       }
+    }
+  };
+
+  const handleConsultaPlaca = async () => {
+    const placa = form.getValues('placa');
+    if (!placa || placa.length < 7) {
+      toast({
+        title: 'Placa inválida',
+        description: 'Informe a placa completa para consultar.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setLoadingPlaca(true);
+    try {
+      const dados = await consultarPlaca(placa);
+      
+      // Preencher os campos do formulário
+      if (dados.fabricante) {
+        // Tentar encontrar a marca na lista FIPE
+        const marcaEncontrada = marcasFipe.find(
+          m => m.nome.toUpperCase().includes(dados.fabricante.toUpperCase()) ||
+               dados.fabricante.toUpperCase().includes(m.nome.toUpperCase())
+        );
+        if (marcaEncontrada) {
+          form.setValue('fabricante', marcaEncontrada.nome);
+          setSelectedMarcaCodigo(marcaEncontrada.codigo);
+        } else {
+          form.setValue('fabricante', dados.fabricante);
+        }
+      }
+      
+      if (dados.modelo) form.setValue('modelo', dados.modelo);
+      
+      if (dados.ano) {
+        form.setValue('ano', dados.ano);
+        const anoNum = parseInt(dados.ano);
+        if (!isNaN(anoNum)) {
+          setAnosFabricacao([String(anoNum), String(anoNum - 1)]);
+        }
+      }
+      
+      if (dados.ano_fabricacao) {
+        form.setValue('ano_fabricacao', dados.ano_fabricacao);
+      } else if (dados.ano) {
+        form.setValue('ano_fabricacao', dados.ano);
+      }
+      
+      if (dados.cor) {
+        // Mapear cor para o select
+        const coresMap: Record<string, string> = {
+          'PRETO': 'Preto',
+          'BRANCO': 'Branco',
+          'PRATA': 'Prata',
+          'CINZA': 'Cinza',
+          'VERMELHO': 'Vermelho',
+          'AZUL': 'Azul',
+          'VERDE': 'Verde',
+          'MARROM': 'Marrom',
+          'BEGE': 'Bege',
+          'AMARELO': 'Amarelo',
+          'LARANJA': 'Laranja',
+          'ROXO': 'Roxo',
+        };
+        const corNormalizada = coresMap[dados.cor.toUpperCase()] || dados.cor;
+        form.setValue('cor', corNormalizada);
+      }
+      
+      if (dados.chassi) {
+        form.setValue('chassi', dados.chassi.toUpperCase());
+      }
+      
+      if (dados.motor) {
+        form.setValue('motor', dados.motor);
+      }
+      
+      if (dados.valorFipe) {
+        setFipeValorSugerido(dados.valorFipe);
+      }
+
+      toast({
+        title: 'Consulta realizada',
+        description: 'Os dados do veículo foram preenchidos automaticamente.',
+      });
+    } catch (error) {
+      toast({
+        title: 'Erro na consulta',
+        description: error instanceof Error ? error.message : 'Erro ao consultar placa.',
+        variant: 'destructive',
+      });
+    } finally {
+      setLoadingPlaca(false);
     }
   };
 
@@ -516,18 +617,42 @@ export function VehicleDialog({ open, onOpenChange, vehicleId, onSuccess }: Vehi
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>Placa</FormLabel>
-                          <FormControl>
-                            <Input
-                              placeholder="Ex: ABC-1D23"
-                              {...field}
-                              onChange={(e) => {
-                                field.onChange(maskPlaca(e.target.value));
-                                setPlacaError('');
-                              }}
-                              onBlur={handlePlacaBlur}
-                              maxLength={8}
-                            />
-                          </FormControl>
+                          <div className="flex gap-2">
+                            <FormControl>
+                              <Input
+                                placeholder="Ex: ABC-1D23"
+                                {...field}
+                                onChange={(e) => {
+                                  field.onChange(maskPlaca(e.target.value));
+                                  setPlacaError('');
+                                }}
+                                onBlur={handlePlacaBlur}
+                                maxLength={8}
+                              />
+                            </FormControl>
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="icon"
+                                    onClick={handleConsultaPlaca}
+                                    disabled={loadingPlaca || !field.value || field.value.length < 7}
+                                  >
+                                    {loadingPlaca ? (
+                                      <Loader2 className="h-4 w-4 animate-spin" />
+                                    ) : (
+                                      <Search className="h-4 w-4" />
+                                    )}
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>Consultar placa e preencher dados</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          </div>
                           <FormMessage />
                           {placaError && (
                             <p className="text-sm text-destructive">{placaError}</p>
