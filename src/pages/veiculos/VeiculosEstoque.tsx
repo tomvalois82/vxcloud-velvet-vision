@@ -133,10 +133,25 @@ function VehicleCard({
   );
 }
 
+interface Empresa {
+  foto_url: string | null;
+  nome_fantasia: string;
+  logradouro: string;
+  numero: string;
+  complemento: string | null;
+  bairro: string;
+  municipio: string;
+  estado: string;
+  cep: string;
+  telefone: string | null;
+  site: string | null;
+}
+
 const VeiculosEstoque = () => {
   const navigate = useNavigate();
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [vehicleCosts, setVehicleCosts] = useState<VehicleCosts>({});
+  const [empresa, setEmpresa] = useState<Empresa | null>(null);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('Em estoque');
@@ -154,9 +169,27 @@ const VeiculosEstoque = () => {
     contentRef: printRef,
     documentTitle: 'Listagem de Veículos',
   });
+
   useEffect(() => {
     loadVehicles();
+    loadEmpresa();
   }, []);
+
+  const loadEmpresa = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('empresa')
+        .select('foto_url, nome_fantasia, logradouro, numero, complemento, bairro, municipio, estado, cep, telefone, site')
+        .limit(1)
+        .single();
+
+      if (!error && data) {
+        setEmpresa(data);
+      }
+    } catch (error) {
+      console.error('Error loading empresa:', error);
+    }
+  };
 
   const loadVehicles = async () => {
     try {
@@ -562,7 +595,7 @@ const VeiculosEstoque = () => {
 
       {/* Componente de Impressão (oculto) */}
       <div className="hidden">
-        <VehicleListPrint ref={printRef} vehicles={filteredVehicles} />
+        <VehicleListPrint ref={printRef} vehicles={filteredVehicles} empresa={empresa} />
       </div>
     </div>
   );
