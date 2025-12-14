@@ -236,9 +236,14 @@ const FinanceiroReceber = () => {
         query = query.eq(groupByField, dateStr);
       }
       if (searchTerm) {
-        // Try to parse as number for value search
-        const numericValue = parseFloat(searchTerm.replace(/[^\d,.-]/g, '').replace(',', '.'));
-        if (!isNaN(numericValue)) {
+        // Convert Brazilian format (1.234,56) to standard format (1234.56)
+        const cleanedValue = searchTerm
+          .replace(/[^\d.,]/g, '')  // Keep only digits, dots and commas
+          .replace(/\./g, '')       // Remove thousands separator (.)
+          .replace(',', '.');       // Replace decimal separator (,) with (.)
+        const numericValue = parseFloat(cleanedValue);
+        
+        if (!isNaN(numericValue) && cleanedValue.length > 0) {
           query = query.or(`descricao.ilike.%${searchTerm}%,valor_bruto.eq.${numericValue}`);
         } else {
           query = query.ilike("descricao", `%${searchTerm}%`);
