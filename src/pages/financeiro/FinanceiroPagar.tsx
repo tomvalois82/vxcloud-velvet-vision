@@ -241,17 +241,20 @@ const FinanceiroPagar = () => {
         query = query.eq(groupByField, dateStr);
       }
       if (searchTerm) {
+        const rawSearch = searchTerm.trim();
         // Convert Brazilian format (1.234,56) to standard format (1234.56)
-        const cleanedValue = searchTerm
+        const cleanedValue = rawSearch
           .replace(/[^\d.,]/g, '')  // Keep only digits, dots and commas
           .replace(/\./g, '')       // Remove thousands separator (.)
-          .replace(',', '.');       // Replace decimal separator (,) with (.)
-        const numericValue = parseFloat(cleanedValue);
-        
-        if (!isNaN(numericValue) && cleanedValue.length > 0) {
-          query = query.or(`descricao.ilike.%${searchTerm}%,valor_bruto.eq.${numericValue}`);
+          .replace(',', '.');        // Replace decimal separator (,) with (.)
+        const numericValue = cleanedValue ? parseFloat(cleanedValue) : NaN;
+
+        if (!isNaN(numericValue)) {
+          // Numeric search: only filter by valor_bruto to avoid commas breaking OR logic
+          query = query.eq("valor_bruto", numericValue);
         } else {
-          query = query.ilike("descricao", `%${searchTerm}%`);
+          // Text search: filter by descricao only
+          query = query.ilike("descricao", `%${rawSearch}%`);
         }
       }
 
