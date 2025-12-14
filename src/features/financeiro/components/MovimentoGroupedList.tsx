@@ -5,13 +5,6 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
   Table,
   TableBody,
   TableCell,
@@ -88,6 +81,7 @@ interface MovimentoGroupedListProps {
   onEstorno: (movimento: Movimento) => void;
   onConciliar: (movimento: Movimento) => void;
   tipoMovimento: "Pagar" | "Receber";
+  groupBy: GroupByOption;
 }
 
 export const MovimentoGroupedList = ({
@@ -101,20 +95,10 @@ export const MovimentoGroupedList = ({
   onEstorno,
   onConciliar,
   tipoMovimento,
+  groupBy,
 }: MovimentoGroupedListProps) => {
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
   
-  // Persist groupBy preference per tipoMovimento
-  const storageKey = `financeiro-groupBy-${tipoMovimento}`;
-  const [groupBy, setGroupBy] = useState<GroupByOption>(() => {
-    const saved = localStorage.getItem(storageKey);
-    return (saved as GroupByOption) || "data_compra";
-  });
-
-  const handleGroupByChange = (value: GroupByOption) => {
-    setGroupBy(value);
-    localStorage.setItem(storageKey, value);
-  };
   // Group movimentos by selected date field
   const groupedMovimentos = useMemo(() => {
     const groups = new Map<string, DateGroup>();
@@ -213,8 +197,8 @@ export const MovimentoGroupedList = ({
 
   return (
     <div className="space-y-2">
-      {/* Header with select all and group by */}
-      <div className="flex items-center justify-between px-4 py-2 border-b border-border/30">
+      {/* Header with select all */}
+      <div className="flex items-center px-4 py-2 border-b border-border/30">
         <div className="flex items-center gap-4">
           <Checkbox
             checked={allSelected}
@@ -223,22 +207,6 @@ export const MovimentoGroupedList = ({
             className={someSelected && !allSelected ? "data-[state=checked]:bg-accent/50" : ""}
           />
           <span className="text-sm text-muted-foreground">Selecionar todos</span>
-        </div>
-        
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-muted-foreground">Agrupar por:</span>
-          <Select value={groupBy} onValueChange={handleGroupByChange}>
-            <SelectTrigger className="w-[180px] h-8 bg-background/50 border-border/50">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="data_compra">
-                {tipoMovimento === "Pagar" ? "Data da Compra" : "Data da Receita"}
-              </SelectItem>
-              <SelectItem value="data_vencimento">Data de Vencimento</SelectItem>
-              <SelectItem value="data_pagamento">Data de Pagamento</SelectItem>
-            </SelectContent>
-          </Select>
         </div>
       </div>
 
