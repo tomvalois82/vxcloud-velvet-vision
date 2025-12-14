@@ -12,6 +12,7 @@ import Login from "./pages/auth/Login";
 import VeiculosEstoque from "./pages/veiculos/VeiculosEstoque";
 import VeiculosRelatorios from "./pages/veiculos/VeiculosRelatorios";
 import PessoasList from "./pages/pessoas/PessoasList";
+import InvestidoresList from "./pages/investidor/InvestidoresList";
 import VendasList from "./pages/vendas/VendasList";
 import VendasRelatorios from "./pages/vendas/VendasRelatorios";
 import VendaVeiculo from "./pages/vendas/VendaVeiculo";
@@ -57,6 +58,7 @@ const App = () => (
                             <Route path="/veiculos/estoque" element={<VeiculosEstoque />} />
                             <Route path="/veiculos/relatorios" element={<VeiculosRelatorios />} />
                             <Route path="/pessoas" element={<PessoasList />} />
+                            <Route path="/investidores" element={<InvestidoresList />} />
                             <Route path="/vendas" element={<VendasList />} />
                             <Route path="/vendas/nova" element={<VendaVeiculo />} />
                             <Route path="/vendas/editar" element={<VendaEditar />} />
