@@ -13,7 +13,8 @@ import {
   FolderTree,
   ChevronDown,
   LogOut,
-  CreditCard
+  CreditCard,
+  TrendingUp
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
@@ -57,6 +58,7 @@ const menuItems: MenuItem[] = [
     ],
   },
   { title: "Pessoas", url: "/pessoas", icon: Users },
+  { title: "Investidores", url: "/investidores", icon: TrendingUp },
   {
     title: "Vendas",
     icon: ShoppingCart,

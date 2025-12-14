@@ -1571,6 +1571,54 @@ export type Database = {
           },
         ]
       }
+      vx_investimento: {
+        Row: {
+          data_criacao: string
+          data_finalizado: string | null
+          id: string
+          id_estoque: number
+          id_grupo_wtz: string | null
+          id_pessoa: string
+          percentual_investido: number
+          valor_investido: number
+        }
+        Insert: {
+          data_criacao?: string
+          data_finalizado?: string | null
+          id?: string
+          id_estoque: number
+          id_grupo_wtz?: string | null
+          id_pessoa: string
+          percentual_investido: number
+          valor_investido: number
+        }
+        Update: {
+          data_criacao?: string
+          data_finalizado?: string | null
+          id?: string
+          id_estoque?: number
+          id_grupo_wtz?: string | null
+          id_pessoa?: string
+          percentual_investido?: number
+          valor_investido?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vx_investimento_id_estoque_fkey"
+            columns: ["id_estoque"]
+            isOneToOne: false
+            referencedRelation: "estoque"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vx_investimento_id_pessoa_fkey"
+            columns: ["id_pessoa"]
+            isOneToOne: false
+            referencedRelation: "vx_pessoa"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       vx_pessoa: {
         Row: {
           atualizado_em: string
