@@ -140,6 +140,7 @@ const FinanceiroReceber = () => {
   const [formasPagamento, setFormasPagamento] = useState<FormaPagamento[]>([]);
   const [cartoes, setCartoes] = useState<Cartao[]>([]);
   const [loading, setLoading] = useState(true);
+  const [searchInput, setSearchInput] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("todos");
   const [conciliacaoFilter, setConciliacaoFilter] = useState<string>("todos");
@@ -235,7 +236,13 @@ const FinanceiroReceber = () => {
         query = query.eq(groupByField, dateStr);
       }
       if (searchTerm) {
-        query = query.ilike("descricao", `%${searchTerm}%`);
+        // Try to parse as number for value search
+        const numericValue = parseFloat(searchTerm.replace(/[^\d,.-]/g, '').replace(',', '.'));
+        if (!isNaN(numericValue)) {
+          query = query.or(`descricao.ilike.%${searchTerm}%,valor_bruto.eq.${numericValue}`);
+        } else {
+          query = query.ilike("descricao", `%${searchTerm}%`);
+        }
       }
 
       // Order by data_vencimento DESC
@@ -732,7 +739,18 @@ const FinanceiroReceber = () => {
     setCompetenciaFilter(getCompetenciaAtual());
     setStatusFilter("todos");
     setConciliacaoFilter("todos");
+    setSearchInput("");
     setSearchTerm("");
+  };
+
+  const handleSearch = () => {
+    setSearchTerm(searchInput);
+  };
+
+  const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      handleSearch();
+    }
   };
 
   return (
@@ -784,14 +802,22 @@ const FinanceiroReceber = () => {
           <div className="space-y-4">
             {/* Filters */}
             <div className="flex flex-col sm:flex-row gap-4 flex-wrap">
-              <div className="relative flex-1 max-w-sm">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <div className="flex items-center gap-1 flex-1 max-w-sm">
                 <Input
-                  placeholder="Buscar por descrição..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-9 bg-background/50 border-border/50"
+                  placeholder="Buscar por descrição ou valor..."
+                  value={searchInput}
+                  onChange={(e) => setSearchInput(e.target.value)}
+                  onKeyDown={handleSearchKeyDown}
+                  className="bg-background/50 border-border/50"
                 />
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={handleSearch}
+                  className="shrink-0 border-border/50 hover:bg-accent/10"
+                >
+                  <Search className="w-4 h-4" />
+                </Button>
               </div>
 
               <Select value={statusFilter} onValueChange={setStatusFilter}>
