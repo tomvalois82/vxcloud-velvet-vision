@@ -148,6 +148,19 @@ const FinanceiroReceber = () => {
   const [cartaoFilter, setCartaoFilter] = useState<string>("todos");
   const [competenciaFilter, setCompetenciaFilter] = useState<string>(getCompetenciaAtual());
   const [dateFilter, setDateFilter] = useState<Date | undefined>(undefined);
+  
+  // Group by / Filter date field - controls both grouping and date filter field
+  const storageKey = "financeiro-groupBy-Receber";
+  const [groupByField, setGroupByField] = useState<"data_compra" | "data_vencimento" | "data_pagamento">(() => {
+    const saved = localStorage.getItem(storageKey);
+    return (saved as "data_compra" | "data_vencimento" | "data_pagamento") || "data_compra";
+  });
+  
+  const handleGroupByChange = (value: "data_compra" | "data_vencimento" | "data_pagamento") => {
+    setGroupByField(value);
+    localStorage.setItem(storageKey, value);
+    setDateFilter(undefined); // Clear date filter when changing field
+  };
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedMovimento, setSelectedMovimento] = useState<Movimento | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -219,7 +232,7 @@ const FinanceiroReceber = () => {
       }
       if (dateFilter) {
         const dateStr = format(dateFilter, "yyyy-MM-dd");
-        query = query.eq("data_vencimento", dateStr);
+        query = query.eq(groupByField, dateStr);
       }
       if (searchTerm) {
         query = query.ilike("descricao", `%${searchTerm}%`);
@@ -313,7 +326,7 @@ const FinanceiroReceber = () => {
   useEffect(() => {
     fetchMovimentos();
     setSelectedIds(new Set());
-  }, [searchTerm, statusFilter, conciliacaoFilter, contaFilter, formaPagamentoFilter, cartaoFilter, competenciaFilter, dateFilter, currentPage, pageSize]);
+  }, [searchTerm, statusFilter, conciliacaoFilter, contaFilter, formaPagamentoFilter, cartaoFilter, competenciaFilter, dateFilter, groupByField, currentPage, pageSize]);
 
   // Reset to page 1 when filters change
   useEffect(() => {
@@ -865,6 +878,17 @@ const FinanceiroReceber = () => {
                 </SelectContent>
               </Select>
 
+              <Select value={groupByField} onValueChange={handleGroupByChange}>
+                <SelectTrigger className="w-[180px] bg-background/50 border-border/50">
+                  <SelectValue placeholder="Agrupar por" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="data_compra">Data da Receita</SelectItem>
+                  <SelectItem value="data_vencimento">Data de Vencimento</SelectItem>
+                  <SelectItem value="data_pagamento">Data de Pagamento</SelectItem>
+                </SelectContent>
+              </Select>
+
               <Popover>
                 <PopoverTrigger asChild>
                   <Button
@@ -938,6 +962,7 @@ const FinanceiroReceber = () => {
                 onEstorno={handleEstornoClick}
                 onConciliar={handleConciliar}
                 tipoMovimento="Receber"
+                groupBy={groupByField}
               />
             )}
 
