@@ -23,7 +23,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
-import { Plus, CreditCard, Search, Pencil, Trash2, Loader2, FileText } from "lucide-react";
+import { Plus, CreditCard, Search, Pencil, Trash2, Loader2, FileText, Star } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { CartaoDialog } from "@/features/financeiro/components/CartaoDialog";
@@ -42,6 +42,7 @@ interface Cartao {
   dia_fechamento: number;
   dia_vencimento: number;
   ativo: boolean;
+  padrao: boolean;
 }
 
 const FinanceiroCartoes = () => {
@@ -57,6 +58,7 @@ const FinanceiroCartoes = () => {
   const [togglingStatus, setTogglingStatus] = useState<string | null>(null);
   const [faturaDialogOpen, setFaturaDialogOpen] = useState(false);
   const [cartaoFaturaId, setCartaoFaturaId] = useState<string | null>(null);
+  const [togglingPadrao, setTogglingPadrao] = useState<string | null>(null);
 
   const fetchCartoes = async () => {
     setLoading(true);
@@ -171,6 +173,47 @@ const FinanceiroCartoes = () => {
       });
     } finally {
       setTogglingStatus(null);
+    }
+  };
+
+  const handleTogglePadrao = async (cartao: Cartao) => {
+    if (cartao.padrao) return; // Já é padrão, não faz nada
+    
+    setTogglingPadrao(cartao.id);
+    try {
+      // Remove padrão de todos os cartões
+      await supabase
+        .from("vx_fin_cartao")
+        .update({ padrao: false })
+        .neq("id", cartao.id);
+
+      // Define o cartão clicado como padrão
+      const { error } = await supabase
+        .from("vx_fin_cartao")
+        .update({ padrao: true })
+        .eq("id", cartao.id);
+
+      if (error) throw error;
+
+      setCartoes((prev) =>
+        prev.map((c) => ({
+          ...c,
+          padrao: c.id === cartao.id,
+        }))
+      );
+
+      toast({
+        title: "Cartão padrão definido",
+        description: `${cartao.descricao} agora é o cartão padrão.`,
+      });
+    } catch (error: any) {
+      toast({
+        title: "Erro ao definir padrão",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setTogglingPadrao(null);
     }
   };
 
@@ -305,6 +348,18 @@ const FinanceiroCartoes = () => {
                               onClick={() => handleDeleteClick(cartao)}
                             >
                               <Trash2 className="w-4 h-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 hover:bg-yellow-500/20"
+                              onClick={() => handleTogglePadrao(cartao)}
+                              disabled={togglingPadrao === cartao.id}
+                              title={cartao.padrao ? "Cartão padrão" : "Definir como padrão"}
+                            >
+                              <Star 
+                                className={`w-4 h-4 ${cartao.padrao ? "fill-yellow-500 text-yellow-500" : "text-muted-foreground"}`} 
+                              />
                             </Button>
                           </div>
                         </TableCell>
