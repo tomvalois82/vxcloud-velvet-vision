@@ -140,10 +140,32 @@ export function ContaDialog({ open, onOpenChange, conta, onSuccess }: ContaDialo
     setLoading(true);
 
     try {
+      // Get empresa ID
+      const { data: userData } = await supabase.auth.getUser();
+      if (!userData.user) throw new Error("Usuário não autenticado");
+
+      const { data: usuarioData } = await supabase
+        .from("usuario")
+        .select("config")
+        .eq("uid", userData.user.id)
+        .single();
+
+      if (!usuarioData?.config) throw new Error("Configuração não encontrada");
+
+      const { data: configData } = await supabase
+        .from("config")
+        .select("empresa:empresa(id)")
+        .eq("id", usuarioData.config)
+        .single();
+
+      const empresaId = (configData?.empresa as any)?.id;
+      if (!empresaId) throw new Error("Empresa não encontrada");
+
       const contaData = {
         banco: banco.trim(),
         descricao: descricao.trim() || null,
         saldo: unmaskCurrency(saldo),
+        id_empresa: empresaId,
       };
 
       if (conta) {
