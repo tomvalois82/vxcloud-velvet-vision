@@ -24,8 +24,9 @@ import {
 } from '@/components/ui/alert-dialog';
 import { EmptyState } from '@/components/EmptyState';
 import { toast } from 'sonner';
-import { Plus, Search, Pencil, Trash2, TrendingUp, TrendingDown, Loader2 } from 'lucide-react';
+import { Plus, Search, Pencil, Trash2, TrendingUp, TrendingDown, Loader2, BarChart3 } from 'lucide-react';
 import { InvestimentoDialog } from '@/features/investidor/components/InvestimentoDialog';
+import { InvestimentoDetailDialog } from '@/features/investidor/components/InvestimentoDetailDialog';
 
 interface Investimento {
   id: string;
@@ -49,6 +50,8 @@ interface Investimento {
     cor: string | null;
     valor_aquisicao: number;
     valor: string | null;
+    status: string | null;
+    data_aquisicao: string | null;
   };
   custos_veiculo?: number;
 }
@@ -67,6 +70,8 @@ export default function InvestidoresList() {
   const [selectedInvestimento, setSelectedInvestimento] = useState<Investimento | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [investimentoToDelete, setInvestimentoToDelete] = useState<Investimento | null>(null);
+  const [detailDialogOpen, setDetailDialogOpen] = useState(false);
+  const [investimentoToDetail, setInvestimentoToDetail] = useState<Investimento | null>(null);
 
   const fetchInvestimentos = useCallback(async () => {
     setLoading(true);
@@ -77,7 +82,7 @@ export default function InvestidoresList() {
         .select(`
           *,
           pessoa:vx_pessoa(nome),
-          veiculo:estoque(id, placa, modelo, motor, cambio, ano, cor, valor_aquisicao, valor)
+          veiculo:estoque(id, placa, modelo, motor, cambio, ano, cor, valor_aquisicao, valor, status, data_aquisicao)
         `)
         .order('data_criacao', { ascending: false });
 
@@ -313,12 +318,22 @@ export default function InvestidoresList() {
                         </div>
                       </TableCell>
                       <TableCell>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => { setInvestimentoToDetail(inv); setDetailDialogOpen(true); }}
+                            className="hover:text-accent"
+                            title="Detalhamento do Investimento"
+                          >
+                            <BarChart3 className="h-4 w-4" />
+                          </Button>
                           <Button
                             variant="ghost"
                             size="icon"
                             onClick={() => handleEdit(inv)}
                             className="hover:text-accent"
+                            title="Editar"
                           >
                             <Pencil className="h-4 w-4" />
                           </Button>
@@ -327,6 +342,7 @@ export default function InvestidoresList() {
                             size="icon"
                             onClick={() => { setInvestimentoToDelete(inv); setDeleteDialogOpen(true); }}
                             className="hover:text-destructive"
+                            title="Excluir"
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>
@@ -346,6 +362,12 @@ export default function InvestidoresList() {
         onOpenChange={setDialogOpen}
         investimento={selectedInvestimento}
         onSuccess={fetchInvestimentos}
+      />
+
+      <InvestimentoDetailDialog
+        open={detailDialogOpen}
+        onOpenChange={setDetailDialogOpen}
+        investimento={investimentoToDetail}
       />
 
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
