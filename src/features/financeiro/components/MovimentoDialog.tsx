@@ -4,7 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { format, addDays, addMonths, setDate, lastDayOfMonth } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { CalendarIcon, Loader2, Car, Repeat } from "lucide-react";
+import { CalendarIcon, Loader2, Car, Repeat, ChevronsUpDown } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -95,6 +95,13 @@ interface Conta {
   id: string;
   banco: string;
   descricao: string | null;
+  padrao: boolean;
+}
+
+interface Pessoa {
+  id: string;
+  nome: string;
+  cpf_cnpj: string | null;
 }
 
 interface Categoria {
@@ -143,6 +150,7 @@ interface Movimento {
   id_empresa: string;
   id_forma_pagamento: string | null;
   id_cartao: string | null;
+  id_pessoa: string | null;
   observacoes: string | null;
   status: string;
   id_estoque: number | null;
@@ -176,8 +184,11 @@ export function MovimentoDialog({
   const [formasPagamento, setFormasPagamento] = useState<FormaPagamento[]>([]);
   const [cartoes, setCartoes] = useState<Cartao[]>([]);
   const [veiculos, setVeiculos] = useState<Veiculo[]>([]);
+  const [pessoas, setPessoas] = useState<Pessoa[]>([]);
   const [loadingData, setLoadingData] = useState(true);
   const [vincularVeiculo, setVincularVeiculo] = useState(false);
+  const [pessoaSelecionada, setPessoaSelecionada] = useState<string>("");
+  const [pessoaSearchTerm, setPessoaSearchTerm] = useState("");
   const [veiculoSelecionado, setVeiculoSelecionado] = useState<string>("");
   const [cartaoSelecionado, setCartaoSelecionado] = useState<string>("");
 
@@ -223,8 +234,8 @@ export function MovimentoDialog({
         const tresMesesAtras = new Date();
         tresMesesAtras.setMonth(tresMesesAtras.getMonth() - 3);
 
-        const [contasRes, categoriasRes, formasPagamentoRes, cartoesRes, veiculosEstoqueRes, vendasRecentesRes] = await Promise.all([
-          supabase.from("vx_fin_conta").select("*").order("banco"),
+        const [contasRes, categoriasRes, formasPagamentoRes, cartoesRes, veiculosEstoqueRes, vendasRecentesRes, pessoasRes] = await Promise.all([
+          supabase.from("vx_fin_conta").select("id, banco, descricao, padrao").order("banco"),
           supabase.from("vx_fin_categoria").select("*").eq("ativo", true).order("categoria"),
           supabase.from("vx_forma_pagamento").select("*").eq("ativa", true).order("descricao"),
           supabase.from("vx_fin_cartao").select("id, descricao, final, id_forma_pagamento, ativo, dia_fechamento, dia_vencimento").eq("ativo", true).order("descricao"),
@@ -242,6 +253,7 @@ export function MovimentoDialog({
             `)
             .eq("fechada", true)
             .gte("data_venda", tresMesesAtras.toISOString()),
+          supabase.from("vx_pessoa").select("id, nome, cpf_cnpj").order("nome"),
         ]);
 
         if (contasRes.error) throw contasRes.error;
@@ -250,6 +262,7 @@ export function MovimentoDialog({
         if (categoriasRes.error) throw categoriasRes.error;
         if (veiculosEstoqueRes.error) throw veiculosEstoqueRes.error;
         if (vendasRecentesRes.error) throw vendasRecentesRes.error;
+        if (pessoasRes.error) throw pessoasRes.error;
 
         const veiculosEmEstoque = (veiculosEstoqueRes.data || []) as Veiculo[];
         const veiculosVendidosRecentes = (vendasRecentesRes.data || [])
@@ -271,11 +284,12 @@ export function MovimentoDialog({
             return fabA.localeCompare(fabB);
           });
 
-        setContas(contasRes.data || []);
+        setContas((contasRes.data || []) as Conta[]);
         setCategorias(categoriasRes.data || []);
         setFormasPagamento(formasPagamentoRes.data || []);
         setCartoes((cartoesRes.data || []) as Cartao[]);
         setVeiculos(todosVeiculos);
+        setPessoas((pessoasRes.data || []) as Pessoa[]);
       } catch (error: any) {
         toast({
           title: "Erro ao carregar dados",
@@ -319,6 +333,9 @@ export function MovimentoDialog({
         setCartaoSelecionado(movimento.id_cartao || "");
         // Set data_compra if exists - default to current date if not set
         setDataCompra(movimento.data_compra ? new Date(movimento.data_compra + "T00:00:00") : new Date());
+        // Set pessoa if exists
+        setPessoaSelecionada(movimento.id_pessoa || "");
+        setPessoaSearchTerm("");
         // Reset recurrence fields when editing
         setTipoRecorrencia("nao_recorrente");
         setNumeroOcorrencias(12);
@@ -342,6 +359,8 @@ export function MovimentoDialog({
         setVeiculoSelecionado("");
         setCartaoSelecionado("");
         setDataCompra(new Date());
+        setPessoaSelecionada("");
+        setPessoaSearchTerm("");
         setTipoRecorrencia("nao_recorrente");
         setNumeroOcorrencias(12);
         setIntervaloDias(30);
@@ -350,6 +369,23 @@ export function MovimentoDialog({
       }
     }
   }, [open, movimento, defaultTipo, form]);
+
+  // Set default conta when contas are loaded (new entry only)
+  useEffect(() => {
+    if (open && !movimento && contas.length > 0) {
+      const contaPadrao = contas.find((c) => c.padrao);
+      if (contaPadrao && !form.getValues("id_conta")) {
+        form.setValue("id_conta", contaPadrao.id);
+      }
+    }
+  }, [open, movimento, contas, form]);
+
+  // Sync dataCompra -> data_vencimento (only when not using credit card)
+  useEffect(() => {
+    if (dataCompra && !cartaoSelecionado) {
+      form.setValue("data_vencimento", dataCompra);
+    }
+  }, [dataCompra, cartaoSelecionado, form]);
 
   const getContaDisplayName = (conta: Conta) => {
     return conta.descricao ? `${conta.banco} - ${conta.descricao}` : conta.banco;
@@ -528,6 +564,7 @@ export function MovimentoDialog({
           id_categoria: data.id_categoria,
           id_forma_pagamento: data.id_forma_pagamento || null,
           id_cartao: cartaoSelecionado || null,
+          id_pessoa: pessoaSelecionada || null,
           data_compra: dataCompra ? format(dataCompra, "yyyy-MM-dd") : null,
           id_empresa: empresaData.id,
           observacoes: data.observacoes || null,
@@ -630,6 +667,7 @@ export function MovimentoDialog({
             id_categoria: data.id_categoria,
             id_forma_pagamento: data.id_forma_pagamento || null,
             id_cartao: cartaoSelecionado || null,
+            id_pessoa: pessoaSelecionada || null,
             data_compra: dataCompra ? format(dataCompra, "yyyy-MM-dd") : null,
             id_empresa: empresaData.id,
             observacoes: data.observacoes || null,
@@ -684,6 +722,7 @@ export function MovimentoDialog({
               id_categoria: data.id_categoria,
               id_forma_pagamento: data.id_forma_pagamento || null,
               id_cartao: cartaoSelecionado || null,
+              id_pessoa: pessoaSelecionada || null,
               data_compra: dataCompra ? format(dataCompra, "yyyy-MM-dd") : null,
               id_empresa: empresaData.id,
               observacoes: data.observacoes || null,
@@ -1065,6 +1104,78 @@ export function MovimentoDialog({
                   </FormItem>
                 )}
               />
+
+              {/* Pessoa com Autocomplete */}
+              <div className="space-y-2">
+                <Label>Pessoa (Favorecido)</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      role="combobox"
+                      className={cn(
+                        "w-full justify-between bg-background/50 border-border/50",
+                        !pessoaSelecionada && "text-muted-foreground"
+                      )}
+                    >
+                      {pessoaSelecionada
+                        ? pessoas.find((p) => p.id === pessoaSelecionada)?.nome || "Selecione a pessoa"
+                        : "Selecione a pessoa"}
+                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-full p-0" align="start">
+                    <div className="p-2">
+                      <Input
+                        placeholder="Buscar pessoa..."
+                        value={pessoaSearchTerm}
+                        onChange={(e) => setPessoaSearchTerm(e.target.value)}
+                        className="bg-background/50 border-border/50"
+                      />
+                    </div>
+                    <div className="max-h-[200px] overflow-y-auto">
+                      <div
+                        className={cn(
+                          "px-2 py-1.5 text-sm cursor-pointer hover:bg-accent/50",
+                          !pessoaSelecionada && "bg-accent/30"
+                        )}
+                        onClick={() => {
+                          setPessoaSelecionada("");
+                          setPessoaSearchTerm("");
+                        }}
+                      >
+                        Nenhuma
+                      </div>
+                      {pessoas
+                        .filter((p) =>
+                          p.nome.toLowerCase().includes(pessoaSearchTerm.toLowerCase()) ||
+                          (p.cpf_cnpj && p.cpf_cnpj.includes(pessoaSearchTerm))
+                        )
+                        .slice(0, 50)
+                        .map((pessoa) => (
+                          <div
+                            key={pessoa.id}
+                            className={cn(
+                              "px-2 py-1.5 text-sm cursor-pointer hover:bg-accent/50",
+                              pessoaSelecionada === pessoa.id && "bg-accent/30"
+                            )}
+                            onClick={() => {
+                              setPessoaSelecionada(pessoa.id);
+                              setPessoaSearchTerm("");
+                            }}
+                          >
+                            {pessoa.nome}
+                            {pessoa.cpf_cnpj && (
+                              <span className="text-muted-foreground ml-2 text-xs">
+                                ({pessoa.cpf_cnpj})
+                              </span>
+                            )}
+                          </div>
+                        ))}
+                    </div>
+                  </PopoverContent>
+                </Popover>
+              </div>
 
               <FormField
                 control={form.control}

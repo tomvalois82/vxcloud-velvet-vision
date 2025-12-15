@@ -1280,6 +1280,7 @@ export type Database = {
           id_forma_pagamento: string
           limite: number
           nome_impresso: string
+          padrao: boolean
         }
         Insert: {
           ativo: boolean
@@ -1293,6 +1294,7 @@ export type Database = {
           id_forma_pagamento: string
           limite: number
           nome_impresso: string
+          padrao?: boolean
         }
         Update: {
           ativo?: boolean
@@ -1306,6 +1308,7 @@ export type Database = {
           id_forma_pagamento?: string
           limite?: number
           nome_impresso?: string
+          padrao?: boolean
         }
         Relationships: [
           {
@@ -1361,21 +1364,35 @@ export type Database = {
           banco: string
           descricao: string | null
           id: string
+          id_empresa: string
+          padrao: boolean
           saldo: number
         }
         Insert: {
           banco: string
           descricao?: string | null
           id?: string
+          id_empresa: string
+          padrao?: boolean
           saldo?: number
         }
         Update: {
           banco?: string
           descricao?: string | null
           id?: string
+          id_empresa?: string
+          padrao?: boolean
           saldo?: number
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "vx_fin_conta_id_empresa_fkey"
+            columns: ["id_empresa"]
+            isOneToOne: false
+            referencedRelation: "empresa"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       vx_fin_movimento: {
         Row: {
@@ -1635,10 +1652,12 @@ export type Database = {
           email: string | null
           estado: string | null
           id: string
+          id_empresa: string
           logradouro: string | null
           municipio: string | null
           nome: string
           numero: string | null
+          padrao: boolean
           ponto_referencia: string | null
           telefone: string | null
           tipo_cadastro: string | null
@@ -1658,10 +1677,12 @@ export type Database = {
           email?: string | null
           estado?: string | null
           id?: string
+          id_empresa: string
           logradouro?: string | null
           municipio?: string | null
           nome: string
           numero?: string | null
+          padrao?: boolean
           ponto_referencia?: string | null
           telefone?: string | null
           tipo_cadastro?: string | null
@@ -1681,15 +1702,25 @@ export type Database = {
           email?: string | null
           estado?: string | null
           id?: string
+          id_empresa?: string
           logradouro?: string | null
           municipio?: string | null
           nome?: string
           numero?: string | null
+          padrao?: boolean
           ponto_referencia?: string | null
           telefone?: string | null
           tipo_cadastro?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "vx_pessoa_id_empresa_fkey"
+            columns: ["id_empresa"]
+            isOneToOne: false
+            referencedRelation: "empresa"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       vx_veiculos_consultados: {
         Row: {
