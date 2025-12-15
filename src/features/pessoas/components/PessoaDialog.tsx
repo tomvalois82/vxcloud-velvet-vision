@@ -212,6 +212,27 @@ export function PessoaDialog({ open, onOpenChange, pessoa, onSuccess }: PessoaDi
     setIsSubmitting(true);
 
     try {
+      // Get empresa ID
+      const { data: userData } = await supabase.auth.getUser();
+      if (!userData.user) throw new Error("Usuário não autenticado");
+
+      const { data: usuarioData } = await supabase
+        .from("usuario")
+        .select("config")
+        .eq("uid", userData.user.id)
+        .single();
+
+      if (!usuarioData?.config) throw new Error("Configuração não encontrada");
+
+      const { data: configData } = await supabase
+        .from("config")
+        .select("empresa:empresa(id)")
+        .eq("id", usuarioData.config)
+        .single();
+
+      const empresaId = (configData?.empresa as any)?.id;
+      if (!empresaId) throw new Error("Empresa não encontrada");
+
       const cpfCnpjDigits = data.cpf_cnpj ? unmaskCPFCNPJ(data.cpf_cnpj) : "";
       const telefoneDigits = data.telefone ? unmaskCPFCNPJ(data.telefone) : "";
       const cepDigits = data.cep ? unmaskCPFCNPJ(data.cep) : "";
@@ -234,6 +255,7 @@ export function PessoaDialog({ open, onOpenChange, pessoa, onSuccess }: PessoaDi
         eh_cliente: data.eh_cliente,
         eh_fornecedor: data.eh_fornecedor,
         eh_colaborador: data.eh_colaborador,
+        id_empresa: empresaId,
       };
 
       if (pessoa?.id) {
