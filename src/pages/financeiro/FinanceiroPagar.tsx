@@ -70,6 +70,7 @@ interface Movimento {
   id_empresa: string;
   id_forma_pagamento: string | null;
   id_cartao: string | null;
+  id_pessoa: string | null;
   observacoes: string | null;
   status: string;
   id_estoque: number | null;
