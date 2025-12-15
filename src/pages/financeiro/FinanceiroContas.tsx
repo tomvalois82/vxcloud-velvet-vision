@@ -21,7 +21,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Plus, Wallet, Search, Pencil, Trash2, Loader2 } from "lucide-react";
+import { Plus, Wallet, Search, Pencil, Trash2, Loader2, Star } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { ContaDialog } from "@/features/financeiro/components/ContaDialog";
@@ -32,6 +32,7 @@ interface Conta {
   banco: string;
   descricao: string | null;
   saldo: number;
+  padrao: boolean;
 }
 
 const FinanceiroContas = () => {
@@ -44,6 +45,7 @@ const FinanceiroContas = () => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [contaToDelete, setContaToDelete] = useState<Conta | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [togglingPadrao, setTogglingPadrao] = useState<string | null>(null);
 
   const fetchContas = async () => {
     setLoading(true);
@@ -122,6 +124,47 @@ const FinanceiroContas = () => {
       setDeleting(false);
       setDeleteDialogOpen(false);
       setContaToDelete(null);
+    }
+  };
+
+  const handleTogglePadrao = async (conta: Conta) => {
+    if (conta.padrao) return; // Já é padrão, não faz nada
+    
+    setTogglingPadrao(conta.id);
+    try {
+      // Remove padrão de todas as contas
+      await supabase
+        .from("vx_fin_conta")
+        .update({ padrao: false })
+        .neq("id", conta.id);
+
+      // Define a conta clicada como padrão
+      const { error } = await supabase
+        .from("vx_fin_conta")
+        .update({ padrao: true })
+        .eq("id", conta.id);
+
+      if (error) throw error;
+
+      setContas((prev) =>
+        prev.map((c) => ({
+          ...c,
+          padrao: c.id === conta.id,
+        }))
+      );
+
+      toast({
+        title: "Conta padrão definida",
+        description: `${conta.banco} agora é a conta padrão.`,
+      });
+    } catch (error: any) {
+      toast({
+        title: "Erro ao definir padrão",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setTogglingPadrao(null);
     }
   };
 
@@ -213,6 +256,18 @@ const FinanceiroContas = () => {
                               onClick={() => handleDeleteClick(conta)}
                             >
                               <Trash2 className="w-4 h-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 hover:bg-yellow-500/20"
+                              onClick={() => handleTogglePadrao(conta)}
+                              disabled={togglingPadrao === conta.id}
+                              title={conta.padrao ? "Conta padrão" : "Definir como padrão"}
+                            >
+                              <Star 
+                                className={`w-4 h-4 ${conta.padrao ? "fill-yellow-500 text-yellow-500" : "text-muted-foreground"}`} 
+                              />
                             </Button>
                           </div>
                         </TableCell>

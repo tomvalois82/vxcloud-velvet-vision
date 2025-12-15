@@ -3,7 +3,7 @@ import { PageHeader } from "@/components/PageHeader";
 import { EmptyState } from "@/components/EmptyState";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, Users, Search, Pencil, Trash2, Loader2 } from "lucide-react";
+import { Plus, Users, Search, Pencil, Trash2, Loader2, Star } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import {
@@ -36,6 +36,7 @@ const PessoasList = () => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [pessoaToDelete, setPessoaToDelete] = useState<any>(null);
   const [deleting, setDeleting] = useState(false);
+  const [togglingPadrao, setTogglingPadrao] = useState<string | null>(null);
 
   const fetchPessoas = async () => {
     setLoading(true);
@@ -91,6 +92,41 @@ const PessoasList = () => {
       setDeleting(false);
       setDeleteDialogOpen(false);
       setPessoaToDelete(null);
+    }
+  };
+
+  const handleTogglePadrao = async (pessoa: any) => {
+    if (pessoa.padrao) return; // Já é padrão, não faz nada
+    
+    setTogglingPadrao(pessoa.id);
+    try {
+      // Remove padrão de todas as pessoas
+      await supabase
+        .from("vx_pessoa")
+        .update({ padrao: false })
+        .neq("id", pessoa.id);
+
+      // Define a pessoa clicada como padrão
+      const { error } = await supabase
+        .from("vx_pessoa")
+        .update({ padrao: true })
+        .eq("id", pessoa.id);
+
+      if (error) throw error;
+
+      setPessoas((prev) =>
+        prev.map((p) => ({
+          ...p,
+          padrao: p.id === pessoa.id,
+        }))
+      );
+
+      toast.success(`${pessoa.nome} agora é a pessoa padrão.`);
+    } catch (error: any) {
+      console.error("Erro ao definir padrão:", error);
+      toast.error("Erro ao definir padrão");
+    } finally {
+      setTogglingPadrao(null);
     }
   };
 
@@ -197,6 +233,18 @@ const PessoasList = () => {
                           }}
                         >
                           <Trash2 className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="hover:bg-yellow-500/20"
+                          onClick={() => handleTogglePadrao(pessoa)}
+                          disabled={togglingPadrao === pessoa.id}
+                          title={pessoa.padrao ? "Pessoa padrão" : "Definir como padrão"}
+                        >
+                          <Star 
+                            className={`h-4 w-4 ${pessoa.padrao ? "fill-yellow-500 text-yellow-500" : "text-muted-foreground"}`} 
+                          />
                         </Button>
                       </div>
                     </TableCell>
