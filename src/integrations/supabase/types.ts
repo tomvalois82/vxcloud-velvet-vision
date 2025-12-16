@@ -1331,6 +1331,7 @@ export type Database = {
         Row: {
           ativo: boolean
           categoria: string
+          dre: boolean
           id: string
           id_categoria_pai: string | null
           operacao: string
@@ -1338,6 +1339,7 @@ export type Database = {
         Insert: {
           ativo?: boolean
           categoria: string
+          dre?: boolean
           id?: string
           id_categoria_pai?: string | null
           operacao: string
@@ -1345,6 +1347,7 @@ export type Database = {
         Update: {
           ativo?: boolean
           categoria?: string
+          dre?: boolean
           id?: string
           id_categoria_pai?: string | null
           operacao?: string
@@ -1403,7 +1406,7 @@ export type Database = {
           data_pagamento: string | null
           data_vencimento: string
           desconto: number | null
-          descricao: string
+          descricao: string | null
           id: string
           id_cartao: string | null
           id_categoria: string | null
@@ -1431,7 +1434,7 @@ export type Database = {
           data_pagamento?: string | null
           data_vencimento: string
           desconto?: number | null
-          descricao: string
+          descricao?: string | null
           id?: string
           id_cartao?: string | null
           id_categoria?: string | null
@@ -1459,7 +1462,7 @@ export type Database = {
           data_pagamento?: string | null
           data_vencimento?: string
           desconto?: number | null
-          descricao?: string
+          descricao?: string | null
           id?: string
           id_cartao?: string | null
           id_categoria?: string | null
