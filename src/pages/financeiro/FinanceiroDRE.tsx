@@ -239,7 +239,7 @@ const FinanceiroDRE = () => {
           id_categoria,
           id_conta,
           id_pessoa,
-          conta:vx_fin_conta(banco),
+          conta:vx_fin_conta!id_conta(banco),
           pessoa:vx_pessoa(nome)
         `)
         .eq("status", "Pago")
