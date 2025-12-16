@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, Search, ChevronRight, ChevronDown, Pencil, Trash2, FolderPlus, Loader2 } from "lucide-react";
+import { Plus, Search, ChevronRight, ChevronDown, Pencil, Trash2, FolderPlus, Loader2, FileText } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { EmptyState } from "@/components/EmptyState";
@@ -24,6 +24,7 @@ interface Categoria {
   id_categoria_pai: string | null;
   ativo: boolean;
   operacao: string;
+  dre: boolean;
   children?: Categoria[];
   hasChildren?: boolean;
 }
@@ -39,6 +40,7 @@ export default function FinanceiroCategorias() {
   const [loadingChildren, setLoadingChildren] = useState<Set<string>>(new Set());
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [categoriaToDelete, setCategoriaToDelete] = useState<Categoria | null>(null);
+  const [togglingDre, setTogglingDre] = useState<string | null>(null);
 
   const fetchRootCategorias = useCallback(async () => {
     setLoading(true);
@@ -136,6 +138,43 @@ export default function FinanceiroCategorias() {
       }
       return cat;
     });
+  };
+
+  const updateTreeDre = (
+    tree: Categoria[],
+    catId: string,
+    newDre: boolean
+  ): Categoria[] => {
+    return tree.map((cat) => {
+      if (cat.id === catId) {
+        return { ...cat, dre: newDre };
+      }
+      if (cat.children && cat.children.length > 0) {
+        return { ...cat, children: updateTreeDre(cat.children, catId, newDre) };
+      }
+      return cat;
+    });
+  };
+
+  const handleToggleDre = async (categoria: Categoria) => {
+    setTogglingDre(categoria.id);
+    try {
+      const newDre = !categoria.dre;
+      const { error } = await supabase
+        .from("vx_fin_categoria")
+        .update({ dre: newDre })
+        .eq("id", categoria.id);
+
+      if (error) throw error;
+
+      setCategorias((prev) => updateTreeDre(prev, categoria.id, newDre));
+      toast.success(newDre ? "Categoria será exibida no DRE" : "Categoria removida do DRE");
+    } catch (error) {
+      console.error("Erro ao atualizar DRE:", error);
+      toast.error("Erro ao atualizar configuração de DRE");
+    } finally {
+      setTogglingDre(null);
+    }
   };
 
   const toggleExpand = async (categoria: Categoria) => {
@@ -314,6 +353,24 @@ export default function FinanceiroCategorias() {
               title="Editar"
             >
               <Pencil className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className={`h-8 w-8 transition-colors ${
+                categoria.dre 
+                  ? "text-accent hover:text-accent/80" 
+                  : "text-muted-foreground/50 hover:text-muted-foreground"
+              }`}
+              onClick={() => handleToggleDre(categoria)}
+              disabled={togglingDre === categoria.id}
+              title="Exibido no DRE"
+            >
+              {togglingDre === categoria.id ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <FileText className={`h-4 w-4 ${categoria.dre ? "fill-accent/20" : ""}`} />
+              )}
             </Button>
             <Button
               variant="ghost"
