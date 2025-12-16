@@ -14,7 +14,8 @@ import {
   ChevronDown,
   LogOut,
   CreditCard,
-  TrendingUp
+  TrendingUp,
+  FileText
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
@@ -79,6 +80,7 @@ const menuItems: MenuItem[] = [
       { title: "A Receber", url: "/financeiro/receber", icon: ArrowUpCircle },
       { title: "Transferências", url: "/financeiro/transferencias", icon: ArrowLeftRight },
       { title: "Margem", url: "/financeiro/margem", icon: BarChart3 },
+      { title: "DRE", url: "/financeiro/dre", icon: FileText },
       { title: "Relatórios", url: "/financeiro/relatorios", icon: BarChart3 },
     ],
   },
