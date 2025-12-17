@@ -1,9 +1,10 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { differenceInDays, differenceInMonths, format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { Car, Calendar, Gauge, Palette, CreditCard, FileText, Clock, Edit, MapPin, Hash, Settings, Fuel, TrendingUp, Receipt, Printer, Plus } from 'lucide-react';
+import { Car, Calendar, Gauge, Palette, CreditCard, FileText, Clock, Edit, MapPin, Hash, Settings, Fuel, TrendingUp, Receipt, Printer, Plus, Trash2, Pencil } from 'lucide-react';
 import { useReactToPrint } from 'react-to-print';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
@@ -16,6 +17,8 @@ import { PhotoCarousel } from './PhotoCarousel';
 import { StorageManager, PhotoMetadata } from '@/features/estoque/utils/storageManager';
 import { VehicleReportPrint } from './VehicleReportPrint';
 import { MovimentoDialog } from '@/features/financeiro/components/MovimentoDialog';
+import { useToast } from '@/hooks/use-toast';
+import { deleteAnexosDoMovimento } from '@/features/financeiro/utils/anexosUtils';
 interface VehicleCost {
   id: string;
   descricao: string;
@@ -120,7 +123,12 @@ export function VehicleDetailDialog({
   const [empresa, setEmpresa] = useState<Empresa | null>(null);
   const [dataVenda, setDataVenda] = useState<string | null>(null);
   const [movimentoDialogOpen, setMovimentoDialogOpen] = useState(false);
+  const [selectedMovimento, setSelectedMovimento] = useState<any>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [costToDelete, setCostToDelete] = useState<VehicleCost | null>(null);
+  const [deleting, setDeleting] = useState(false);
   const printRef = useRef<HTMLDivElement>(null);
+  const { toast } = useToast();
   const {
     mainPhoto
   } = useVehicleMainPhoto(vehicleId, vehicle?.foto || null);
@@ -254,6 +262,61 @@ export function VehicleDetailDialog({
       onEdit(vehicleId);
     }
   };
+
+  const handleEditCost = async (costId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('vx_fin_movimento')
+        .select('*')
+        .eq('id', costId)
+        .single();
+      
+      if (error) throw error;
+      setSelectedMovimento(data);
+      setMovimentoDialogOpen(true);
+    } catch (error: any) {
+      toast({
+        title: "Erro ao carregar custo",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDeleteCost = async () => {
+    if (!costToDelete) return;
+    
+    setDeleting(true);
+    try {
+      // Delete attachments first
+      await deleteAnexosDoMovimento(costToDelete.id);
+      
+      // Then delete the movement
+      const { error } = await supabase
+        .from('vx_fin_movimento')
+        .delete()
+        .eq('id', costToDelete.id);
+      
+      if (error) throw error;
+      
+      toast({
+        title: "Custo excluído",
+        description: "O custo foi removido com sucesso.",
+      });
+      
+      loadVehicleCosts();
+    } catch (error: any) {
+      toast({
+        title: "Erro ao excluir custo",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setDeleting(false);
+      setDeleteDialogOpen(false);
+      setCostToDelete(null);
+    }
+  };
   const getStatusBadge = (status: string | null) => {
     if (!status) return null;
     const variants: Record<string, 'default' | 'secondary' | 'destructive' | 'outline'> = {
@@ -385,7 +448,10 @@ export function VehicleDetailDialog({
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => setMovimentoDialogOpen(true)}
+                    onClick={() => {
+                      setSelectedMovimento(null);
+                      setMovimentoDialogOpen(true);
+                    }}
                   >
                     <Plus className="w-4 h-4 mr-1" />
                     Adicionar Custo
@@ -400,10 +466,11 @@ export function VehicleDetailDialog({
                             <th className="text-left py-2 px-3 text-muted-foreground font-medium">Vencimento</th>
                             <th className="text-left py-2 px-3 text-muted-foreground font-medium">Pagamento</th>
                             <th className="text-right py-2 px-3 text-muted-foreground font-medium">Valor</th>
+                            <th className="text-center py-2 px-3 text-muted-foreground font-medium w-20">Ações</th>
                           </tr>
                         </thead>
                         <tbody>
-                          {vehicleCosts.map(cost => <tr key={cost.id} className="border-b border-border/30 last:border-0">
+                          {vehicleCosts.map(cost => <tr key={cost.id} className="border-b border-border/30 last:border-0 hover:bg-muted/20">
                               <td className="py-2 px-3 text-foreground">{cost.descricao}</td>
                               <td className="py-2 px-3 text-muted-foreground">
                                 {format(new Date(cost.data_vencimento), 'dd/MM/yyyy', {
@@ -418,11 +485,36 @@ export function VehicleDetailDialog({
                               <td className="py-2 px-3 text-right text-red-400">
                                 {maskCurrency(cost.valor_liquido)}
                               </td>
+                              <td className="py-2 px-3 text-center">
+                                <div className="flex items-center justify-center gap-1">
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-7 w-7"
+                                    onClick={() => handleEditCost(cost.id)}
+                                    title="Editar"
+                                  >
+                                    <Pencil className="h-3.5 w-3.5" />
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-7 w-7 text-destructive hover:text-destructive"
+                                    onClick={() => {
+                                      setCostToDelete(cost);
+                                      setDeleteDialogOpen(true);
+                                    }}
+                                    title="Excluir"
+                                  >
+                                    <Trash2 className="h-3.5 w-3.5" />
+                                  </Button>
+                                </div>
+                              </td>
                             </tr>)}
                         </tbody>
                         <tfoot>
                           <tr className="bg-muted/30">
-                            <td colSpan={3} className="py-2 px-3 font-semibold text-foreground">Total</td>
+                            <td colSpan={4} className="py-2 px-3 font-semibold text-foreground">Total</td>
                             <td className="py-2 px-3 text-right font-bold text-red-400">
                               {maskCurrency(vehicleCosts.reduce((acc, c) => acc + c.valor_liquido, 0))}
                             </td>
@@ -481,16 +573,42 @@ export function VehicleDetailDialog({
           <VehicleReportPrint ref={printRef} vehicle={vehicle} costs={vehicleCosts} valorVenda={valorVenda} empresa={empresa} dataVenda={dataVenda} />
         </div>}
 
-      {/* Dialog para adicionar custo */}
+      {/* Dialog para adicionar/editar custo */}
       <MovimentoDialog
         open={movimentoDialogOpen}
-        onOpenChange={setMovimentoDialogOpen}
-        movimento={null}
+        onOpenChange={(open) => {
+          setMovimentoDialogOpen(open);
+          if (!open) setSelectedMovimento(null);
+        }}
+        movimento={selectedMovimento}
         defaultTipo="Pagar"
-        initialVehicleId={vehicleId}
+        initialVehicleId={selectedMovimento ? undefined : vehicleId}
         onSuccess={() => {
           loadVehicleCosts();
+          setSelectedMovimento(null);
         }}
       />
+
+      {/* Dialog de confirmação de exclusão */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir o custo "{costToDelete?.descricao}"? Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteCost}
+              disabled={deleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleting ? "Excluindo..." : "Excluir"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>;
 }
