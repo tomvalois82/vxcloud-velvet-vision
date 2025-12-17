@@ -594,29 +594,52 @@ export function MovimentoDialog({
           if (fetchError) throw fetchError;
 
           if (registrosFuturos && registrosFuturos.length > 0) {
-            // Calculate interval between entries
+            // Remove numbering from description for base
+            const descricaoBase = data.descricao.replace(/\s*\(\d+\/\d+\)$/, "");
+
+            // Se for cartão de crédito, recalcular vencimentos corretamente por parcela
+            const cartaoId = cartaoSelecionado || movimento.id_cartao;
+            const cartaoParaCalculo = cartaoId ? cartoes.find((c) => c.id === cartaoId) : null;
+            const total = (registrosFuturos[0]?.total_ocorrencias ?? registrosFuturos.length) as number;
+
+            const datasCartao =
+              cartaoParaCalculo && dataCompra
+                ? gerarDatasVencimentoCartao(
+                    dataCompra,
+                    cartaoParaCalculo.dia_fechamento,
+                    cartaoParaCalculo.dia_vencimento,
+                    total
+                  )
+                : null;
+
+            // Fallback: manter lógica anterior (intervalo em dias baseado no histórico)
             let intervaloDiasCalculado = 30;
-            if (registrosFuturos.length > 1) {
+            if (!datasCartao && registrosFuturos.length > 1) {
               const data1 = new Date(registrosFuturos[0].data_vencimento);
               const data2 = new Date(registrosFuturos[1].data_vencimento);
-              intervaloDiasCalculado = Math.round((data2.getTime() - data1.getTime()) / (1000 * 60 * 60 * 24));
+              intervaloDiasCalculado = Math.round(
+                (data2.getTime() - data1.getTime()) / (1000 * 60 * 60 * 24)
+              );
             }
-
-            // Remove numbering from description for base
-            const descricaoBase = data.descricao.replace(/\s*\(\d+\/\d+\)$/, '');
 
             // Update each record
             for (let i = 0; i < registrosFuturos.length; i++) {
               const registro = registrosFuturos[i];
-              const novaDescricao = formatarDescricaoRecorrente(
-                descricaoBase,
-                registro.ordem_ocorrencia || (i + 1),
-                registro.total_ocorrencias || registrosFuturos.length
-              );
+              const ordem = registro.ordem_ocorrencia || (i + 1);
+              const totalOc = registro.total_ocorrencias || registrosFuturos.length;
+
+              const novaDescricao = formatarDescricaoRecorrente(descricaoBase, ordem, totalOc);
 
               // Calculate new due date
               let novaDataVencimento: string;
-              if (i === 0) {
+              let novaCompetencia: string | null = baseMovimentoData.competencia ?? null;
+
+              if (datasCartao) {
+                const idx = Math.max(0, ordem - 1);
+                const dataOcorrencia = datasCartao[idx] ?? datasCartao[datasCartao.length - 1];
+                novaDataVencimento = format(dataOcorrencia, "yyyy-MM-dd");
+                novaCompetencia = `${String(dataOcorrencia.getMonth() + 1).padStart(2, "0")}/${dataOcorrencia.getFullYear()}`;
+              } else if (i === 0) {
                 novaDataVencimento = format(data.data_vencimento, "yyyy-MM-dd");
               } else {
                 const dataBase = addDays(data.data_vencimento, intervaloDiasCalculado * i);
@@ -629,6 +652,7 @@ export function MovimentoDialog({
                   ...baseMovimentoData,
                   descricao: novaDescricao,
                   data_vencimento: novaDataVencimento,
+                  competencia: novaCompetencia,
                   // Preserve individual status
                 })
                 .eq("id", registro.id);
