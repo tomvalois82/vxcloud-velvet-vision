@@ -699,11 +699,17 @@ export function MovimentoDialog({
           // Multiple entries (recurrence)
           // Se tiver cartão selecionado, usar datas específicas de cartão
           let datas: Date[];
-          if (cartaoSelecionado && dataCompra && cartaoAtual) {
+          
+          // Buscar o cartão diretamente do array cartoes para evitar closure stale
+          const cartaoParaCalculo = cartaoSelecionado 
+            ? cartoes.find(c => c.id === cartaoSelecionado) 
+            : null;
+          
+          if (cartaoSelecionado && dataCompra && cartaoParaCalculo) {
             datas = gerarDatasVencimentoCartao(
               dataCompra, 
-              cartaoAtual.dia_fechamento, 
-              cartaoAtual.dia_vencimento, 
+              cartaoParaCalculo.dia_fechamento, 
+              cartaoParaCalculo.dia_vencimento, 
               numeroOcorrencias
             );
           } else {
