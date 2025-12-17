@@ -167,6 +167,7 @@ interface MovimentoDialogProps {
   defaultTipo?: "Pagar" | "Receber";
   onSuccess: () => void;
   editScope?: "single" | "future";
+  initialVehicleId?: number;
 }
 
 export function MovimentoDialog({
@@ -176,6 +177,7 @@ export function MovimentoDialog({
   defaultTipo = "Receber",
   onSuccess,
   editScope = "single",
+  initialVehicleId,
 }: MovimentoDialogProps) {
   const { toast } = useToast();
   const [saving, setSaving] = useState(false);
@@ -355,8 +357,14 @@ export function MovimentoDialog({
           observacoes: "",
           status: "Pendente",
         });
-        setVincularVeiculo(false);
-        setVeiculoSelecionado("");
+        // Check if initialVehicleId was passed
+        if (initialVehicleId) {
+          setVincularVeiculo(true);
+          setVeiculoSelecionado(initialVehicleId.toString());
+        } else {
+          setVincularVeiculo(false);
+          setVeiculoSelecionado("");
+        }
         setCartaoSelecionado("");
         setDataCompra(new Date());
         setPessoaSelecionada("");
@@ -368,7 +376,7 @@ export function MovimentoDialog({
         setValorOcorrenciaDiaMes("");
       }
     }
-  }, [open, movimento, defaultTipo, form]);
+  }, [open, movimento, defaultTipo, form, initialVehicleId]);
 
   // Set default conta when contas are loaded (new entry only)
   useEffect(() => {

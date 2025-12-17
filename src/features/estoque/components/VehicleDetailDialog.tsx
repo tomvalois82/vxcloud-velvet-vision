@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { differenceInDays, differenceInMonths, format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { Car, Calendar, Gauge, Palette, CreditCard, FileText, Clock, Edit, MapPin, Hash, Settings, Fuel, TrendingUp, Receipt, Printer } from 'lucide-react';
+import { Car, Calendar, Gauge, Palette, CreditCard, FileText, Clock, Edit, MapPin, Hash, Settings, Fuel, TrendingUp, Receipt, Printer, Plus } from 'lucide-react';
 import { useReactToPrint } from 'react-to-print';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -15,6 +15,7 @@ import { maskCurrency, maskKm } from '@/features/estoque/utils/masks';
 import { PhotoCarousel } from './PhotoCarousel';
 import { StorageManager, PhotoMetadata } from '@/features/estoque/utils/storageManager';
 import { VehicleReportPrint } from './VehicleReportPrint';
+import { MovimentoDialog } from '@/features/financeiro/components/MovimentoDialog';
 interface VehicleCost {
   id: string;
   descricao: string;
@@ -118,6 +119,7 @@ export function VehicleDetailDialog({
   const [vehicleCosts, setVehicleCosts] = useState<VehicleCost[]>([]);
   const [empresa, setEmpresa] = useState<Empresa | null>(null);
   const [dataVenda, setDataVenda] = useState<string | null>(null);
+  const [movimentoDialogOpen, setMovimentoDialogOpen] = useState(false);
   const printRef = useRef<HTMLDivElement>(null);
   const {
     mainPhoto
@@ -376,12 +378,22 @@ export function VehicleDetailDialog({
               </div>
 
               {/* Costs Section */}
-              {vehicleCosts.length > 0 && <>
-                  <Separator />
-                  <div>
-                    <h3 className="text-sm font-semibold text-foreground mb-3">Custos</h3>
-                    <div className="glass rounded-lg overflow-hidden">
-                      <table className="w-full text-sm">
+              <Separator />
+              <div>
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-sm font-semibold text-foreground">Custos</h3>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setMovimentoDialogOpen(true)}
+                  >
+                    <Plus className="w-4 h-4 mr-1" />
+                    Adicionar Custo
+                  </Button>
+                </div>
+                {vehicleCosts.length > 0 ? (
+                  <div className="glass rounded-lg overflow-hidden">
+                    <table className="w-full text-sm">
                         <thead>
                           <tr className="border-b border-border/50">
                             <th className="text-left py-2 px-3 text-muted-foreground font-medium">Descrição</th>
@@ -418,8 +430,10 @@ export function VehicleDetailDialog({
                         </tfoot>
                       </table>
                     </div>
-                  </div>
-                </>}
+                  ) : (
+                    <p className="text-sm text-muted-foreground italic">Nenhum custo registrado.</p>
+                  )}
+                </div>
 
               <Separator />
 
@@ -466,5 +480,17 @@ export function VehicleDetailDialog({
       {vehicle && <div className="hidden">
           <VehicleReportPrint ref={printRef} vehicle={vehicle} costs={vehicleCosts} valorVenda={valorVenda} empresa={empresa} dataVenda={dataVenda} />
         </div>}
+
+      {/* Dialog para adicionar custo */}
+      <MovimentoDialog
+        open={movimentoDialogOpen}
+        onOpenChange={setMovimentoDialogOpen}
+        movimento={null}
+        defaultTipo="Pagar"
+        initialVehicleId={vehicleId}
+        onSuccess={() => {
+          loadVehicleCosts();
+        }}
+      />
     </>;
 }
