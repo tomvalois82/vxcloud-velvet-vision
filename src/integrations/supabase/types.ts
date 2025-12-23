@@ -2199,6 +2199,22 @@ export type Database = {
           solicitado: number | null
           total: number | null
         }
+        Insert: {
+          alocado?: never
+          carteira?: never
+          id_pessoa?: string | null
+          nome?: string | null
+          solicitado?: never
+          total?: never
+        }
+        Update: {
+          alocado?: never
+          carteira?: never
+          id_pessoa?: string | null
+          nome?: string | null
+          solicitado?: never
+          total?: never
+        }
         Relationships: []
       }
     }
