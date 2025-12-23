@@ -13,6 +13,7 @@ import VeiculosEstoque from "./pages/veiculos/VeiculosEstoque";
 import VeiculosRelatorios from "./pages/veiculos/VeiculosRelatorios";
 import PessoasList from "./pages/pessoas/PessoasList";
 import InvestidoresList from "./pages/investidor/InvestidoresList";
+import InvestidoresCarteiras from "./pages/investidor/InvestidoresCarteiras";
 import VendasList from "./pages/vendas/VendasList";
 import VendasRelatorios from "./pages/vendas/VendasRelatorios";
 import VendaVeiculo from "./pages/vendas/VendaVeiculo";
@@ -60,6 +61,7 @@ const App = () => (
                             <Route path="/veiculos/relatorios" element={<VeiculosRelatorios />} />
                             <Route path="/pessoas" element={<PessoasList />} />
                             <Route path="/investidores" element={<InvestidoresList />} />
+                            <Route path="/investidores/carteiras" element={<InvestidoresCarteiras />} />
                             <Route path="/vendas" element={<VendasList />} />
                             <Route path="/vendas/nova" element={<VendaVeiculo />} />
                             <Route path="/vendas/editar" element={<VendaEditar />} />
