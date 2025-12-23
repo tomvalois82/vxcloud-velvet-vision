@@ -59,7 +59,14 @@ const menuItems: MenuItem[] = [
     ],
   },
   { title: "Pessoas", url: "/pessoas", icon: Users },
-  { title: "Investidores", url: "/investidores", icon: TrendingUp },
+  {
+    title: "Investidores",
+    icon: TrendingUp,
+    items: [
+      { title: "Investimentos", url: "/investidores", icon: TrendingUp },
+      { title: "Carteiras", url: "/investidores/carteiras", icon: Wallet },
+    ],
+  },
   {
     title: "Vendas",
     icon: ShoppingCart,

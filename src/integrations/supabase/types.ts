@@ -475,6 +475,13 @@ export type Database = {
             foreignKeyName: "estoque_adquirido_de_fkey"
             columns: ["adquirido_de"]
             isOneToOne: false
+            referencedRelation: "vw_investidor_carteira"
+            referencedColumns: ["id_pessoa"]
+          },
+          {
+            foreignKeyName: "estoque_adquirido_de_fkey"
+            columns: ["adquirido_de"]
+            isOneToOne: false
             referencedRelation: "vx_pessoa"
             referencedColumns: ["id"]
           },
@@ -1366,6 +1373,7 @@ export type Database = {
         Row: {
           banco: string
           descricao: string | null
+          eh_virtual: boolean | null
           id: string
           id_empresa: string
           padrao: boolean
@@ -1374,6 +1382,7 @@ export type Database = {
         Insert: {
           banco: string
           descricao?: string | null
+          eh_virtual?: boolean | null
           id?: string
           id_empresa: string
           padrao?: boolean
@@ -1382,6 +1391,7 @@ export type Database = {
         Update: {
           banco?: string
           descricao?: string | null
+          eh_virtual?: boolean | null
           id?: string
           id_empresa?: string
           padrao?: boolean
@@ -1536,6 +1546,13 @@ export type Database = {
             foreignKeyName: "vx_fin_movimento_id_pessoa_fkey"
             columns: ["id_pessoa"]
             isOneToOne: false
+            referencedRelation: "vw_investidor_carteira"
+            referencedColumns: ["id_pessoa"]
+          },
+          {
+            foreignKeyName: "vx_fin_movimento_id_pessoa_fkey"
+            columns: ["id_pessoa"]
+            isOneToOne: false
             referencedRelation: "vx_pessoa"
             referencedColumns: ["id"]
           },
@@ -1600,7 +1617,9 @@ export type Database = {
           id_grupo_wtz: string | null
           id_pessoa: string
           percentual_investido: number
+          valor_custos: number | null
           valor_investido: number
+          valor_lucro: number | null
         }
         Insert: {
           data_criacao?: string
@@ -1610,7 +1629,9 @@ export type Database = {
           id_grupo_wtz?: string | null
           id_pessoa: string
           percentual_investido: number
+          valor_custos?: number | null
           valor_investido: number
+          valor_lucro?: number | null
         }
         Update: {
           data_criacao?: string
@@ -1620,7 +1641,9 @@ export type Database = {
           id_grupo_wtz?: string | null
           id_pessoa?: string
           percentual_investido?: number
+          valor_custos?: number | null
           valor_investido?: number
+          valor_lucro?: number | null
         }
         Relationships: [
           {
@@ -1632,6 +1655,68 @@ export type Database = {
           },
           {
             foreignKeyName: "vx_investimento_id_pessoa_fkey"
+            columns: ["id_pessoa"]
+            isOneToOne: false
+            referencedRelation: "vw_investidor_carteira"
+            referencedColumns: ["id_pessoa"]
+          },
+          {
+            foreignKeyName: "vx_investimento_id_pessoa_fkey"
+            columns: ["id_pessoa"]
+            isOneToOne: false
+            referencedRelation: "vx_pessoa"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vx_investimento_carteira: {
+        Row: {
+          created_at: string | null
+          data: string
+          descricao: string | null
+          id: string
+          id_estoque: number | null
+          id_movimento: string | null
+          id_pessoa: string
+          valor: number
+        }
+        Insert: {
+          created_at?: string | null
+          data: string
+          descricao?: string | null
+          id?: string
+          id_estoque?: number | null
+          id_movimento?: string | null
+          id_pessoa: string
+          valor: number
+        }
+        Update: {
+          created_at?: string | null
+          data?: string
+          descricao?: string | null
+          id?: string
+          id_estoque?: number | null
+          id_movimento?: string | null
+          id_pessoa?: string
+          valor?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vx_investimento_carteira_id_movimento_fkey"
+            columns: ["id_movimento"]
+            isOneToOne: false
+            referencedRelation: "vx_fin_movimento"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vx_investimento_carteira_id_pessoa_fkey"
+            columns: ["id_pessoa"]
+            isOneToOne: false
+            referencedRelation: "vw_investidor_carteira"
+            referencedColumns: ["id_pessoa"]
+          },
+          {
+            foreignKeyName: "vx_investimento_carteira_id_pessoa_fkey"
             columns: ["id_pessoa"]
             isOneToOne: false
             referencedRelation: "vx_pessoa"
@@ -1827,6 +1912,13 @@ export type Database = {
             foreignKeyName: "vx_vendas_id_cliente_fkey"
             columns: ["id_cliente"]
             isOneToOne: false
+            referencedRelation: "vw_investidor_carteira"
+            referencedColumns: ["id_pessoa"]
+          },
+          {
+            foreignKeyName: "vx_vendas_id_cliente_fkey"
+            columns: ["id_cliente"]
+            isOneToOne: false
             referencedRelation: "vx_pessoa"
             referencedColumns: ["id"]
           },
@@ -1843,6 +1935,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "estoque"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vx_vendas_id_vendedor_fkey"
+            columns: ["id_vendedor"]
+            isOneToOne: false
+            referencedRelation: "vw_investidor_carteira"
+            referencedColumns: ["id_pessoa"]
           },
           {
             foreignKeyName: "vx_vendas_id_vendedor_fkey"
@@ -2091,7 +2190,17 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      vw_investidor_carteira: {
+        Row: {
+          alocado: number | null
+          carteira: number | null
+          id_pessoa: string | null
+          nome: string | null
+          solicitado: number | null
+          total: number | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       match_documents: {
