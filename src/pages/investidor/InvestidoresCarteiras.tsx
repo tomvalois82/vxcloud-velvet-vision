@@ -61,6 +61,18 @@ export default function InvestidoresCarteiras() {
 
   useEffect(() => {
     fetchInvestidores();
+
+    // Realtime subscription para atualizações automáticas
+    const channel = supabase
+      .channel('carteiras-changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'vx_investimento' }, fetchInvestidores)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'vx_investimento_carteira' }, fetchInvestidores)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'vx_pessoa' }, fetchInvestidores)
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [fetchInvestidores]);
 
   const formatCurrency = (value: number) => {
