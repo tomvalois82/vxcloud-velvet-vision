@@ -24,9 +24,10 @@ import {
 } from '@/components/ui/alert-dialog';
 import { EmptyState } from '@/components/EmptyState';
 import { toast } from 'sonner';
-import { Plus, Search, Pencil, Trash2, TrendingUp, TrendingDown, Loader2, BarChart3 } from 'lucide-react';
+import { Plus, Search, Pencil, Trash2, TrendingUp, TrendingDown, Loader2, BarChart3, CheckCircle, Undo2 } from 'lucide-react';
 import { InvestimentoDialog } from '@/features/investidor/components/InvestimentoDialog';
 import { InvestimentoDetailDialog } from '@/features/investidor/components/InvestimentoDetailDialog';
+import { FinalizarInvestimentoDialog } from '@/features/investidor/components/FinalizarInvestimentoDialog';
 
 interface Investimento {
   id: string;
@@ -72,6 +73,8 @@ export default function InvestidoresList() {
   const [investimentoToDelete, setInvestimentoToDelete] = useState<Investimento | null>(null);
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
   const [investimentoToDetail, setInvestimentoToDetail] = useState<Investimento | null>(null);
+  const [finalizarDialogOpen, setFinalizarDialogOpen] = useState(false);
+  const [investimentoToFinalizar, setInvestimentoToFinalizar] = useState<string | null>(null);
 
   const fetchInvestimentos = useCallback(async () => {
     setLoading(true);
@@ -185,6 +188,23 @@ export default function InvestidoresList() {
     }
   };
 
+  const handleEstornar = async (investimentoId: string) => {
+    try {
+      const { error } = await supabase
+        .from('vx_investimento')
+        .update({ data_finalizado: null })
+        .eq('id', investimentoId);
+
+      if (error) throw error;
+
+      toast.success('Investimento estornado com sucesso!');
+      fetchInvestimentos();
+    } catch (error) {
+      console.error('Erro ao estornar investimento:', error);
+      toast.error('Erro ao estornar investimento');
+    }
+  };
+
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
@@ -268,7 +288,7 @@ export default function InvestidoresList() {
                   <TableHead className="text-right">Custos Prop.</TableHead>
                   <TableHead className="text-right">Rentabilidade</TableHead>
                   <TableHead className="text-right">Lucro %</TableHead>
-                  <TableHead className="w-[100px]"></TableHead>
+                  <TableHead className="w-[140px]"></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -328,6 +348,27 @@ export default function InvestidoresList() {
                           >
                             <BarChart3 className="h-4 w-4" />
                           </Button>
+                          {inv.data_finalizado ? (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleEstornar(inv.id)}
+                              className="hover:text-amber-500"
+                              title="Estornar Finalização"
+                            >
+                              <Undo2 className="h-4 w-4" />
+                            </Button>
+                          ) : (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => { setInvestimentoToFinalizar(inv.id); setFinalizarDialogOpen(true); }}
+                              className="hover:text-green-500"
+                              title="Finalizar Investimento"
+                            >
+                              <CheckCircle className="h-4 w-4" />
+                            </Button>
+                          )}
                           <Button
                             variant="ghost"
                             size="icon"
@@ -368,6 +409,13 @@ export default function InvestidoresList() {
         open={detailDialogOpen}
         onOpenChange={setDetailDialogOpen}
         investimento={investimentoToDetail}
+      />
+
+      <FinalizarInvestimentoDialog
+        open={finalizarDialogOpen}
+        onOpenChange={setFinalizarDialogOpen}
+        investimentoId={investimentoToFinalizar}
+        onSuccess={fetchInvestimentos}
       />
 
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
