@@ -191,8 +191,30 @@ export function CarteiraDetailDialog({
     if (open && investidor) {
       fetchVeiculos();
       fetchLancamentos();
+
+      // Realtime subscription para atualizações automáticas
+      const channel = supabase
+        .channel(`carteira-detail-${investidor.id_pessoa}`)
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'vx_investimento_carteira', filter: `id_pessoa=eq.${investidor.id_pessoa}` },
+          fetchLancamentos
+        )
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'vx_investimento', filter: `id_pessoa=eq.${investidor.id_pessoa}` },
+          () => {
+            fetchLancamentos();
+            onDeleted?.();
+          }
+        )
+        .subscribe();
+
+      return () => {
+        supabase.removeChannel(channel);
+      };
     }
-  }, [open, investidor, fetchVeiculos, fetchLancamentos]);
+  }, [open, investidor, fetchVeiculos, fetchLancamentos, onDeleted]);
 
   const handleDelete = async () => {
     if (!lancamentoToDelete) return;
