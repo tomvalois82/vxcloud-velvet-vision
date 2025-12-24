@@ -1676,6 +1676,7 @@ export type Database = {
           descricao: string | null
           id: string
           id_estoque: number | null
+          id_investimento: string | null
           id_movimento: string | null
           id_pessoa: string
           valor: number
@@ -1686,6 +1687,7 @@ export type Database = {
           descricao?: string | null
           id?: string
           id_estoque?: number | null
+          id_investimento?: string | null
           id_movimento?: string | null
           id_pessoa: string
           valor: number
@@ -1696,11 +1698,19 @@ export type Database = {
           descricao?: string | null
           id?: string
           id_estoque?: number | null
+          id_investimento?: string | null
           id_movimento?: string | null
           id_pessoa?: string
           valor?: number
         }
         Relationships: [
+          {
+            foreignKeyName: "vx_investimento_carteira_id_investimento_fkey"
+            columns: ["id_investimento"]
+            isOneToOne: false
+            referencedRelation: "vx_investimento"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "vx_investimento_carteira_id_movimento_fkey"
             columns: ["id_movimento"]
