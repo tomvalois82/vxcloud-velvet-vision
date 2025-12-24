@@ -39,7 +39,8 @@ import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/EmptyState";
 import { useToast } from "@/hooks/use-toast";
-import { Trash2, FileText, Car } from "lucide-react";
+import { Trash2, FileText, Car, Receipt } from "lucide-react";
+import { MovimentoDialog } from "@/features/financeiro/components/MovimentoDialog";
 
 interface InvestidorCarteira {
   id_pessoa: string;
@@ -85,6 +86,12 @@ export function CarteiraDetailDialog({
   const [deleting, setDeleting] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [lancamentoToDelete, setLancamentoToDelete] = useState<LancamentoCarteira | null>(null);
+  
+  // Estado para gerar título financeiro
+  const [movimentoDialogOpen, setMovimentoDialogOpen] = useState(false);
+  const [movimentoDefaultTipo, setMovimentoDefaultTipo] = useState<"Pagar" | "Receber">("Pagar");
+  const [movimentoDefaultValor, setMovimentoDefaultValor] = useState(0);
+  const [movimentoDefaultPessoaId, setMovimentoDefaultPessoaId] = useState<string | null>(null);
 
   // Filtros
   const [dataInicial, setDataInicial] = useState(() =>
@@ -372,18 +379,36 @@ export function CarteiraDetailDialog({
                         </span>
                       </TableCell>
                       <TableCell>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-7 w-7 text-destructive hover:text-destructive"
-                          onClick={() => {
-                            setLancamentoToDelete(lancamento);
-                            setDeleteDialogOpen(true);
-                          }}
-                          title="Excluir"
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
+                        <div className="flex items-center gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7 hover:text-primary"
+                            onClick={() => {
+                              // Valor positivo = Pagar, negativo = Receber
+                              const tipo = lancamento.valor >= 0 ? "Pagar" : "Receber";
+                              setMovimentoDefaultTipo(tipo);
+                              setMovimentoDefaultValor(Math.abs(lancamento.valor));
+                              setMovimentoDefaultPessoaId(investidor?.id_pessoa || null);
+                              setMovimentoDialogOpen(true);
+                            }}
+                            title="Gerar Título Financeiro"
+                          >
+                            <Receipt className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7 text-destructive hover:text-destructive"
+                            onClick={() => {
+                              setLancamentoToDelete(lancamento);
+                              setDeleteDialogOpen(true);
+                            }}
+                            title="Excluir"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))
@@ -420,6 +445,18 @@ export function CarteiraDetailDialog({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Dialog para lançamento de título financeiro */}
+      <MovimentoDialog
+        open={movimentoDialogOpen}
+        onOpenChange={setMovimentoDialogOpen}
+        defaultTipo={movimentoDefaultTipo}
+        defaultValor={movimentoDefaultValor}
+        defaultPessoaId={movimentoDefaultPessoaId}
+        onSuccess={() => {
+          setMovimentoDialogOpen(false);
+        }}
+      />
     </>
   );
 }

@@ -163,11 +163,13 @@ interface Movimento {
 interface MovimentoDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  movimento: Movimento | null;
+  movimento?: Movimento | null;
   defaultTipo?: "Pagar" | "Receber";
   onSuccess: () => void;
   editScope?: "single" | "future";
   initialVehicleId?: number;
+  defaultValor?: number;
+  defaultPessoaId?: string | null;
 }
 
 export function MovimentoDialog({
@@ -178,6 +180,8 @@ export function MovimentoDialog({
   onSuccess,
   editScope = "single",
   initialVehicleId,
+  defaultValor,
+  defaultPessoaId,
 }: MovimentoDialogProps) {
   const { toast } = useToast();
   const [saving, setSaving] = useState(false);
@@ -348,7 +352,7 @@ export function MovimentoDialog({
         form.reset({
           tipo_movimento: defaultTipo,
           descricao: "",
-          valor_bruto: "",
+          valor_bruto: defaultValor ? maskCurrency(defaultValor) : "",
           data_vencimento: new Date(),
           competencia: getCompetenciaAtual(),
           id_conta: "",
@@ -367,7 +371,8 @@ export function MovimentoDialog({
         }
         setCartaoSelecionado("");
         setDataCompra(new Date());
-        setPessoaSelecionada("");
+        // Set pessoa if defaultPessoaId was passed
+        setPessoaSelecionada(defaultPessoaId || "");
         setPessoaSearchTerm("");
         setTipoRecorrencia("nao_recorrente");
         setNumeroOcorrencias(12);
@@ -376,7 +381,7 @@ export function MovimentoDialog({
         setValorOcorrenciaDiaMes("");
       }
     }
-  }, [open, movimento, defaultTipo, form, initialVehicleId]);
+  }, [open, movimento, defaultTipo, form, initialVehicleId, defaultValor, defaultPessoaId]);
 
   // Set default conta when contas are loaded (new entry only)
   useEffect(() => {
