@@ -5,6 +5,13 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
   Table,
   TableBody,
   TableCell,
@@ -28,6 +35,7 @@ import { Plus, Search, Pencil, Trash2, TrendingUp, TrendingDown, Loader2, BarCha
 import { InvestimentoDialog } from '@/features/investidor/components/InvestimentoDialog';
 import { InvestimentoDetailDialog } from '@/features/investidor/components/InvestimentoDetailDialog';
 import { FinalizarInvestimentoDialog } from '@/features/investidor/components/FinalizarInvestimentoDialog';
+import { InvestimentoGroupedList, GroupByOption } from '@/features/investidor/components/InvestimentoGroupedList';
 
 interface Investimento {
   id: string;
@@ -53,6 +61,7 @@ interface Investimento {
     valor: string | null;
     status: string | null;
     data_aquisicao: string | null;
+    fabricante?: string | null;
   };
   custos_veiculo?: number;
 }
@@ -62,6 +71,8 @@ interface InvestimentoComCalculos extends Investimento {
   rentabilidade_proporcional: number;
   lucro_percentual: number;
 }
+
+type StatusFilter = "todos" | "ativos" | "finalizados";
 
 export default function InvestidoresList() {
   const [investimentos, setInvestimentos] = useState<InvestimentoComCalculos[]>([]);
@@ -76,6 +87,10 @@ export default function InvestidoresList() {
   const [finalizarDialogOpen, setFinalizarDialogOpen] = useState(false);
   const [investimentoToFinalizar, setInvestimentoToFinalizar] = useState<string | null>(null);
 
+  // Filter and grouping states
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("todos");
+  const [groupBy, setGroupBy] = useState<GroupByOption>("none");
+
   const fetchInvestimentos = useCallback(async () => {
     setLoading(true);
     try {
@@ -85,7 +100,7 @@ export default function InvestidoresList() {
         .select(`
           *,
           pessoa:vx_pessoa(nome),
-          veiculo:estoque(id, placa, modelo, motor, cambio, ano, cor, valor_aquisicao, valor, status, data_aquisicao)
+          veiculo:estoque(id, placa, modelo, motor, cambio, ano, cor, valor_aquisicao, valor, status, data_aquisicao, fabricante)
         `)
         .order('data_criacao', { ascending: false });
 
@@ -214,22 +229,16 @@ export default function InvestidoresList() {
 
   const formatVehicleInfo = (veiculo: Investimento['veiculo']) => {
     if (!veiculo) return '-';
-    const parts = [
-      veiculo.placa || '',
-      '-',
-      veiculo.modelo || '',
-      veiculo.motor || '',
-      veiculo.cambio || '',
-      '-',
-      veiculo.ano || '',
-      '-',
-      veiculo.cor || '',
-    ].filter(p => p && p !== '-');
-    
     return `${veiculo.placa || 'S/P'} - ${veiculo.modelo || ''} ${veiculo.motor || ''} ${veiculo.cambio || ''} - ${veiculo.ano || ''} - ${veiculo.cor || ''}`;
   };
 
+  // Apply filters
   const filteredInvestimentos = investimentos.filter((inv) => {
+    // Status filter
+    if (statusFilter === "ativos" && inv.data_finalizado !== null) return false;
+    if (statusFilter === "finalizados" && inv.data_finalizado === null) return false;
+
+    // Search filter
     const searchLower = searchTerm.toLowerCase();
     return (
       inv.pessoa?.nome?.toLowerCase().includes(searchLower) ||
@@ -237,6 +246,21 @@ export default function InvestidoresList() {
       inv.veiculo?.placa?.toLowerCase().includes(searchLower)
     );
   });
+
+  const handleOpenDeleteDialog = (investimento: Investimento) => {
+    setInvestimentoToDelete(investimento);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleOpenDetailDialog = (investimento: Investimento) => {
+    setInvestimentoToDetail(investimento);
+    setDetailDialogOpen(true);
+  };
+
+  const handleOpenFinalizarDialog = (investimentoId: string) => {
+    setInvestimentoToFinalizar(investimentoId);
+    setFinalizarDialogOpen(true);
+  };
 
   return (
     <div className="space-y-6">
@@ -252,14 +276,38 @@ export default function InvestidoresList() {
       />
 
       <Card className="glass-card p-4">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Buscar por investidor, veículo ou placa..."
-            className="pl-10 bg-background/50"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
+        <div className="flex flex-col md:flex-row gap-4">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Buscar por investidor, veículo ou placa..."
+              className="pl-10 bg-background/50"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+          <div className="flex gap-2">
+            <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as StatusFilter)}>
+              <SelectTrigger className="w-[180px] bg-background/50">
+                <SelectValue placeholder="Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="todos">Todos</SelectItem>
+                <SelectItem value="ativos">Investimentos Ativos</SelectItem>
+                <SelectItem value="finalizados">Investimentos Finalizados</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={groupBy} onValueChange={(value) => setGroupBy(value as GroupByOption)}>
+              <SelectTrigger className="w-[200px] bg-background/50">
+                <SelectValue placeholder="Agrupar por" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">Não Agrupar</SelectItem>
+                <SelectItem value="veiculo">Agrupar por Veículo</SelectItem>
+                <SelectItem value="investidor">Agrupar por Investidor</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </div>
       </Card>
 
@@ -273,6 +321,18 @@ export default function InvestidoresList() {
           description={searchTerm ? 'Tente uma busca diferente' : 'Cadastre seu primeiro investimento'}
           icon={TrendingUp}
         />
+      ) : groupBy !== "none" ? (
+        <Card className="glass-card p-4">
+          <InvestimentoGroupedList
+            investimentos={filteredInvestimentos}
+            groupBy={groupBy}
+            onEdit={handleEdit}
+            onDelete={handleOpenDeleteDialog}
+            onDetail={handleOpenDetailDialog}
+            onFinalizar={handleOpenFinalizarDialog}
+            onEstornar={handleEstornar}
+          />
+        </Card>
       ) : (
         <Card className="glass-card overflow-hidden">
           <div className="overflow-x-auto">
@@ -342,7 +402,7 @@ export default function InvestidoresList() {
                           <Button
                             variant="ghost"
                             size="icon"
-                            onClick={() => { setInvestimentoToDetail(inv); setDetailDialogOpen(true); }}
+                            onClick={() => handleOpenDetailDialog(inv)}
                             className="hover:text-accent"
                             title="Detalhamento do Investimento"
                           >
@@ -362,7 +422,7 @@ export default function InvestidoresList() {
                             <Button
                               variant="ghost"
                               size="icon"
-                              onClick={() => { setInvestimentoToFinalizar(inv.id); setFinalizarDialogOpen(true); }}
+                              onClick={() => handleOpenFinalizarDialog(inv.id)}
                               className="hover:text-green-500"
                               title="Finalizar Investimento"
                             >
@@ -381,7 +441,7 @@ export default function InvestidoresList() {
                           <Button
                             variant="ghost"
                             size="icon"
-                            onClick={() => { setInvestimentoToDelete(inv); setDeleteDialogOpen(true); }}
+                            onClick={() => handleOpenDeleteDialog(inv)}
                             className="hover:text-destructive"
                             title="Excluir"
                           >
