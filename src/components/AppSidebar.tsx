@@ -15,8 +15,11 @@ import {
   LogOut,
   CreditCard,
   TrendingUp,
-  FileText
+  FileText,
+  Moon,
+  Sun
 } from "lucide-react";
+import { useTheme } from "next-themes";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -98,6 +101,7 @@ export function AppSidebar() {
   const { open } = useSidebar();
   const location = useLocation();
   const { signOut } = useAuth();
+  const { theme, setTheme } = useTheme();
 
   const isItemActive = (item: MenuItem) => {
     if (item.url) {
@@ -177,8 +181,20 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
 
-        {/* Logout Button */}
-        <div className="mt-auto p-4 border-t border-sidebar-border">
+        {/* Theme Toggle & Logout */}
+        <div className="mt-auto p-4 border-t border-sidebar-border space-y-2">
+          <Button
+            onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+            variant="ghost"
+            className="w-full justify-start text-sidebar-foreground hover:text-accent hover:bg-sidebar-accent"
+          >
+            {theme === "dark" ? (
+              <Sun className="w-5 h-5 mr-2" />
+            ) : (
+              <Moon className="w-5 h-5 mr-2" />
+            )}
+            {open && <span>{theme === "dark" ? "Modo Claro" : "Modo Escuro"}</span>}
+          </Button>
           <Button
             onClick={signOut}
             variant="ghost"
