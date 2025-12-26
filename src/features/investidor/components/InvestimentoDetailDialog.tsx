@@ -20,6 +20,7 @@ import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/comp
 import { format, differenceInDays } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { useReactToPrint } from 'react-to-print';
+import { AnexosViewerDialog } from './AnexosViewerDialog';
 
 interface Investimento {
   id: string;
@@ -89,6 +90,8 @@ export function InvestimentoDetailDialog({
   const [custos, setCustos] = useState<CustoItem[]>([]);
   const [venda, setVenda] = useState<{ valor_total_venda: number; data_venda: string } | null>(null);
   const [empresa, setEmpresa] = useState<Empresa | null>(null);
+  const [anexosDialogOpen, setAnexosDialogOpen] = useState(false);
+  const [selectedCusto, setSelectedCusto] = useState<CustoItem | null>(null);
   const printRef = useRef<HTMLDivElement>(null);
 
   const handlePrint = useReactToPrint({
@@ -294,6 +297,7 @@ export function InvestimentoDetailDialog({
                       <TableHead>Favorecido</TableHead>
                       <TableHead>Data Compra</TableHead>
                       <TableHead className="text-right">Valor</TableHead>
+                      <TableHead className="w-12 print:hidden"></TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -311,32 +315,41 @@ export function InvestimentoDetailDialog({
                             : Number(custo.valor_bruto);
                           return (
                             <TableRow key={custo.id}>
-                              <TableCell>
-                                <div className="flex items-center gap-2">
-                                  {custo.descricao}
-                                  {custo.temAnexo && (
-                                    <TooltipProvider>
-                                      <Tooltip>
-                                        <TooltipTrigger asChild>
-                                          <Paperclip className="h-4 w-4 text-muted-foreground" />
-                                        </TooltipTrigger>
-                                        <TooltipContent>
-                                          <p>Possui comprovante anexado</p>
-                                        </TooltipContent>
-                                      </Tooltip>
-                                    </TooltipProvider>
-                                  )}
-                                </div>
-                              </TableCell>
+                              <TableCell>{custo.descricao}</TableCell>
                               <TableCell>{custo.pessoa?.nome || '-'}</TableCell>
                               <TableCell>{formatDate(custo.data_compra)}</TableCell>
                               <TableCell className="text-right">{formatCurrency(valorFinal)}</TableCell>
+                              <TableCell className="print:hidden">
+                                {custo.temAnexo && (
+                                  <TooltipProvider>
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <Button
+                                          variant="ghost"
+                                          size="icon"
+                                          className="h-7 w-7"
+                                          onClick={() => {
+                                            setSelectedCusto(custo);
+                                            setAnexosDialogOpen(true);
+                                          }}
+                                        >
+                                          <Paperclip className="h-4 w-4 text-muted-foreground" />
+                                        </Button>
+                                      </TooltipTrigger>
+                                      <TooltipContent>
+                                        <p>Ver comprovantes anexados</p>
+                                      </TooltipContent>
+                                    </Tooltip>
+                                  </TooltipProvider>
+                                )}
+                              </TableCell>
                             </TableRow>
                           );
                         })}
                         <TableRow className="bg-muted/30 font-semibold">
                           <TableCell colSpan={3}>Total</TableCell>
                           <TableCell className="text-right">{formatCurrency(totalCustos)}</TableCell>
+                          <TableCell className="print:hidden"></TableCell>
                         </TableRow>
                       </>
                     )}
@@ -395,6 +408,13 @@ export function InvestimentoDetailDialog({
             </div>
           </div>
         )}
+
+        <AnexosViewerDialog
+          open={anexosDialogOpen}
+          onOpenChange={setAnexosDialogOpen}
+          movimentoId={selectedCusto?.id || null}
+          descricaoMovimento={selectedCusto?.descricao}
+        />
       </DialogContent>
     </Dialog>
   );
