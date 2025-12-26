@@ -20,6 +20,7 @@ import {
   Sun
 } from "lucide-react";
 import { useTheme } from "next-themes";
+import logo from "@/assets/logo-completa-transparente.png";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -118,15 +119,12 @@ export function AppSidebar() {
       <SidebarContent className="bg-sidebar">
         <SidebarGroup>
           <div className="px-4 py-6">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg bg-accent flex items-center justify-center">
-                <span className="text-accent-foreground font-bold text-sm">VX</span>
-              </div>
-              {open && (
-                <span className="font-bold text-lg text-sidebar-foreground">
-                  VX Cloud
-                </span>
-              )}
+            <div className="flex items-center">
+              <img 
+                src={logo} 
+                alt="VX Cloud" 
+                className={open ? "h-10 w-auto" : "h-8 w-8 object-contain object-left"}
+              />
             </div>
           </div>
 
