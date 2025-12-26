@@ -132,6 +132,11 @@
     border: 1px solid color-mix(in oklch, var(--border) 50%, transparent);
   }
 
+  /* Solid card for dialogs and popovers - no transparency */
+  .glass-card {
+    @apply bg-card border border-border shadow-lg;
+  }
+
   .gradient-accent {
     background: linear-gradient(135deg, color-mix(in oklch, var(--primary) 20%, transparent), transparent);
   }
