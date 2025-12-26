@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import {
   Dialog,
@@ -16,9 +16,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from '@/components/ui/command';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { CalendarIcon, Loader2 } from 'lucide-react';
+import { CalendarIcon, Loader2, Check, ChevronsUpDown } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
@@ -44,6 +52,9 @@ interface Veiculo {
   id: number;
   placa: string | null;
   modelo: string | null;
+  fabricante: string | null;
+  motor: string | null;
+  ano: string | null;
   valor_aquisicao: number;
 }
 
@@ -63,6 +74,7 @@ export function InvestimentoDialog({
   const [loading, setLoading] = useState(false);
   const [investidores, setInvestidores] = useState<Pessoa[]>([]);
   const [veiculos, setVeiculos] = useState<Veiculo[]>([]);
+  const [veiculoPopoverOpen, setVeiculoPopoverOpen] = useState(false);
   
   const [idPessoa, setIdPessoa] = useState('');
   const [idEstoque, setIdEstoque] = useState('');
@@ -113,7 +125,9 @@ export function InvestimentoDialog({
   const loadVeiculos = async () => {
     const { data, error } = await supabase
       .from('estoque')
-      .select('id, placa, modelo, valor_aquisicao')
+      .select('id, placa, modelo, fabricante, motor, ano, valor_aquisicao')
+      .eq('status', 'Em estoque')
+      .order('fabricante')
       .order('modelo');
 
     if (error) {
@@ -123,6 +137,19 @@ export function InvestimentoDialog({
 
     setVeiculos(data || []);
   };
+
+  const formatVeiculoLabel = (veiculo: Veiculo) => {
+    const fabricante = veiculo.fabricante || '';
+    const modelo = veiculo.modelo || '';
+    const motor = veiculo.motor || '';
+    const ano = veiculo.ano || '';
+    const placa = veiculo.placa ? `(${veiculo.placa})` : '(S/P)';
+    return `${fabricante} ${modelo} ${motor} ${ano} ${placa}`.trim();
+  };
+
+  const selectedVeiculo = useMemo(() => {
+    return veiculos.find(v => String(v.id) === idEstoque);
+  }, [veiculos, idEstoque]);
 
   const formatCurrencyInput = (value: number | string) => {
     const numValue = typeof value === 'string' ? parseFloat(value) : value;
@@ -260,18 +287,54 @@ export function InvestimentoDialog({
 
           <div className="space-y-2">
             <Label htmlFor="veiculo">Veículo *</Label>
-            <Select value={idEstoque} onValueChange={setIdEstoque}>
-              <SelectTrigger id="veiculo" className="bg-background/50">
-                <SelectValue placeholder="Selecione o veículo" />
-              </SelectTrigger>
-              <SelectContent>
-                {veiculos.map((veiculo) => (
-                  <SelectItem key={veiculo.id} value={String(veiculo.id)}>
-                    {veiculo.placa || 'S/P'} - {veiculo.modelo || 'Sem modelo'}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Popover open={veiculoPopoverOpen} onOpenChange={setVeiculoPopoverOpen}>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  role="combobox"
+                  aria-expanded={veiculoPopoverOpen}
+                  className="w-full justify-between bg-background/50 font-normal"
+                >
+                  {selectedVeiculo
+                    ? formatVeiculoLabel(selectedVeiculo)
+                    : "Selecione o veículo..."}
+                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-[400px] p-0" align="start">
+                <Command>
+                  <CommandInput placeholder="Buscar veículo..." />
+                  <CommandList>
+                    <CommandEmpty>Nenhum veículo encontrado.</CommandEmpty>
+                    <CommandGroup>
+                      {veiculos.map((veiculo) => (
+                        <CommandItem
+                          key={veiculo.id}
+                          value={formatVeiculoLabel(veiculo)}
+                          onSelect={() => {
+                            setIdEstoque(String(veiculo.id));
+                            setVeiculoPopoverOpen(false);
+                          }}
+                        >
+                          <Check
+                            className={cn(
+                              "mr-2 h-4 w-4",
+                              idEstoque === String(veiculo.id) ? "opacity-100" : "opacity-0"
+                            )}
+                          />
+                          {formatVeiculoLabel(veiculo)}
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                  </CommandList>
+                </Command>
+              </PopoverContent>
+            </Popover>
+            {veiculos.length === 0 && (
+              <p className="text-xs text-muted-foreground">
+                Nenhum veículo "Em estoque" disponível.
+              </p>
+            )}
           </div>
 
           <div className="grid grid-cols-2 gap-4">
