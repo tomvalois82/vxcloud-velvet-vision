@@ -2229,6 +2229,7 @@ export type Database = {
       }
     }
     Functions: {
+      is_admin: { Args: never; Returns: boolean }
       match_documents: {
         Args: { filter?: Json; match_count?: number; query_embedding: string }
         Returns: {
