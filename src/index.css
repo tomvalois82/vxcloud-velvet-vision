@@ -123,14 +123,14 @@
 
 @layer utilities {
   .glass {
-    background: color-mix(in oklch, var(--card) 5%, transparent);
+    background: color-mix(in oklch, var(--card) 50%, transparent);
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
     border: 1px solid color-mix(in oklch, var(--border) 30%, transparent);
   }
 
   .glass-strong {
-    background: color-mix(in oklch, var(--card) 70%, transparent);
+    background: color-mix(in oklch, var(--card) 7%, transparent);
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
     border: 1px solid color-mix(in oklch, var(--border) 50%, transparent);
