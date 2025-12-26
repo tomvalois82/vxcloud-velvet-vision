@@ -41,7 +41,9 @@ import {
   ChevronLeft,
   ChevronRight,
   CheckCheck,
+  Zap,
 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -135,6 +137,7 @@ const PAGE_SIZE_OPTIONS = [25, 50, 100, 200];
 
 const FinanceiroReceber = () => {
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [movimentos, setMovimentos] = useState<Movimento[]>([]);
   const [totalCount, setTotalCount] = useState(0);
   const [contas, setContas] = useState<Conta[]>([]);
@@ -793,6 +796,15 @@ const FinanceiroReceber = () => {
                 Baixar Selecionados ({selectedMovimentos.length})
               </Button>
             )}
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => navigate("/financeiro/fast?tipo=Receber")}
+              className="rounded-full w-10 h-10 border-accent/50 hover:bg-accent/10 shadow-lg shadow-accent/20"
+              title="Lançamento Rápido"
+            >
+              <Zap className="w-5 h-5 text-accent" />
+            </Button>
             <Button className="bg-accent hover:bg-accent/90" onClick={handleNew}>
               <Plus className="w-4 h-4 mr-2" />
               Nova Receita
