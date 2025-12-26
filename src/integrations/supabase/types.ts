@@ -154,6 +154,7 @@ export type Database = {
           id: number
           idusuario: number | null
           krayincrm: boolean | null
+          link_wh_ocr: string | null
           mensagens_folowup: string[] | null
           pausa: number | null
           promptolx: string | null
@@ -186,6 +187,7 @@ export type Database = {
           id?: number
           idusuario?: number | null
           krayincrm?: boolean | null
+          link_wh_ocr?: string | null
           mensagens_folowup?: string[] | null
           pausa?: number | null
           promptolx?: string | null
@@ -218,6 +220,7 @@ export type Database = {
           id?: number
           idusuario?: number | null
           krayincrm?: boolean | null
+          link_wh_ocr?: string | null
           mensagens_folowup?: string[] | null
           pausa?: number | null
           promptolx?: string | null
