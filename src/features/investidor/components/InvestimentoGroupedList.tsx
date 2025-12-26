@@ -91,6 +91,7 @@ interface InvestimentoGroupedListProps {
   onDetail: (investimento: Investimento) => void;
   onFinalizar: (investimentoId: string) => void;
   onEstornar: (investimentoId: string) => void;
+  isSuperUser?: boolean;
 }
 
 const formatCurrency = (value: number) => {
@@ -112,6 +113,7 @@ export const InvestimentoGroupedList = ({
   onDetail,
   onFinalizar,
   onEstornar,
+  isSuperUser = false,
 }: InvestimentoGroupedListProps) => {
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
 
@@ -215,45 +217,49 @@ export const InvestimentoGroupedList = ({
       >
         <BarChart3 className="h-4 w-4" />
       </Button>
-      {inv.data_finalizado ? (
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => onEstornar(inv.id)}
-          className="hover:text-amber-500 h-8 w-8"
-          title="Estornar Finalização"
-        >
-          <Undo2 className="h-4 w-4" />
-        </Button>
-      ) : (
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => onFinalizar(inv.id)}
-          className="hover:text-green-500 h-8 w-8"
-          title="Finalizar Investimento"
-        >
-          <CheckCircle className="h-4 w-4" />
-        </Button>
+      {isSuperUser && (
+        <>
+          {inv.data_finalizado ? (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => onEstornar(inv.id)}
+              className="hover:text-amber-500 h-8 w-8"
+              title="Estornar Finalização"
+            >
+              <Undo2 className="h-4 w-4" />
+            </Button>
+          ) : (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => onFinalizar(inv.id)}
+              className="hover:text-green-500 h-8 w-8"
+              title="Finalizar Investimento"
+            >
+              <CheckCircle className="h-4 w-4" />
+            </Button>
+          )}
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => onEdit(inv)}
+            className="hover:text-accent h-8 w-8"
+            title="Editar"
+          >
+            <Pencil className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => onDelete(inv)}
+            className="hover:text-destructive h-8 w-8"
+            title="Excluir"
+          >
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        </>
       )}
-      <Button
-        variant="ghost"
-        size="icon"
-        onClick={() => onEdit(inv)}
-        className="hover:text-accent h-8 w-8"
-        title="Editar"
-      >
-        <Pencil className="h-4 w-4" />
-      </Button>
-      <Button
-        variant="ghost"
-        size="icon"
-        onClick={() => onDelete(inv)}
-        className="hover:text-destructive h-8 w-8"
-        title="Excluir"
-      >
-        <Trash2 className="h-4 w-4" />
-      </Button>
     </div>
   );
 

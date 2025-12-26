@@ -15,6 +15,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/EmptyState";
 import { Search, FileText, Wallet } from "lucide-react";
 import { CarteiraDetailDialog } from "@/features/investidor/components/CarteiraDetailDialog";
+import { useSuperUser } from "@/hooks/useSuperUser";
 
 interface InvestidorCarteira {
   id_pessoa: string;
@@ -26,6 +27,7 @@ interface InvestidorCarteira {
 }
 
 export default function InvestidoresCarteiras() {
+  const { isSuperUser } = useSuperUser();
   const [investidores, setInvestidores] = useState<InvestidorCarteira[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
@@ -181,6 +183,7 @@ export default function InvestidoresCarteiras() {
         onOpenChange={setDetailDialogOpen}
         investidor={selectedInvestidor}
         onDeleted={fetchInvestidores}
+        isSuperUser={isSuperUser}
       />
     </div>
   );

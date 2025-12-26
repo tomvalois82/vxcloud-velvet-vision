@@ -71,6 +71,7 @@ interface CarteiraDetailDialogProps {
   onOpenChange: (open: boolean) => void;
   investidor: InvestidorCarteira | null;
   onDeleted?: () => void;
+  isSuperUser?: boolean;
 }
 
 export function CarteiraDetailDialog({
@@ -78,6 +79,7 @@ export function CarteiraDetailDialog({
   onOpenChange,
   investidor,
   onDeleted,
+  isSuperUser = false,
 }: CarteiraDetailDialogProps) {
   const { toast } = useToast();
   const [lancamentos, setLancamentos] = useState<LancamentoCarteira[]>([]);
@@ -401,36 +403,38 @@ export function CarteiraDetailDialog({
                         </span>
                       </TableCell>
                       <TableCell>
-                        <div className="flex items-center gap-1">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-7 w-7 hover:text-primary"
-                            onClick={() => {
-                              // Valor positivo = Pagar, negativo = Receber
-                              const tipo = lancamento.valor >= 0 ? "Pagar" : "Receber";
-                              setMovimentoDefaultTipo(tipo);
-                              setMovimentoDefaultValor(Math.abs(lancamento.valor));
-                              setMovimentoDefaultPessoaId(investidor?.id_pessoa || null);
-                              setMovimentoDialogOpen(true);
-                            }}
-                            title="Gerar Título Financeiro"
-                          >
-                            <Receipt className="h-3.5 w-3.5" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-7 w-7 text-destructive hover:text-destructive"
-                            onClick={() => {
-                              setLancamentoToDelete(lancamento);
-                              setDeleteDialogOpen(true);
-                            }}
-                            title="Excluir"
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </Button>
-                        </div>
+                        {isSuperUser && (
+                          <div className="flex items-center gap-1">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7 hover:text-primary"
+                              onClick={() => {
+                                // Valor positivo = Pagar, negativo = Receber
+                                const tipo = lancamento.valor >= 0 ? "Pagar" : "Receber";
+                                setMovimentoDefaultTipo(tipo);
+                                setMovimentoDefaultValor(Math.abs(lancamento.valor));
+                                setMovimentoDefaultPessoaId(investidor?.id_pessoa || null);
+                                setMovimentoDialogOpen(true);
+                              }}
+                              title="Gerar Título Financeiro"
+                            >
+                              <Receipt className="h-3.5 w-3.5" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7 text-destructive hover:text-destructive"
+                              onClick={() => {
+                                setLancamentoToDelete(lancamento);
+                                setDeleteDialogOpen(true);
+                              }}
+                              title="Excluir"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
+                          </div>
+                        )}
                       </TableCell>
                     </TableRow>
                   ))

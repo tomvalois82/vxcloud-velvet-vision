@@ -36,6 +36,7 @@ import { InvestimentoDialog } from '@/features/investidor/components/Investiment
 import { InvestimentoDetailDialog } from '@/features/investidor/components/InvestimentoDetailDialog';
 import { FinalizarInvestimentoDialog } from '@/features/investidor/components/FinalizarInvestimentoDialog';
 import { InvestimentoGroupedList, GroupByOption } from '@/features/investidor/components/InvestimentoGroupedList';
+import { useSuperUser } from '@/hooks/useSuperUser';
 
 interface Investimento {
   id: string;
@@ -75,6 +76,7 @@ interface InvestimentoComCalculos extends Investimento {
 type StatusFilter = "todos" | "ativos" | "finalizados";
 
 export default function InvestidoresList() {
+  const { isSuperUser } = useSuperUser();
   const [investimentos, setInvestimentos] = useState<InvestimentoComCalculos[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -268,10 +270,12 @@ export default function InvestidoresList() {
         title="Investidores"
         description="Gerencie os investimentos em veículos"
         action={
-          <Button onClick={() => { setSelectedInvestimento(null); setDialogOpen(true); }}>
-            <Plus className="h-4 w-4 mr-2" />
-            Novo Investimento
-          </Button>
+          isSuperUser ? (
+            <Button onClick={() => { setSelectedInvestimento(null); setDialogOpen(true); }}>
+              <Plus className="h-4 w-4 mr-2" />
+              Novo Investimento
+            </Button>
+          ) : undefined
         }
       />
 
@@ -331,6 +335,7 @@ export default function InvestidoresList() {
             onDetail={handleOpenDetailDialog}
             onFinalizar={handleOpenFinalizarDialog}
             onEstornar={handleEstornar}
+            isSuperUser={isSuperUser}
           />
         </Card>
       ) : (
@@ -408,45 +413,49 @@ export default function InvestidoresList() {
                           >
                             <BarChart3 className="h-4 w-4" />
                           </Button>
-                          {inv.data_finalizado ? (
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => handleEstornar(inv.id)}
-                              className="hover:text-amber-500"
-                              title="Estornar Finalização"
-                            >
-                              <Undo2 className="h-4 w-4" />
-                            </Button>
-                          ) : (
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => handleOpenFinalizarDialog(inv.id)}
-                              className="hover:text-green-500"
-                              title="Finalizar Investimento"
-                            >
-                              <CheckCircle className="h-4 w-4" />
-                            </Button>
+                          {isSuperUser && (
+                            <>
+                              {inv.data_finalizado ? (
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => handleEstornar(inv.id)}
+                                  className="hover:text-amber-500"
+                                  title="Estornar Finalização"
+                                >
+                                  <Undo2 className="h-4 w-4" />
+                                </Button>
+                              ) : (
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => handleOpenFinalizarDialog(inv.id)}
+                                  className="hover:text-green-500"
+                                  title="Finalizar Investimento"
+                                >
+                                  <CheckCircle className="h-4 w-4" />
+                                </Button>
+                              )}
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => handleEdit(inv)}
+                                className="hover:text-accent"
+                                title="Editar"
+                              >
+                                <Pencil className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => handleOpenDeleteDialog(inv)}
+                                className="hover:text-destructive"
+                                title="Excluir"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </>
                           )}
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleEdit(inv)}
-                            className="hover:text-accent"
-                            title="Editar"
-                          >
-                            <Pencil className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleOpenDeleteDialog(inv)}
-                            className="hover:text-destructive"
-                            title="Excluir"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
                         </div>
                       </TableCell>
                     </TableRow>
