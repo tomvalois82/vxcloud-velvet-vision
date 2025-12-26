@@ -33,7 +33,7 @@
     --chart-3: 234 89% 73%;
     --chart-4: 258 89% 66%;
     --chart-5: 240 3% 46%;
-    --sidebar-background: oklch(0.8687 0.0043 56.3660);
+    --sidebar-background: oklch(0.8687 0.0043 56.366);
     --sidebar-foreground: 240 5% 10%;
     --sidebar-primary: 258 89% 66%;
     --sidebar-primary-foreground: 250 100% 97%;
@@ -54,9 +54,13 @@
     --shadow-xl: 0 1px 3px 0px hsl(0 0% 0% / 0.1), 0 8px 10px -1px hsl(0 0% 0% / 0.1);
     --shadow-2xl: 0 1px 3px 0px hsl(0 0% 0% / 0.25);
     --sidebar: 0 0% 98%;
-    --font-sans: 'Montserrat', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif;
-    --font-serif: 'Cormorant Garamond', ui-serif, Georgia, Cambria, 'Times New Roman', Times, serif;
-    --font-mono: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
+    --font-sans:
+      "Montserrat", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue",
+      Arial, "Noto Sans", sans-serif;
+    --font-serif: "Cormorant Garamond", ui-serif, Georgia, Cambria, "Times New Roman", Times, serif;
+    --font-mono:
+      "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New",
+      monospace;
     --tracking-normal: 0em;
     --spacing: 0.25rem;
   }
@@ -119,7 +123,7 @@
 
 @layer utilities {
   .glass {
-    background: color-mix(in oklch, var(--card) 50%, transparent);
+    background: color-mix(in oklch, var(--card) 100%, transparent);
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
     border: 1px solid color-mix(in oklch, var(--border) 30%, transparent);
