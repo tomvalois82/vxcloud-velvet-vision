@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { z } from 'zod';
 import { Loader2 } from 'lucide-react';
+import logo from '@/assets/logo-completa-transparente.png';
 
 const loginSchema = z.object({
   email: z.string().trim().email({ message: "E-mail inválido" }),
@@ -74,47 +75,66 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background p-6">
-      <div className="w-full max-w-md animate-fade-in">
-        <div className="glass rounded-lg p-8">
+    <div className="min-h-screen flex items-center justify-center relative overflow-hidden">
+      {/* Black background layer */}
+      <div className="absolute inset-0 bg-black" />
+      
+      {/* GIF Background */}
+      <div 
+        className="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-70"
+        style={{ backgroundImage: 'url(/images/login-bg.gif)' }}
+      />
+
+      {/* Login Card with Glassmorphism */}
+      <div className="relative z-10 w-full max-w-md mx-4 animate-fade-in">
+        <div 
+          className="rounded-2xl p-8 border border-white/10"
+          style={{
+            background: 'rgba(15, 15, 25, 0.75)',
+            backdropFilter: 'blur(20px)',
+            WebkitBackdropFilter: 'blur(20px)',
+            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.05) inset'
+          }}
+        >
           {/* Logo */}
           <div className="flex items-center justify-center mb-8">
-            <div className="w-16 h-16 rounded-lg bg-accent flex items-center justify-center">
-              <span className="text-accent-foreground font-bold text-2xl">VX</span>
-            </div>
+            <img 
+              src={logo} 
+              alt="VX Cloud" 
+              className="h-14 w-auto drop-shadow-lg"
+            />
           </div>
 
-          {/* Title */}
+          {/* Subtitle */}
           <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold text-foreground mb-2">VX Cloud</h1>
-            <p className="text-muted-foreground">Entre com sua conta</p>
+            <p className="text-white/60 text-sm">Entre com sua conta</p>
           </div>
 
           {/* Form */}
-          <form onSubmit={handleSubmit} className="space-y-6">
+          <form onSubmit={handleSubmit} className="space-y-5">
             <div className="space-y-2">
-              <Label htmlFor="email" className="text-foreground">E-mail</Label>
+              <Label htmlFor="email" className="text-white/80 text-sm">E-mail</Label>
               <Input
                 id="email"
                 type="email"
                 placeholder="seu@email.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="bg-background/50 border-border text-foreground"
+                className="bg-white/5 border-white/10 text-white placeholder:text-white/30 focus:border-primary/50 focus:ring-primary/20 h-11"
                 disabled={loading}
                 required
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="password" className="text-foreground">Senha</Label>
+              <Label htmlFor="password" className="text-white/80 text-sm">Senha</Label>
               <Input
                 id="password"
                 type="password"
                 placeholder="••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="bg-background/50 border-border text-foreground"
+                className="bg-white/5 border-white/10 text-white placeholder:text-white/30 focus:border-primary/50 focus:ring-primary/20 h-11"
                 disabled={loading}
                 required
               />
@@ -122,7 +142,7 @@ const Login = () => {
 
             <Button
               type="submit"
-              className="w-full bg-accent hover:bg-accent/90 text-accent-foreground"
+              className="w-full h-11 mt-2 bg-gradient-to-r from-primary via-purple-500 to-primary hover:opacity-90 text-white font-medium transition-all duration-300"
               disabled={loading}
             >
               {loading ? (
