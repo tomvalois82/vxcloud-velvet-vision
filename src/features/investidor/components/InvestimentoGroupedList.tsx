@@ -1,33 +1,10 @@
 import { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
-import {
-  Pencil,
-  Trash2,
-  ChevronDown,
-  ChevronRight,
-  TrendingUp,
-  TrendingDown,
-  BarChart3,
-  CheckCircle,
-  Undo2,
-} from "lucide-react";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Pencil, Trash2, ChevronDown, ChevronRight, TrendingUp, TrendingDown, BarChart3, CheckCircle, Undo2 } from "lucide-react";
 import { cn } from "@/lib/utils";
-
 export type GroupByOption = "veiculo" | "investidor" | "none";
-
 interface Investimento {
   id: string;
   id_pessoa: string;
@@ -59,7 +36,6 @@ interface Investimento {
   rentabilidade_proporcional: number;
   lucro_percentual: number;
 }
-
 interface VeiculoGroup {
   id: number;
   placa: string;
@@ -73,7 +49,6 @@ interface VeiculoGroup {
   lucroGeral: number;
   investimentos: Investimento[];
 }
-
 interface InvestidorGroup {
   id: string;
   nome: string;
@@ -82,7 +57,6 @@ interface InvestidorGroup {
   lucroTotal: number;
   investimentos: Investimento[];
 }
-
 interface InvestimentoGroupedListProps {
   investimentos: Investimento[];
   groupBy: GroupByOption;
@@ -93,18 +67,15 @@ interface InvestimentoGroupedListProps {
   onEstornar: (investimentoId: string) => void;
   isSuperUser?: boolean;
 }
-
 const formatCurrency = (value: number) => {
   return new Intl.NumberFormat("pt-BR", {
     style: "currency",
-    currency: "BRL",
+    currency: "BRL"
   }).format(value);
 };
-
 const formatPercent = (value: number) => {
   return `${value.toFixed(2)}%`;
 };
-
 export const InvestimentoGroupedList = ({
   investimentos,
   groupBy,
@@ -113,10 +84,9 @@ export const InvestimentoGroupedList = ({
   onDetail,
   onFinalizar,
   onEstornar,
-  isSuperUser = false,
+  isSuperUser = false
 }: InvestimentoGroupedListProps) => {
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
-
   const parseValorVenda = (valor: string | null | undefined): number => {
     if (!valor) return 0;
     return parseFloat(valor.replace(/[^\d,.-]/g, "").replace(",", ".")) || 0;
@@ -125,20 +95,16 @@ export const InvestimentoGroupedList = ({
   // Group by Veículo
   const groupedByVeiculo = useMemo(() => {
     if (groupBy !== "veiculo") return [];
-
     const groups = new Map<number, VeiculoGroup>();
-
-    investimentos.forEach((inv) => {
+    investimentos.forEach(inv => {
       if (!inv.veiculo) return;
       const veiculoId = inv.veiculo.id;
-
       if (!groups.has(veiculoId)) {
         const valorVenda = parseValorVenda(inv.veiculo.valor);
         const valorCompra = inv.veiculo.valor_aquisicao || 0;
         const custosTotal = inv.custos_veiculo || 0;
         const rentabilidadeGeral = valorVenda - valorCompra - custosTotal;
-        const lucroGeral = valorCompra > 0 ? (rentabilidadeGeral / valorCompra) * 100 : 0;
-
+        const lucroGeral = valorCompra > 0 ? rentabilidadeGeral / valorCompra * 100 : 0;
         groups.set(veiculoId, {
           id: veiculoId,
           placa: inv.veiculo.placa || "S/P",
@@ -150,25 +116,20 @@ export const InvestimentoGroupedList = ({
           custosTotal,
           rentabilidadeGeral,
           lucroGeral,
-          investimentos: [],
+          investimentos: []
         });
       }
-
       groups.get(veiculoId)!.investimentos.push(inv);
     });
-
     return Array.from(groups.values());
   }, [investimentos, groupBy]);
 
   // Group by Investidor
   const groupedByInvestidor = useMemo(() => {
     if (groupBy !== "investidor") return [];
-
     const groups = new Map<string, InvestidorGroup>();
-
-    investimentos.forEach((inv) => {
+    investimentos.forEach(inv => {
       const pessoaId = inv.id_pessoa;
-
       if (!groups.has(pessoaId)) {
         groups.set(pessoaId, {
           id: pessoaId,
@@ -176,10 +137,9 @@ export const InvestimentoGroupedList = ({
           totalInvestido: 0,
           rentabilidadeTotal: 0,
           lucroTotal: 0,
-          investimentos: [],
+          investimentos: []
         });
       }
-
       const group = groups.get(pessoaId)!;
       group.investimentos.push(inv);
       group.totalInvestido += inv.valor_investido;
@@ -187,15 +147,11 @@ export const InvestimentoGroupedList = ({
     });
 
     // Calculate lucro total for each group
-    groups.forEach((group) => {
-      group.lucroTotal = group.totalInvestido > 0
-        ? (group.rentabilidadeTotal / group.totalInvestido) * 100
-        : 0;
+    groups.forEach(group => {
+      group.lucroTotal = group.totalInvestido > 0 ? group.rentabilidadeTotal / group.totalInvestido * 100 : 0;
     });
-
     return Array.from(groups.values());
   }, [investimentos, groupBy]);
-
   const toggleGroup = (groupKey: string) => {
     const newCollapsed = new Set(collapsedGroups);
     if (newCollapsed.has(groupKey)) {
@@ -205,93 +161,40 @@ export const InvestimentoGroupedList = ({
     }
     setCollapsedGroups(newCollapsed);
   };
-
-  const renderActionButtons = (inv: Investimento) => (
-    <div className="flex items-center gap-1">
-      <Button
-        variant="ghost"
-        size="icon"
-        onClick={() => onDetail(inv)}
-        className="hover:text-accent h-8 w-8"
-        title="Detalhamento do Investimento"
-      >
+  const renderActionButtons = (inv: Investimento) => <div className="flex items-center gap-1">
+      <Button variant="ghost" size="icon" onClick={() => onDetail(inv)} className="hover:text-accent h-8 w-8" title="Detalhamento do Investimento">
         <BarChart3 className="h-4 w-4" />
       </Button>
-      {isSuperUser && (
-        <>
-          {inv.data_finalizado ? (
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => onEstornar(inv.id)}
-              className="hover:text-amber-500 h-8 w-8"
-              title="Estornar Finalização"
-            >
+      {isSuperUser && <>
+          {inv.data_finalizado ? <Button variant="ghost" size="icon" onClick={() => onEstornar(inv.id)} className="hover:text-amber-500 h-8 w-8" title="Estornar Finalização">
               <Undo2 className="h-4 w-4" />
-            </Button>
-          ) : (
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => onFinalizar(inv.id)}
-              className="hover:text-green-500 h-8 w-8"
-              title="Finalizar Investimento"
-            >
+            </Button> : <Button variant="ghost" size="icon" onClick={() => onFinalizar(inv.id)} className="hover:text-green-500 h-8 w-8" title="Finalizar Investimento">
               <CheckCircle className="h-4 w-4" />
-            </Button>
-          )}
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => onEdit(inv)}
-            className="hover:text-accent h-8 w-8"
-            title="Editar"
-          >
+            </Button>}
+          <Button variant="ghost" size="icon" onClick={() => onEdit(inv)} className="hover:text-accent h-8 w-8" title="Editar">
             <Pencil className="h-4 w-4" />
           </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => onDelete(inv)}
-            className="hover:text-destructive h-8 w-8"
-            title="Excluir"
-          >
+          <Button variant="ghost" size="icon" onClick={() => onDelete(inv)} className="hover:text-destructive h-8 w-8" title="Excluir">
             <Trash2 className="h-4 w-4" />
           </Button>
-        </>
-      )}
-    </div>
-  );
-
+        </>}
+    </div>;
   if (investimentos.length === 0) {
-    return (
-      <div className="text-center text-muted-foreground py-8">
+    return <div className="text-center text-muted-foreground py-8">
         Nenhum investimento encontrado
-      </div>
-    );
+      </div>;
   }
 
   // Group by Veículo View
   if (groupBy === "veiculo") {
-    return (
-      <div className="space-y-2">
-        {groupedByVeiculo.map((group) => {
-          const isCollapsed = collapsedGroups.has(String(group.id));
-
-          return (
-            <Collapsible
-              key={group.id}
-              open={!isCollapsed}
-              onOpenChange={() => toggleGroup(String(group.id))}
-            >
+    return <div className="space-y-2">
+        {groupedByVeiculo.map(group => {
+        const isCollapsed = collapsedGroups.has(String(group.id));
+        return <Collapsible key={group.id} open={!isCollapsed} onOpenChange={() => toggleGroup(String(group.id))}>
               <CollapsibleTrigger asChild>
                 <div className="flex items-center justify-between bg-muted/30 hover:bg-muted/50 px-4 py-3 rounded-lg cursor-pointer transition-colors border border-border/30">
                   <div className="flex items-center gap-3">
-                    {isCollapsed ? (
-                      <ChevronRight className="h-5 w-5 text-muted-foreground" />
-                    ) : (
-                      <ChevronDown className="h-5 w-5 text-muted-foreground" />
-                    )}
+                    {isCollapsed ? <ChevronRight className="h-5 w-5 text-muted-foreground" /> : <ChevronDown className="h-5 w-5 text-muted-foreground" />}
                     <span className="font-semibold text-foreground">
                       {group.modelo} {group.motor} {group.ano} ({group.placa})
                     </span>
@@ -330,12 +233,11 @@ export const InvestimentoGroupedList = ({
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {group.investimentos.map((inv) => (
-                        <TableRow key={inv.id} className="border-border/30 hover:bg-muted/30">
+                      {group.investimentos.map(inv => <TableRow key={inv.id} className="border-border/30 hover:bg-muted/30">
                           <TableCell className="font-medium">{inv.pessoa?.nome || "-"}</TableCell>
                           <TableCell className="text-right">{formatCurrency(inv.valor_investido)}</TableCell>
                           <TableCell className="text-center">
-                            <span className="px-2 py-1 rounded-full bg-accent/20 text-accent text-sm">
+                            <span className="px-2 py-1 rounded-full text-sm text-primary bg-accent">
                               {inv.percentual_investido}%
                             </span>
                           </TableCell>
@@ -346,51 +248,33 @@ export const InvestimentoGroupedList = ({
                           </TableCell>
                           <TableCell className="text-center">
                             <div className="flex items-center justify-center gap-1">
-                              {inv.lucro_percentual >= 0 ? (
-                                <TrendingUp className="h-4 w-4 text-green-500" />
-                              ) : (
-                                <TrendingDown className="h-4 w-4 text-red-500" />
-                              )}
+                              {inv.lucro_percentual >= 0 ? <TrendingUp className="h-4 w-4 text-green-500" /> : <TrendingDown className="h-4 w-4 text-red-500" />}
                               <span className={inv.lucro_percentual >= 0 ? "text-green-500" : "text-red-500"}>
                                 {formatPercent(inv.lucro_percentual)}
                               </span>
                             </div>
                           </TableCell>
                           <TableCell>{renderActionButtons(inv)}</TableCell>
-                        </TableRow>
-                      ))}
+                        </TableRow>)}
                     </TableBody>
                   </Table>
                 </div>
               </CollapsibleContent>
-            </Collapsible>
-          );
-        })}
-      </div>
-    );
+            </Collapsible>;
+      })}
+      </div>;
   }
 
   // Group by Investidor View
   if (groupBy === "investidor") {
-    return (
-      <div className="space-y-2">
-        {groupedByInvestidor.map((group) => {
-          const isCollapsed = collapsedGroups.has(group.id);
-
-          return (
-            <Collapsible
-              key={group.id}
-              open={!isCollapsed}
-              onOpenChange={() => toggleGroup(group.id)}
-            >
+    return <div className="space-y-2">
+        {groupedByInvestidor.map(group => {
+        const isCollapsed = collapsedGroups.has(group.id);
+        return <Collapsible key={group.id} open={!isCollapsed} onOpenChange={() => toggleGroup(group.id)}>
               <CollapsibleTrigger asChild>
                 <div className="flex items-center justify-between bg-muted/30 hover:bg-muted/50 px-4 py-3 rounded-lg cursor-pointer transition-colors border border-border/30">
                   <div className="flex items-center gap-3">
-                    {isCollapsed ? (
-                      <ChevronRight className="h-5 w-5 text-muted-foreground" />
-                    ) : (
-                      <ChevronDown className="h-5 w-5 text-muted-foreground" />
-                    )}
+                    {isCollapsed ? <ChevronRight className="h-5 w-5 text-muted-foreground" /> : <ChevronDown className="h-5 w-5 text-muted-foreground" />}
                     <span className="font-semibold text-foreground">{group.nome}</span>
                   </div>
                   <div className="flex items-center gap-4 text-sm">
@@ -423,14 +307,10 @@ export const InvestimentoGroupedList = ({
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {group.investimentos.map((inv) => {
-                        const valorVenda = parseValorVenda(inv.veiculo?.valor);
-                        const veiculoLabel = inv.veiculo
-                          ? `${inv.veiculo.modelo || ""} ${inv.veiculo.ano || ""} (${inv.veiculo.placa || "S/P"})`
-                          : "-";
-
-                        return (
-                          <TableRow key={inv.id} className="border-border/30 hover:bg-muted/30">
+                      {group.investimentos.map(inv => {
+                    const valorVenda = parseValorVenda(inv.veiculo?.valor);
+                    const veiculoLabel = inv.veiculo ? `${inv.veiculo.modelo || ""} ${inv.veiculo.ano || ""} (${inv.veiculo.placa || "S/P"})` : "-";
+                    return <TableRow key={inv.id} className="border-border/30 hover:bg-muted/30">
                             <TableCell className="font-medium">{veiculoLabel}</TableCell>
                             <TableCell className="text-right">{formatCurrency(inv.veiculo?.valor_aquisicao || 0)}</TableCell>
                             <TableCell className="text-right">{formatCurrency(valorVenda)}</TableCell>
@@ -446,29 +326,22 @@ export const InvestimentoGroupedList = ({
                             </TableCell>
                             <TableCell className="text-center">
                               <div className="flex items-center justify-center gap-1">
-                                {inv.lucro_percentual >= 0 ? (
-                                  <TrendingUp className="h-4 w-4 text-green-500" />
-                                ) : (
-                                  <TrendingDown className="h-4 w-4 text-red-500" />
-                                )}
+                                {inv.lucro_percentual >= 0 ? <TrendingUp className="h-4 w-4 text-green-500" /> : <TrendingDown className="h-4 w-4 text-red-500" />}
                                 <span className={inv.lucro_percentual >= 0 ? "text-green-500" : "text-red-500"}>
                                   {formatPercent(inv.lucro_percentual)}
                                 </span>
                               </div>
                             </TableCell>
                             <TableCell>{renderActionButtons(inv)}</TableCell>
-                          </TableRow>
-                        );
-                      })}
+                          </TableRow>;
+                  })}
                     </TableBody>
                   </Table>
                 </div>
               </CollapsibleContent>
-            </Collapsible>
-          );
-        })}
-      </div>
-    );
+            </Collapsible>;
+      })}
+      </div>;
   }
 
   // No grouping - return null, the parent will handle this case
