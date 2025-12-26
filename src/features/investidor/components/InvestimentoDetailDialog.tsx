@@ -15,7 +15,8 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { Loader2, Printer } from 'lucide-react';
+import { Loader2, Printer, Paperclip } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
 import { format, differenceInDays } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { useReactToPrint } from 'react-to-print';
@@ -56,6 +57,7 @@ interface CustoItem {
   pessoa?: {
     nome: string;
   } | null;
+  temAnexo?: boolean;
 }
 
 interface Empresa {
@@ -122,7 +124,30 @@ export function InvestimentoDetailDialog({
         .eq('tipo_movimento', 'Pagar')
         .order('data_compra', { ascending: false });
 
-      setCustos(custosData || []);
+      // Buscar IDs de movimentos que possuem anexos
+      const movimentoIds = (custosData || []).map(c => c.id);
+      let anexosMap: Record<string, boolean> = {};
+      
+      if (movimentoIds.length > 0) {
+        const { data: anexosData } = await supabase
+          .from('vx_fin_anexo')
+          .select('id_movimento')
+          .in('id_movimento', movimentoIds);
+        
+        if (anexosData) {
+          anexosData.forEach(a => {
+            anexosMap[a.id_movimento] = true;
+          });
+        }
+      }
+
+      // Mapear custos com informação de anexo
+      const custosComAnexo = (custosData || []).map(c => ({
+        ...c,
+        temAnexo: !!anexosMap[c.id]
+      }));
+
+      setCustos(custosComAnexo);
 
       // Buscar venda do veículo (se existir)
       const { data: vendaData } = await supabase
@@ -274,7 +299,7 @@ export function InvestimentoDetailDialog({
                   <TableBody>
                     {custos.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={4} className="text-center text-muted-foreground py-8">
+                        <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
                           Nenhum custo registrado para este veículo
                         </TableCell>
                       </TableRow>
@@ -286,7 +311,23 @@ export function InvestimentoDetailDialog({
                             : Number(custo.valor_bruto);
                           return (
                             <TableRow key={custo.id}>
-                              <TableCell>{custo.descricao}</TableCell>
+                              <TableCell>
+                                <div className="flex items-center gap-2">
+                                  {custo.descricao}
+                                  {custo.temAnexo && (
+                                    <TooltipProvider>
+                                      <Tooltip>
+                                        <TooltipTrigger asChild>
+                                          <Paperclip className="h-4 w-4 text-muted-foreground" />
+                                        </TooltipTrigger>
+                                        <TooltipContent>
+                                          <p>Possui comprovante anexado</p>
+                                        </TooltipContent>
+                                      </Tooltip>
+                                    </TooltipProvider>
+                                  )}
+                                </div>
+                              </TableCell>
                               <TableCell>{custo.pessoa?.nome || '-'}</TableCell>
                               <TableCell>{formatDate(custo.data_compra)}</TableCell>
                               <TableCell className="text-right">{formatCurrency(valorFinal)}</TableCell>
