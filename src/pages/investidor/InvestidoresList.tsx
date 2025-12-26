@@ -297,7 +297,7 @@ export default function InvestidoresList() {
                         {formatCurrency(inv.valor_investido)}
                       </TableCell>
                       <TableCell className="text-center">
-                        <span className="px-2 py-1 rounded-full text-sm text-primary bg-secondary">
+                        <span className="px-2 py-1 rounded-full text-sm bg-secondary text-accent">
                           {inv.percentual_investido}%
                         </span>
                       </TableCell>
