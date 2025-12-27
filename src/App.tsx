@@ -32,6 +32,7 @@ import FinanceiroDRE from "./pages/financeiro/FinanceiroDRE";
 import FinanceiroFast from "./pages/financeiro/FinanceiroFast";
 import Configuracoes from "./pages/configuracoes/Configuracoes";
 import FormasPagamento from "./pages/configuracoes/FormasPagamento";
+import Usuarios from "./pages/configuracoes/Usuarios";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -82,6 +83,7 @@ const App = () => (
                               <Route path="/financeiro/fast" element={<FinanceiroFast />} />
                               <Route path="/configuracoes" element={<Configuracoes />} />
                               <Route path="/configuracoes/formas-pagamento" element={<FormasPagamento />} />
+                              <Route path="/configuracoes/usuarios" element={<Usuarios />} />
                               <Route path="*" element={<NotFound />} />
                             </Routes>
                           </main>

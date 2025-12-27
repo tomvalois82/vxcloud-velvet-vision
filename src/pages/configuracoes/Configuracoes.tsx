@@ -17,7 +17,7 @@ const Configuracoes = () => {
       icon: Users,
       title: "Usuários",
       description: "Gerenciar usuários e permissões",
-      path: null,
+      path: "/configuracoes/usuarios",
     },
     {
       icon: CreditCard,
