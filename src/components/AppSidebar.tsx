@@ -151,7 +151,7 @@ export function AppSidebar() {
                                   className="flex items-center gap-3 transition-all hover:text-accent"
                                   activeClassName="text-accent font-medium"
                                 >
-                                  <subItem.icon className="w-4 h-4" />
+                                  <subItem.icon className="w-5 h-5" />
                                   <span>{subItem.title}</span>
                                 </NavLink>
                               </SidebarMenuSubButton>
