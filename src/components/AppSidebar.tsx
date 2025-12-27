@@ -1,9 +1,10 @@
-import { LayoutDashboard, Car, Users, ShoppingCart, Wallet, Settings, Package, BarChart3, ArrowDownCircle, ArrowUpCircle, ArrowLeftRight, FolderTree, ChevronDown, LogOut, CreditCard, TrendingUp, FileText, Moon, Sun } from "lucide-react";
+import { LayoutDashboard, Car, Users, ShoppingCart, Wallet, Settings, Package, BarChart3, ArrowDownCircle, ArrowUpCircle, ArrowLeftRight, FolderTree, ChevronDown, LogOut, CreditCard, TrendingUp, FileText, Moon, Sun, Building2 } from "lucide-react";
 import { useTheme } from "next-themes";
 import logo from "@/assets/logo-completa-transparente.png";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import { useSuperUser } from "@/hooks/useSuperUser";
 import { Button } from "@/components/ui/button";
 import { Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarMenuSub, SidebarMenuSubItem, SidebarMenuSubButton, useSidebar } from "@/components/ui/sidebar";
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/components/ui/collapsible";
@@ -110,6 +111,12 @@ const menuItems: MenuItem[] = [{
   url: "/configuracoes",
   icon: Settings
 }];
+
+const superUserMenuItems: MenuItem[] = [{
+  title: "Empresas",
+  url: "/configuracoes/empresas",
+  icon: Building2
+}];
 export function AppSidebar() {
   const {
     open
@@ -122,6 +129,7 @@ export function AppSidebar() {
     theme,
     setTheme
   } = useTheme();
+  const { isSuperUser } = useSuperUser();
   const isItemActive = (item: MenuItem) => {
     if (item.url) {
       return location.pathname === item.url;
@@ -173,6 +181,27 @@ export function AppSidebar() {
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
+
+        {/* Super User Menu */}
+        {isSuperUser && (
+          <SidebarGroup>
+            <SidebarGroupLabel>Super Usuário</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {superUserMenuItems.map(item => (
+                  <SidebarMenuItem key={item.title}>
+                    <SidebarMenuButton asChild tooltip={item.title}>
+                      <NavLink to={item.url!} className="flex items-center gap-3 transition-all hover:text-accent" activeClassName="text-accent font-medium">
+                        <item.icon className="w-5 h-5" />
+                        <span>{item.title}</span>
+                      </NavLink>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
 
         {/* Theme Toggle & Logout */}
         <div className="mt-auto p-4 border-t border-sidebar-border space-y-2">
