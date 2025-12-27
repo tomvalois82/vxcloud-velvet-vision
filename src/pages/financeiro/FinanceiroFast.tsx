@@ -29,6 +29,35 @@ import { subMonths, format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { maskCurrency } from "@/features/estoque/utils/masks";
 import { MovimentoDialog } from "@/features/financeiro/components/MovimentoDialog";
+import imageCompression from "browser-image-compression";
+
+// Aggressive compression options for OCR - smallest possible while legible
+const OCR_COMPRESSION_OPTIONS = {
+  maxSizeMB: 0.3, // Max 300KB
+  maxWidthOrHeight: 1200, // Enough for OCR legibility
+  useWebWorker: true,
+  fileType: "image/jpeg" as const,
+  initialQuality: 0.6, // Lower quality for smaller size
+};
+
+// Helper function to compress image for OCR
+async function compressImageForOCR(file: File): Promise<File> {
+  // Only compress images, not PDFs
+  if (!file.type.startsWith("image/")) {
+    return file;
+  }
+
+  try {
+    console.log(`Original file size: ${(file.size / 1024).toFixed(2)} KB`);
+    const compressedFile = await imageCompression(file, OCR_COMPRESSION_OPTIONS);
+    console.log(`Compressed file size: ${(compressedFile.size / 1024).toFixed(2)} KB`);
+    return compressedFile;
+  } catch (error) {
+    console.error("Error compressing image:", error);
+    // Return original file if compression fails
+    return file;
+  }
+}
 
 interface VeiculoOption {
   id: number;
@@ -278,6 +307,9 @@ const FinanceiroFast = () => {
     setMovimentoResult(null);
 
     try {
+      // Compress image before sending (if it's an image)
+      const fileToSend = await compressImageForOCR(file);
+
       // Convert file to base64
       const base64 = await new Promise<string>((resolve, reject) => {
         const reader = new FileReader();
@@ -288,7 +320,7 @@ const FinanceiroFast = () => {
           resolve(base64Data);
         };
         reader.onerror = reject;
-        reader.readAsDataURL(file);
+        reader.readAsDataURL(fileToSend);
       });
 
       const payload = {
