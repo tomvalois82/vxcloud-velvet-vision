@@ -300,11 +300,11 @@ const FinanceiroFast = () => {
 
       // Parse response to get movement ID
       const responseData = await response.json();
-      const movimentoId = responseData?.id || responseData;
+      const movimentoId = responseData?.id_movimento;
 
-      // Check if ID is valid
-      if (!movimentoId || movimentoId === "" || movimentoId === null) {
-        throw new Error("Nenhum ID retornado pelo servidor.");
+      // Check if ID is valid (webhook returns "erro" on failure)
+      if (!movimentoId || movimentoId === "" || movimentoId === "erro") {
+        throw new Error("Erro ao processar o lançamento. Tente novamente.");
       }
 
       // Fetch movement details from database
