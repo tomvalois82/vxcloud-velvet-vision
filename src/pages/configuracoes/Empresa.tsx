@@ -79,7 +79,7 @@ const Empresa = () => {
     if (field === 'cep') {
       formattedValue = maskCEP(value);
     } else if (field === 'cnpj') {
-      formattedValue = empresa.tipo_pessoa === 'PJ' ? maskCNPJ(value) : maskCPF(value);
+      formattedValue = empresa.tipo_pessoa === 'Pessoa Jurídica' ? maskCNPJ(value) : maskCPF(value);
     } else if (field === 'telefone') {
       formattedValue = maskPhone(value);
     }
@@ -276,18 +276,18 @@ const Empresa = () => {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="PJ">Pessoa Jurídica</SelectItem>
-                      <SelectItem value="PF">Pessoa Física</SelectItem>
+                      <SelectItem value="Pessoa Jurídica">Pessoa Jurídica</SelectItem>
+                      <SelectItem value="Pessoa Física">Pessoa Física</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
 
                 <div className="space-y-2">
-                  <Label>{empresa.tipo_pessoa === 'PJ' ? 'CNPJ' : 'CPF'}</Label>
+                  <Label>{empresa.tipo_pessoa === 'Pessoa Jurídica' ? 'CNPJ' : 'CPF'}</Label>
                   <Input
                     value={empresa.cnpj || ''}
                     onChange={(e) => handleChange('cnpj', e.target.value)}
-                    placeholder={empresa.tipo_pessoa === 'PJ' ? '00.000.000/0000-00' : '000.000.000-00'}
+                    placeholder={empresa.tipo_pessoa === 'Pessoa Jurídica' ? '00.000.000/0000-00' : '000.000.000-00'}
                   />
                 </div>
 
