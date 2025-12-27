@@ -11,7 +11,7 @@ const Configuracoes = () => {
       icon: Building2,
       title: "Empresa",
       description: "Dados da empresa e informações gerais",
-      path: null,
+      path: "/configuracoes/empresa",
     },
     {
       icon: Users,
