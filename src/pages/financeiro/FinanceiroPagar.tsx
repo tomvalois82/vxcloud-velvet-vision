@@ -691,7 +691,7 @@ const FinanceiroPagar = () => {
               <FileText className="w-4 h-4 mr-2" />
               Gerar Fatura
             </Button>
-            <Button variant="outline" size="icon" onClick={() => navigate("/financeiro/fast?tipo=Pagar")} className="rounded-full w-10 h-10 border-accent/50 hover:bg-accent/10 shadow-lg shadow-accent/20" title="Lançamento Rápido">
+            <Button variant="outline" size="icon" onClick={() => navigate("/financeiro/fast?tipo=Pagar")} title="Lançamento Rápido" className="rounded-full w-10 h-10 hover:bg-accent/10 shadow-lg shadow-accent/20 border-secondary">
               <Zap className="w-5 h-5 text-chart-1" />
             </Button>
             <Button className="bg-accent hover:bg-accent/90" onClick={handleNew}>
