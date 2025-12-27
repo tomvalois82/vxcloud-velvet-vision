@@ -2235,7 +2235,9 @@ export type Database = {
       }
     }
     Functions: {
+      get_user_config_id: { Args: never; Returns: number }
       is_admin: { Args: never; Returns: boolean }
+      is_super_admin: { Args: never; Returns: boolean }
       match_documents: {
         Args: { filter?: Json; match_count?: number; query_embedding: string }
         Returns: {
