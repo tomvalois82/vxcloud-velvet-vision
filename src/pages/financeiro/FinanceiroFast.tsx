@@ -298,12 +298,13 @@ const FinanceiroFast = () => {
         throw new Error(`Erro HTTP: ${response.status}`);
       }
 
-      // Parse response to get movement ID
+      // Parse response to get movement ID (webhook returns an array)
       const responseData = await response.json();
-      const movimentoId = responseData?.id_movimento;
+      const movimentoData = Array.isArray(responseData) ? responseData[0] : responseData;
+      const movimentoId = movimentoData?.id;
 
-      // Check if ID is valid (webhook returns "erro" on failure)
-      if (!movimentoId || movimentoId === "" || movimentoId === "erro") {
+      // Check if ID is valid
+      if (!movimentoId || movimentoId === "") {
         throw new Error("Erro ao processar o lançamento. Tente novamente.");
       }
 
