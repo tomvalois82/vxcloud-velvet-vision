@@ -298,13 +298,23 @@ const FinanceiroFast = () => {
         throw new Error(`Erro HTTP: ${response.status}`);
       }
 
-      // Parse response to get movement ID (webhook returns an array)
-      const responseData = await response.json();
+      // Parse response to get movement ID (webhook sometimes returns JSON with wrong headers)
+      const raw = await response.text();
+      let responseData: any;
+      try {
+        responseData = raw ? JSON.parse(raw) : null;
+      } catch {
+        console.error("Resposta inválida do webhook:", raw);
+        throw new Error("Resposta inválida do webhook. Tente novamente.");
+      }
+
+      console.log("Webhook response:", responseData);
+
       const movimentoData = Array.isArray(responseData) ? responseData[0] : responseData;
-      const movimentoId = movimentoData?.id;
+      const movimentoId = movimentoData?.id ?? movimentoData?.id_movimento;
 
       // Check if ID is valid
-      if (!movimentoId || movimentoId === "") {
+      if (!movimentoId || movimentoId === "" || movimentoId === "erro") {
         throw new Error("Erro ao processar o lançamento. Tente novamente.");
       }
 
