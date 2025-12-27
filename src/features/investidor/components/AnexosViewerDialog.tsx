@@ -21,9 +21,37 @@ interface Anexo {
   id: string;
   id_movimento: string;
   nome_arquivo: string;
-  url_arquivo: string;
+  url_arquivo: string | null;
   tipo_mime: string | null;
+  base64: string | null;
 }
+
+// Helper to get file source (URL or base64 data URI)
+const getFileSource = (anexo: Anexo): string | null => {
+  if (anexo.url_arquivo) {
+    return anexo.url_arquivo;
+  }
+  if (anexo.base64 && anexo.tipo_mime) {
+    return `data:${anexo.tipo_mime};base64,${anexo.base64}`;
+  }
+  if (anexo.base64) {
+    return `data:application/octet-stream;base64,${anexo.base64}`;
+  }
+  return null;
+};
+
+// Helper to download base64 file
+const downloadBase64File = (anexo: Anexo) => {
+  const source = getFileSource(anexo);
+  if (!source) return;
+  
+  const link = document.createElement("a");
+  link.href = source;
+  link.download = anexo.nome_arquivo;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+};
 
 interface AnexosViewerDialogProps {
   open: boolean;
@@ -82,16 +110,23 @@ export function AnexosViewerDialog({
   };
 
   const handlePreview = (anexo: Anexo) => {
-    setPreviewUrl(anexo.url_arquivo);
+    const source = getFileSource(anexo);
+    setPreviewUrl(source);
     setPreviewType(anexo.tipo_mime);
   };
 
   const handleDownload = (anexo: Anexo) => {
-    window.open(anexo.url_arquivo, "_blank");
+    if (anexo.url_arquivo) {
+      window.open(anexo.url_arquivo, "_blank");
+    } else {
+      downloadBase64File(anexo);
+    }
   };
 
-  const canPreview = (tipo: string | null) => {
-    if (!tipo) return false;
+  const canPreview = (anexo: Anexo) => {
+    const tipo = anexo.tipo_mime;
+    const hasSource = anexo.url_arquivo || anexo.base64;
+    if (!tipo || !hasSource) return false;
     return (
       ACCEPTED_TYPES.images.includes(tipo) ||
       ACCEPTED_TYPES.videos.includes(tipo) ||
@@ -134,7 +169,7 @@ export function AnexosViewerDialog({
                     </p>
                   </div>
                   <div className="flex items-center gap-1">
-                    {canPreview(anexo.tipo_mime) && (
+                    {canPreview(anexo) && (
                       <Button
                         type="button"
                         variant="ghost"
