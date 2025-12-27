@@ -19,6 +19,7 @@ import { VehicleReportPrint } from './VehicleReportPrint';
 import { MovimentoDialog } from '@/features/financeiro/components/MovimentoDialog';
 import { useToast } from '@/hooks/use-toast';
 import { deleteAnexosDoMovimento } from '@/features/financeiro/utils/anexosUtils';
+import { EstoqueAnexosManager } from './EstoqueAnexosManager';
 interface VehicleCost {
   id: string;
   descricao: string;
@@ -526,6 +527,14 @@ export function VehicleDetailDialog({
                     <p className="text-sm text-muted-foreground italic">Nenhum custo registrado.</p>
                   )}
                 </div>
+
+              <Separator />
+
+              {/* Attachments Section */}
+              <div>
+                <h3 className="text-sm font-semibold text-foreground mb-3">Documentos</h3>
+                <EstoqueAnexosManager estoqueId={vehicleId} />
+              </div>
 
               <Separator />
 
