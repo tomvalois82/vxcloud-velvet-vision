@@ -4,6 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { 
@@ -15,9 +17,21 @@ import {
   FileImage, 
   FileText,
   ArrowDownCircle,
-  ArrowUpCircle
+  ArrowUpCircle,
+  Car,
+  ChevronsUpDown,
+  Check
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { subMonths } from "date-fns";
+
+interface VeiculoOption {
+  id: number;
+  placa: string;
+  modelo: string | null;
+  fabricante: string | null;
+  status: string | null;
+}
 
 const FinanceiroFast = () => {
   const navigate = useNavigate();
@@ -35,10 +49,16 @@ const FinanceiroFast = () => {
   const [filePreview, setFilePreview] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
   const [webhookUrl, setWebhookUrl] = useState<string | null>(null);
+  
+  // Vehicle selection state
+  const [veiculos, setVeiculos] = useState<VeiculoOption[]>([]);
+  const [selectedVeiculo, setSelectedVeiculo] = useState<VeiculoOption | null>(null);
+  const [veiculoOpen, setVeiculoOpen] = useState(false);
+  const [loadingVeiculos, setLoadingVeiculos] = useState(false);
 
-  // Fetch webhook URL from config
+  // Fetch webhook URL and vehicles
   useEffect(() => {
-    const fetchConfig = async () => {
+    const fetchData = async () => {
       try {
         const { data: userData } = await supabase.auth.getUser();
         if (!userData.user) return;
@@ -60,13 +80,90 @@ const FinanceiroFast = () => {
             setWebhookUrl(configData.link_wh_ocr);
           }
         }
+
+        // Fetch vehicles
+        await fetchVeiculos();
       } catch (error) {
         console.error("Erro ao carregar configuração:", error);
       }
     };
 
-    fetchConfig();
+    fetchData();
   }, []);
+
+  const fetchVeiculos = async () => {
+    setLoadingVeiculos(true);
+    try {
+      // Calculate date 3 months ago
+      const threeMonthsAgo = subMonths(new Date(), 3).toISOString();
+
+      // Get user's empresa
+      const { data: userData } = await supabase.auth.getUser();
+      if (!userData.user) return;
+
+      const { data: usuario } = await supabase
+        .from("usuario")
+        .select("config")
+        .eq("auth_id", userData.user.id)
+        .single();
+
+      if (!usuario?.config) return;
+
+      const { data: configData } = await supabase
+        .from("config")
+        .select("id")
+        .eq("id", usuario.config)
+        .single();
+
+      if (!configData) return;
+
+      const { data: empresa } = await supabase
+        .from("empresa")
+        .select("id")
+        .eq("id_config", configData.id)
+        .single();
+
+      if (!empresa) return;
+
+      // Fetch all vehicles
+      const { data: veiculosData, error } = await supabase
+        .from("estoque")
+        .select("id, placa, modelo, fabricante, status")
+        .eq("id_empresa", empresa.id)
+        .not("placa", "is", null);
+
+      if (error) throw error;
+
+      // Get sold vehicles with sale date from vx_vendas
+      const { data: vendasData } = await supabase
+        .from("vx_vendas")
+        .select("id_veiculo_vendido, data_venda")
+        .eq("id_empresa", empresa.id)
+        .gte("data_venda", threeMonthsAgo);
+
+      const veiculosVendidosRecentes = new Set(
+        (vendasData || []).map(v => v.id_veiculo_vendido)
+      );
+
+      // Filter vehicles based on status
+      const filteredVeiculos = (veiculosData || []).filter(v => {
+        if (v.status === "Em estoque" || v.status === "Fora de Estoque") {
+          return true;
+        }
+        if (v.status === "Vendido") {
+          // Include only if sold in last 3 months
+          return veiculosVendidosRecentes.has(v.id);
+        }
+        return false;
+      });
+
+      setVeiculos(filteredVeiculos);
+    } catch (error) {
+      console.error("Erro ao carregar veículos:", error);
+    } finally {
+      setLoadingVeiculos(false);
+    }
+  };
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
@@ -150,10 +247,10 @@ const FinanceiroFast = () => {
         reader.readAsDataURL(file);
       });
 
-      // Prepare payload
       const payload = {
         tipo,
         descricao: descricao.trim(),
+        placa: selectedVeiculo?.placa || null,
         arquivo: {
           nome: file.name,
           tipo_mime: file.type,
@@ -280,6 +377,99 @@ const FinanceiroFast = () => {
               </Label>
             </div>
           </RadioGroup>
+        </div>
+
+        {/* Vehicle Selection */}
+        <div className="space-y-3">
+          <Label className="text-base">
+            Veículo <span className="text-muted-foreground text-sm">(opcional)</span>
+          </Label>
+          <Popover open={veiculoOpen} onOpenChange={setVeiculoOpen}>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                role="combobox"
+                aria-expanded={veiculoOpen}
+                className="w-full justify-between h-12 bg-background/50"
+              >
+                {selectedVeiculo ? (
+                  <div className="flex items-center gap-2 truncate">
+                    <Car className="w-4 h-4 text-muted-foreground shrink-0" />
+                    <span className="truncate">
+                      {selectedVeiculo.placa} - {selectedVeiculo.fabricante} {selectedVeiculo.modelo}
+                    </span>
+                  </div>
+                ) : (
+                  <span className="text-muted-foreground flex items-center gap-2">
+                    <Car className="w-4 h-4" />
+                    Selecione um veículo
+                  </span>
+                )}
+                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-[calc(100vw-2rem)] max-w-lg p-0" align="start">
+              <Command>
+                <CommandInput placeholder="Buscar por placa ou modelo..." />
+                <CommandList>
+                  <CommandEmpty>
+                    {loadingVeiculos ? "Carregando..." : "Nenhum veículo encontrado."}
+                  </CommandEmpty>
+                  <CommandGroup>
+                    {veiculos.map((veiculo) => (
+                      <CommandItem
+                        key={veiculo.id}
+                        value={`${veiculo.placa} ${veiculo.fabricante} ${veiculo.modelo}`}
+                        onSelect={() => {
+                          setSelectedVeiculo(
+                            selectedVeiculo?.id === veiculo.id ? null : veiculo
+                          );
+                          setVeiculoOpen(false);
+                        }}
+                        className="py-3"
+                      >
+                        <Check
+                          className={cn(
+                            "mr-2 h-4 w-4",
+                            selectedVeiculo?.id === veiculo.id
+                              ? "opacity-100"
+                              : "opacity-0"
+                          )}
+                        />
+                        <div className="flex flex-col">
+                          <span className="font-medium">{veiculo.placa}</span>
+                          <span className="text-xs text-muted-foreground">
+                            {veiculo.fabricante} {veiculo.modelo}
+                            {veiculo.status && (
+                              <span className={cn(
+                                "ml-2 px-1.5 py-0.5 rounded text-[10px]",
+                                veiculo.status === "Em estoque" && "bg-green-500/20 text-green-600",
+                                veiculo.status === "Fora de Estoque" && "bg-yellow-500/20 text-yellow-600",
+                                veiculo.status === "Vendido" && "bg-blue-500/20 text-blue-600"
+                              )}>
+                                {veiculo.status}
+                              </span>
+                            )}
+                          </span>
+                        </div>
+                      </CommandItem>
+                    ))}
+                  </CommandGroup>
+                </CommandList>
+              </Command>
+            </PopoverContent>
+          </Popover>
+          {selectedVeiculo && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setSelectedVeiculo(null)}
+              className="text-muted-foreground hover:text-foreground"
+            >
+              <X className="w-3 h-3 mr-1" />
+              Limpar seleção
+            </Button>
+          )}
         </div>
 
         {/* File Upload */}
