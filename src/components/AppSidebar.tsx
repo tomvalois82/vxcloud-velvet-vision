@@ -156,7 +156,7 @@ export function AppSidebar() {
                           {item.items.map(subItem => <SidebarMenuSubItem key={subItem.url}>
                               <SidebarMenuSubButton asChild>
                                 <NavLink to={subItem.url} className="flex items-center gap-3 transition-all hover:text-accent" activeClassName="text-accent font-medium">
-                                  <subItem.icon className="w-4 h-4 text-accent" />
+                                  <subItem.icon className="w-4 h-4 text-primary-foreground" />
                                   <span>{subItem.title}</span>
                                 </NavLink>
                               </SidebarMenuSubButton>
