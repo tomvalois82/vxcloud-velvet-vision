@@ -54,10 +54,12 @@
     --shadow-xl: 0 1px 3px 0px hsl(0 0% 0% / 0.1), 0 8px 10px -1px hsl(0 0% 0% / 0.1);
     --shadow-2xl: 0 1px 3px 0px hsl(0 0% 0% / 0.25);
     --sidebar: 0 0% 98%;
-    --font-sans: "Montserrat", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue",
+    --font-sans:
+      "Montserrat", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue",
       Arial, "Noto Sans", sans-serif;
     --font-serif: "Cormorant Garamond", ui-serif, Georgia, Cambria, "Times New Roman", Times, serif;
-    --font-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New",
+    --font-mono:
+      "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New",
       monospace;
     --tracking-normal: 0em;
     --spacing: 0.25rem;
@@ -88,7 +90,7 @@
     --chart-3: 229 93% 81%;
     --chart-4: 255 91% 76%;
     --chart-5: 240 3% 46%;
-    --sidebar-background: oklch(0.3359 0.0077 59.4197);
+    --sidebar-background: oklch(0 0 0);
     --sidebar-foreground: 0 0% 98%;
     --sidebar-primary: 255 91% 76%;
     --sidebar-primary-foreground: 261 72% 22%;
