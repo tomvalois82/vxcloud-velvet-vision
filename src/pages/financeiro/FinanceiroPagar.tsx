@@ -5,45 +5,11 @@ import { PageHeader } from "@/components/PageHeader";
 import { EmptyState } from "@/components/EmptyState";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
-import {
-  Plus,
-  ArrowDownCircle,
-  Search,
-  Loader2,
-  CalendarIcon,
-  X,
-  Landmark,
-  CreditCard,
-  CheckCircle2,
-  ChevronLeft,
-  ChevronRight,
-  CheckCheck,
-  FileText,
-  Zap,
-} from "lucide-react";
+import { Plus, ArrowDownCircle, Search, Loader2, CalendarIcon, X, Landmark, CreditCard, CheckCircle2, ChevronLeft, ChevronRight, CheckCheck, FileText, Zap } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
@@ -57,7 +23,6 @@ import { MovimentoGroupedList } from "@/features/financeiro/components/Movimento
 import { GerarFaturaDialog } from "@/features/financeiro/components/GerarFaturaDialog";
 import { atualizarSaldoConta, calcularValorFinal } from "@/features/financeiro/utils/saldoUtils";
 import { deleteAnexosDoMovimento, deleteAnexosDeMovimentos } from "@/features/financeiro/utils/anexosUtils";
-
 interface Movimento {
   id: string;
   tipo_movimento: string;
@@ -84,22 +49,28 @@ interface Movimento {
   acrescimo: number | null;
   motivo_ajuste: string | null;
   conciliado: boolean;
-  vx_fin_conta: { banco: string; descricao: string | null } | null;
-  vx_fin_categoria: { categoria: string } | null;
-  vx_fin_cartao: { descricao: string; final: string; bandeira: string } | null;
+  vx_fin_conta: {
+    banco: string;
+    descricao: string | null;
+  } | null;
+  vx_fin_categoria: {
+    categoria: string;
+  } | null;
+  vx_fin_cartao: {
+    descricao: string;
+    final: string;
+    bandeira: string;
+  } | null;
 }
-
 interface Conta {
   id: string;
   banco: string;
   descricao: string | null;
 }
-
 interface FormaPagamento {
   id: string;
   descricao: string;
 }
-
 interface Cartao {
   id: string;
   descricao: string;
@@ -108,23 +79,29 @@ interface Cartao {
 }
 
 // Generate competencia options from 01/2019 to current month/year
-const gerarOpcoesCompetencia = (): { value: string; label: string }[] => {
-  const opcoes: { value: string; label: string }[] = [];
+const gerarOpcoesCompetencia = (): {
+  value: string;
+  label: string;
+}[] => {
+  const opcoes: {
+    value: string;
+    label: string;
+  }[] = [];
   const dataInicio = new Date(2019, 0, 1);
   const dataAtual = new Date();
-  
   let dataIteracao = new Date(dataInicio);
   while (dataIteracao <= dataAtual) {
     const mes = String(dataIteracao.getMonth() + 1).padStart(2, '0');
     const ano = dataIteracao.getFullYear();
     const value = `${mes}/${ano}`;
-    opcoes.push({ value, label: value });
+    opcoes.push({
+      value,
+      label: value
+    });
     dataIteracao = addMonths(dataIteracao, 1);
   }
-  
   return opcoes.reverse();
 };
-
 const opcoesCompetencia = gerarOpcoesCompetencia();
 
 // Get current month/year competencia
@@ -134,11 +111,11 @@ const getCompetenciaAtual = (): string => {
   const ano = now.getFullYear();
   return `${mes}/${ano}`;
 };
-
 const PAGE_SIZE_OPTIONS = [25, 50, 100, 200];
-
 const FinanceiroPagar = () => {
-  const { toast } = useToast();
+  const {
+    toast
+  } = useToast();
   const navigate = useNavigate();
   const [movimentos, setMovimentos] = useState<Movimento[]>([]);
   const [totalCount, setTotalCount] = useState(0);
@@ -155,14 +132,13 @@ const FinanceiroPagar = () => {
   const [cartaoFilter, setCartaoFilter] = useState<string>("todos");
   const [competenciaFilter, setCompetenciaFilter] = useState<string>(getCompetenciaAtual());
   const [dateFilter, setDateFilter] = useState<Date | undefined>(undefined);
-  
+
   // Group by / Filter date field - controls both grouping and date filter field
   const storageKey = "financeiro-groupBy-Pagar";
   const [groupByField, setGroupByField] = useState<"data_compra" | "data_vencimento" | "data_pagamento">(() => {
     const saved = localStorage.getItem(storageKey);
-    return (saved as "data_compra" | "data_vencimento" | "data_pagamento") || "data_compra";
+    return saved as "data_compra" | "data_vencimento" | "data_pagamento" || "data_compra";
   });
-  
   const handleGroupByChange = (value: "data_compra" | "data_vencimento" | "data_pagamento") => {
     setGroupByField(value);
     localStorage.setItem(storageKey, value);
@@ -200,19 +176,17 @@ const FinanceiroPagar = () => {
 
   // Gerar fatura dialog state
   const [faturaDialogOpen, setFaturaDialogOpen] = useState(false);
-
   const fetchMovimentos = async () => {
     setLoading(true);
     try {
-      let query = supabase
-        .from("vx_fin_movimento")
-        .select(`
+      let query = supabase.from("vx_fin_movimento").select(`
           *,
           vx_fin_conta!id_conta (banco, descricao),
           vx_fin_categoria (categoria),
           vx_fin_cartao (descricao, final, bandeira)
-        `, { count: 'exact' })
-        .eq("tipo_movimento", "Pagar");
+        `, {
+        count: 'exact'
+      }).eq("tipo_movimento", "Pagar");
 
       // Apply filters at database level
       if (competenciaFilter && competenciaFilter !== "todos") {
@@ -247,12 +221,10 @@ const FinanceiroPagar = () => {
       if (searchTerm) {
         const rawSearch = searchTerm.trim();
         // Convert Brazilian format (1.234,56) to standard format (1234.56)
-        const cleanedValue = rawSearch
-          .replace(/[^\d.,]/g, '')  // Keep only digits, dots and commas
-          .replace(/\./g, '')       // Remove thousands separator (.)
-          .replace(',', '.');        // Replace decimal separator (,) with (.)
+        const cleanedValue = rawSearch.replace(/[^\d.,]/g, '') // Keep only digits, dots and commas
+        .replace(/\./g, '') // Remove thousands separator (.)
+        .replace(',', '.'); // Replace decimal separator (,) with (.)
         const numericValue = cleanedValue ? parseFloat(cleanedValue) : NaN;
-
         if (!isNaN(numericValue)) {
           // Numeric search: only filter by valor_bruto to avoid commas breaking OR logic
           query = query.eq("valor_bruto", numericValue);
@@ -263,66 +235,62 @@ const FinanceiroPagar = () => {
       }
 
       // Order by data_vencimento DESC
-      query = query.order("data_vencimento", { ascending: false });
+      query = query.order("data_vencimento", {
+        ascending: false
+      });
 
       // Apply pagination
       const from = (currentPage - 1) * pageSize;
       const to = from + pageSize - 1;
       query = query.range(from, to);
-
-      const { data, error, count } = await query;
-
+      const {
+        data,
+        error,
+        count
+      } = await query;
       if (error) throw error;
-      setMovimentos((data as unknown as Movimento[]) || []);
+      setMovimentos(data as unknown as Movimento[] || []);
       setTotalCount(count || 0);
     } catch (error: any) {
       toast({
         title: "Erro ao carregar lançamentos",
         description: error.message,
-        variant: "destructive",
+        variant: "destructive"
       });
     } finally {
       setLoading(false);
     }
   };
-
   const fetchContas = async () => {
     try {
-      const { data, error } = await supabase
-        .from("vx_fin_conta")
-        .select("id, banco, descricao")
-        .order("banco");
-
+      const {
+        data,
+        error
+      } = await supabase.from("vx_fin_conta").select("id, banco, descricao").order("banco");
       if (error) throw error;
       setContas(data || []);
     } catch (error) {
       console.error("Erro ao carregar contas:", error);
     }
   };
-
   const fetchFormasPagamento = async () => {
     try {
-      const { data, error } = await supabase
-        .from("vx_forma_pagamento")
-        .select("id, descricao")
-        .eq("ativa", true)
-        .order("descricao");
-
+      const {
+        data,
+        error
+      } = await supabase.from("vx_forma_pagamento").select("id, descricao").eq("ativa", true).order("descricao");
       if (error) throw error;
       setFormasPagamento(data || []);
     } catch (error) {
       console.error("Erro ao carregar formas de pagamento:", error);
     }
   };
-
   const fetchCartoes = async () => {
     try {
-      const { data, error } = await supabase
-        .from("vx_fin_cartao")
-        .select("id, descricao, final, id_forma_pagamento")
-        .eq("ativo", true)
-        .order("descricao");
-
+      const {
+        data,
+        error
+      } = await supabase.from("vx_fin_cartao").select("id, descricao, final, id_forma_pagamento").eq("ativo", true).order("descricao");
       if (error) throw error;
       setCartoes(data || []);
     } catch (error) {
@@ -331,15 +299,12 @@ const FinanceiroPagar = () => {
   };
 
   // Cartões filtrados pela forma de pagamento selecionada
-  const cartoesFiltrados = formaPagamentoFilter !== "todos" 
-    ? cartoes.filter(c => c.id_forma_pagamento === formaPagamentoFilter)
-    : [];
+  const cartoesFiltrados = formaPagamentoFilter !== "todos" ? cartoes.filter(c => c.id_forma_pagamento === formaPagamentoFilter) : [];
 
   // Reset cartaoFilter when formaPagamentoFilter changes
   useEffect(() => {
     setCartaoFilter("todos");
   }, [formaPagamentoFilter]);
-
   useEffect(() => {
     fetchContas();
     fetchFormasPagamento();
@@ -356,11 +321,9 @@ const FinanceiroPagar = () => {
   useEffect(() => {
     setCurrentPage(1);
   }, [searchTerm, statusFilter, conciliacaoFilter, contaFilter, formaPagamentoFilter, cartaoFilter, competenciaFilter, dateFilter, pageSize]);
-
   const getContaDisplayName = (conta: Conta) => {
     return conta.descricao ? `${conta.banco} - ${conta.descricao}` : conta.banco;
   };
-
   const handleEdit = (movimento: Movimento) => {
     if (movimento.status === "Pago") return;
     if (movimento.recorrencia_id) {
@@ -372,7 +335,6 @@ const FinanceiroPagar = () => {
       setDialogOpen(true);
     }
   };
-
   const handleRecorrenciaEditConfirm = (scope: "single" | "future") => {
     setRecorrenciaEditDialogOpen(false);
     if (pendingEditMovimento) {
@@ -382,12 +344,10 @@ const FinanceiroPagar = () => {
       setPendingEditMovimento(null);
     }
   };
-
   const handleNew = () => {
     setSelectedMovimento(null);
     setDialogOpen(true);
   };
-
   const handleDeleteClick = (movimento: Movimento) => {
     if (movimento.status === "Pago") return;
     setMovimentoToDelete(movimento);
@@ -397,32 +357,26 @@ const FinanceiroPagar = () => {
       setDeleteDialogOpen(true);
     }
   };
-
   const handleDeleteConfirm = async () => {
     if (!movimentoToDelete) return;
-
     setDeleting(true);
     try {
       // Delete attachments first
       await deleteAnexosDoMovimento(movimentoToDelete.id);
-
-      const { error } = await supabase
-        .from("vx_fin_movimento")
-        .delete()
-        .eq("id", movimentoToDelete.id);
-
+      const {
+        error
+      } = await supabase.from("vx_fin_movimento").delete().eq("id", movimentoToDelete.id);
       if (error) throw error;
-
       toast({
         title: "Lançamento excluído",
-        description: "O lançamento foi excluído com sucesso.",
+        description: "O lançamento foi excluído com sucesso."
       });
       fetchMovimentos();
     } catch (error: any) {
       toast({
         title: "Erro ao excluir",
         description: error.message,
-        variant: "destructive",
+        variant: "destructive"
       });
     } finally {
       setDeleting(false);
@@ -430,34 +384,26 @@ const FinanceiroPagar = () => {
       setMovimentoToDelete(null);
     }
   };
-
   const handleRecorrenciaDeleteConfirm = async (scope: "single" | "future") => {
     if (!movimentoToDelete) return;
-
     setDeleting(true);
     try {
       if (scope === "single") {
         // Delete attachments first
         await deleteAnexosDoMovimento(movimentoToDelete.id);
-
-        const { error } = await supabase
-          .from("vx_fin_movimento")
-          .delete()
-          .eq("id", movimentoToDelete.id);
-
+        const {
+          error
+        } = await supabase.from("vx_fin_movimento").delete().eq("id", movimentoToDelete.id);
         if (error) throw error;
-
         toast({
           title: "Lançamento excluído",
-          description: "A ocorrência foi excluída com sucesso.",
+          description: "A ocorrência foi excluída com sucesso."
         });
       } else {
         // Get all IDs to delete
-        const { data: idsToDelete } = await supabase
-          .from("vx_fin_movimento")
-          .select("id")
-          .eq("recorrencia_id", movimentoToDelete.recorrencia_id)
-          .gte("ordem_ocorrencia", movimentoToDelete.ordem_ocorrencia || 0);
+        const {
+          data: idsToDelete
+        } = await supabase.from("vx_fin_movimento").select("id").eq("recorrencia_id", movimentoToDelete.recorrencia_id).gte("ordem_ocorrencia", movimentoToDelete.ordem_ocorrencia || 0);
 
         // Delete attachments for all movements
         if (idsToDelete) {
@@ -465,17 +411,13 @@ const FinanceiroPagar = () => {
         }
 
         // Delete this and all future occurrences
-        const { error } = await supabase
-          .from("vx_fin_movimento")
-          .delete()
-          .eq("recorrencia_id", movimentoToDelete.recorrencia_id)
-          .gte("ordem_ocorrencia", movimentoToDelete.ordem_ocorrencia || 0);
-
+        const {
+          error
+        } = await supabase.from("vx_fin_movimento").delete().eq("recorrencia_id", movimentoToDelete.recorrencia_id).gte("ordem_ocorrencia", movimentoToDelete.ordem_ocorrencia || 0);
         if (error) throw error;
-
         toast({
           title: "Lançamentos excluídos",
-          description: "Esta e todas as ocorrências futuras foram excluídas.",
+          description: "Esta e todas as ocorrências futuras foram excluídas."
         });
       }
       fetchMovimentos();
@@ -483,7 +425,7 @@ const FinanceiroPagar = () => {
       toast({
         title: "Erro ao excluir",
         description: error.message,
-        variant: "destructive",
+        variant: "destructive"
       });
     } finally {
       setDeleting(false);
@@ -498,7 +440,6 @@ const FinanceiroPagar = () => {
     setMovimentoBaixa(movimento);
     setBaixaIndividualDialogOpen(true);
   };
-
   const handleBaixaIndividualConfirm = async (data: {
     id: string;
     dataPagamento: string;
@@ -514,75 +455,62 @@ const FinanceiroPagar = () => {
       if (!movimento) throw new Error("Movimento não encontrado");
 
       // Atualizar o movimento
-      const { error } = await supabase
-        .from("vx_fin_movimento")
-        .update({
-          status: "Pago",
-          data_pagamento: data.dataPagamento,
-          id_conta: data.contaId,
-          id_forma_pagamento: data.formaPagamentoId,
-          desconto: data.desconto,
-          acrescimo: data.acrescimo,
-          motivo_ajuste: data.motivoAjuste,
-        })
-        .eq("id", data.id);
-
+      const {
+        error
+      } = await supabase.from("vx_fin_movimento").update({
+        status: "Pago",
+        data_pagamento: data.dataPagamento,
+        id_conta: data.contaId,
+        id_forma_pagamento: data.formaPagamentoId,
+        desconto: data.desconto,
+        acrescimo: data.acrescimo,
+        motivo_ajuste: data.motivoAjuste
+      }).eq("id", data.id);
       if (error) throw error;
 
       // Calcular valor final e atualizar saldo da conta
       const valorFinal = calcularValorFinal(movimento.valor_bruto, data.desconto, data.acrescimo);
       await atualizarSaldoConta(data.contaId, valorFinal, "Pagar");
-
       toast({
         title: "Título baixado",
-        description: "O título foi baixado e o saldo da conta atualizado com sucesso.",
+        description: "O título foi baixado e o saldo da conta atualizado com sucesso."
       });
       fetchMovimentos();
     } catch (error: any) {
       toast({
         title: "Erro ao baixar título",
         description: error.message,
-        variant: "destructive",
+        variant: "destructive"
       });
       throw error;
     }
   };
-
   const handleBaixaLoteConfirm = async (dataPagamento: string, contaId: string, formaPagamentoId: string | null) => {
-    const selectedMovimentosLote = movimentos.filter(
-      (mov) => selectedIds.has(mov.id) && mov.status !== "Pago"
-    );
-
+    const selectedMovimentosLote = movimentos.filter(mov => selectedIds.has(mov.id) && mov.status !== "Pago");
     if (selectedMovimentosLote.length === 0) return;
-
     try {
       let totalAtualizado = 0;
-      
       for (const mov of selectedMovimentosLote) {
         const dataFinal = dataPagamento || mov.data_vencimento;
-        
-        const { error } = await supabase
-          .from("vx_fin_movimento")
-          .update({
-            status: "Pago",
-            data_pagamento: dataFinal,
-            id_conta: contaId,
-            id_forma_pagamento: formaPagamentoId,
-          })
-          .eq("id", mov.id);
-
+        const {
+          error
+        } = await supabase.from("vx_fin_movimento").update({
+          status: "Pago",
+          data_pagamento: dataFinal,
+          id_conta: contaId,
+          id_forma_pagamento: formaPagamentoId
+        }).eq("id", mov.id);
         if (error) throw error;
-        
+
         // Acumular valor para atualização do saldo
         totalAtualizado += mov.valor_bruto;
       }
 
       // Atualizar saldo da conta uma única vez com o total
       await atualizarSaldoConta(contaId, totalAtualizado, "Pagar");
-
       toast({
         title: "Títulos baixados",
-        description: `${selectedMovimentosLote.length} título(s) baixado(s) e saldo atualizado com sucesso.`,
+        description: `${selectedMovimentosLote.length} título(s) baixado(s) e saldo atualizado com sucesso.`
       });
       setSelectedIds(new Set());
       fetchMovimentos();
@@ -590,21 +518,19 @@ const FinanceiroPagar = () => {
       toast({
         title: "Erro ao baixar títulos",
         description: error.message,
-        variant: "destructive",
+        variant: "destructive"
       });
       throw error;
     }
   };
-
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
-      const allIds = movimentos.map((mov) => mov.id);
+      const allIds = movimentos.map(mov => mov.id);
       setSelectedIds(new Set(allIds));
     } else {
       setSelectedIds(new Set());
     }
   };
-
   const handleSelectOne = (id: string, checked: boolean) => {
     const newSelected = new Set(selectedIds);
     if (checked) {
@@ -618,49 +544,42 @@ const FinanceiroPagar = () => {
   // Conciliação handler
   const handleConciliar = async (movimento: Movimento) => {
     if (movimento.status !== "Pago" || movimento.conciliado) return;
-    
     try {
-      const { error } = await supabase
-        .from("vx_fin_movimento")
-        .update({ conciliado: true })
-        .eq("id", movimento.id);
-
+      const {
+        error
+      } = await supabase.from("vx_fin_movimento").update({
+        conciliado: true
+      }).eq("id", movimento.id);
       if (error) throw error;
-
       toast({
         title: "Título conciliado",
-        description: "O título foi marcado como conciliado com sucesso.",
+        description: "O título foi marcado como conciliado com sucesso."
       });
       fetchMovimentos();
     } catch (error: any) {
       toast({
         title: "Erro ao conciliar",
         description: error.message,
-        variant: "destructive",
+        variant: "destructive"
       });
     }
   };
 
   // Conciliação em lote handler
   const handleConciliarLote = async () => {
-    const idsParaConciliar = movimentos
-      .filter((mov) => selectedIds.has(mov.id) && mov.status === "Pago" && !mov.conciliado)
-      .map((mov) => mov.id);
-
+    const idsParaConciliar = movimentos.filter(mov => selectedIds.has(mov.id) && mov.status === "Pago" && !mov.conciliado).map(mov => mov.id);
     if (idsParaConciliar.length === 0) return;
-
     setConciliandoLote(true);
     try {
-      const { error } = await supabase
-        .from("vx_fin_movimento")
-        .update({ conciliado: true })
-        .in("id", idsParaConciliar);
-
+      const {
+        error
+      } = await supabase.from("vx_fin_movimento").update({
+        conciliado: true
+      }).in("id", idsParaConciliar);
       if (error) throw error;
-
       toast({
         title: "Títulos conciliados",
-        description: `${idsParaConciliar.length} título(s) conciliado(s) com sucesso.`,
+        description: `${idsParaConciliar.length} título(s) conciliado(s) com sucesso.`
       });
       setSelectedIds(new Set());
       fetchMovimentos();
@@ -668,7 +587,7 @@ const FinanceiroPagar = () => {
       toast({
         title: "Erro ao conciliar títulos",
         description: error.message,
-        variant: "destructive",
+        variant: "destructive"
       });
     } finally {
       setConciliandoLote(false);
@@ -681,45 +600,35 @@ const FinanceiroPagar = () => {
     setMovimentoEstorno(movimento);
     setEstornoDialogOpen(true);
   };
-
   const handleEstornoConfirm = async () => {
     if (!movimentoEstorno) return;
-
     setEstornando(true);
     try {
       // Calcular valor que foi creditado/debitado originalmente
-      const valorFinal = calcularValorFinal(
-        movimentoEstorno.valor_bruto,
-        movimentoEstorno.desconto || 0,
-        movimentoEstorno.acrescimo || 0
-      );
+      const valorFinal = calcularValorFinal(movimentoEstorno.valor_bruto, movimentoEstorno.desconto || 0, movimentoEstorno.acrescimo || 0);
 
       // Reverter o saldo da conta (estorno)
       await atualizarSaldoConta(movimentoEstorno.id_conta, valorFinal, "Pagar", true);
-
-      const { error } = await supabase
-        .from("vx_fin_movimento")
-        .update({
-          status: "Pendente",
-          data_pagamento: null,
-          desconto: 0,
-          acrescimo: 0,
-          motivo_ajuste: null,
-        })
-        .eq("id", movimentoEstorno.id);
-
+      const {
+        error
+      } = await supabase.from("vx_fin_movimento").update({
+        status: "Pendente",
+        data_pagamento: null,
+        desconto: 0,
+        acrescimo: 0,
+        motivo_ajuste: null
+      }).eq("id", movimentoEstorno.id);
       if (error) throw error;
-
       toast({
         title: "Título estornado",
-        description: "O título foi reaberto e o saldo da conta revertido com sucesso.",
+        description: "O título foi reaberto e o saldo da conta revertido com sucesso."
       });
       fetchMovimentos();
     } catch (error: any) {
       toast({
         title: "Erro ao estornar",
         description: error.message,
-        variant: "destructive",
+        variant: "destructive"
       });
     } finally {
       setEstornando(false);
@@ -727,32 +636,26 @@ const FinanceiroPagar = () => {
       setMovimentoEstorno(null);
     }
   };
-
   const isRowVencido = (status: string, dataVencimento: string) => {
     const vencimentoDate = new Date(dataVencimento + "T00:00:00");
     return isPast(vencimentoDate) && !isToday(vencimentoDate) && status === "Pendente";
   };
 
   // Get selected movimentos
-  const selectedMovimentos = movimentos.filter((mov) => selectedIds.has(mov.id));
-  
+  const selectedMovimentos = movimentos.filter(mov => selectedIds.has(mov.id));
+
   // Check if ALL selected are pending (for baixa em lote)
-  const allSelectedArePending = selectedMovimentos.length > 0 && 
-    selectedMovimentos.every((mov) => mov.status !== "Pago");
-  
+  const allSelectedArePending = selectedMovimentos.length > 0 && selectedMovimentos.every(mov => mov.status !== "Pago");
+
   // Check if ALL selected are paid (for conciliação em lote)
-  const allSelectedArePaid = selectedMovimentos.length > 0 && 
-    selectedMovimentos.every((mov) => mov.status === "Pago");
-  
+  const allSelectedArePaid = selectedMovimentos.length > 0 && selectedMovimentos.every(mov => mov.status === "Pago");
+
   // Movimentos selecionados elegíveis para conciliação (pagos e não conciliados)
-  const selectedMovimentosForConciliacao = selectedMovimentos.filter(
-    (mov) => mov.status === "Pago" && !mov.conciliado
-  );
+  const selectedMovimentosForConciliacao = selectedMovimentos.filter(mov => mov.status === "Pago" && !mov.conciliado);
 
   // Pagination calculations
   const totalPages = Math.ceil(totalCount / pageSize);
   const hasFiltersActive = dateFilter || contaFilter !== "todos" || formaPagamentoFilter !== "todos" || cartaoFilter !== "todos" || competenciaFilter !== getCompetenciaAtual() || statusFilter !== "todos" || conciliacaoFilter !== "todos" || searchTerm;
-
   const handleClearFilters = () => {
     setDateFilter(undefined);
     setContaFilter("todos");
@@ -764,97 +667,49 @@ const FinanceiroPagar = () => {
     setSearchInput("");
     setSearchTerm("");
   };
-
   const handleSearch = () => {
     setSearchTerm(searchInput);
   };
-
   const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter") {
       handleSearch();
     }
   };
-
-  return (
-    <div className="animate-fade-in">
-      <PageHeader
-        title="Contas a Pagar"
-        description="Gerencie despesas e pagamentos"
-        action={
-          <div className="flex items-center gap-2">
-            {allSelectedArePaid && selectedMovimentosForConciliacao.length > 0 && (
-              <Button
-                onClick={handleConciliarLote}
-                disabled={conciliandoLote}
-                style={{ backgroundColor: '#0DCAF0' }}
-                className="hover:opacity-90 text-black"
-              >
-                {conciliandoLote ? (
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                ) : (
-                  <CheckCheck className="w-4 h-4 mr-2" />
-                )}
+  return <div className="animate-fade-in">
+      <PageHeader title="Contas a Pagar" description="Gerencie despesas e pagamentos" action={<div className="flex items-center gap-2">
+            {allSelectedArePaid && selectedMovimentosForConciliacao.length > 0 && <Button onClick={handleConciliarLote} disabled={conciliandoLote} style={{
+        backgroundColor: '#0DCAF0'
+      }} className="hover:opacity-90 text-black">
+                {conciliandoLote ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <CheckCheck className="w-4 h-4 mr-2" />}
                 Conciliar Selecionados ({selectedMovimentosForConciliacao.length})
-              </Button>
-            )}
-            {allSelectedArePending && selectedMovimentos.length > 0 && (
-              <Button
-                className="bg-green-600 hover:bg-green-700"
-                onClick={() => setBaixaLoteDialogOpen(true)}
-              >
+              </Button>}
+            {allSelectedArePending && selectedMovimentos.length > 0 && <Button className="bg-green-600 hover:bg-green-700" onClick={() => setBaixaLoteDialogOpen(true)}>
                 <CheckCircle2 className="w-4 h-4 mr-2" />
                 Baixar Selecionados ({selectedMovimentos.length})
-              </Button>
-            )}
-            <Button 
-              variant="outline" 
-              className="border-accent/50 hover:bg-accent/10"
-              onClick={() => setFaturaDialogOpen(true)}
-            >
+              </Button>}
+            <Button variant="outline" className="border-accent/50 hover:bg-accent/10" onClick={() => setFaturaDialogOpen(true)}>
               <FileText className="w-4 h-4 mr-2" />
               Gerar Fatura
             </Button>
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={() => navigate("/financeiro/fast?tipo=Pagar")}
-              className="rounded-full w-10 h-10 border-accent/50 hover:bg-accent/10 shadow-lg shadow-accent/20"
-              title="Lançamento Rápido"
-            >
-              <Zap className="w-5 h-5 text-accent" />
+            <Button variant="outline" size="icon" onClick={() => navigate("/financeiro/fast?tipo=Pagar")} className="rounded-full w-10 h-10 border-accent/50 hover:bg-accent/10 shadow-lg shadow-accent/20" title="Lançamento Rápido">
+              <Zap className="w-5 h-5 text-amber-200" />
             </Button>
             <Button className="bg-accent hover:bg-accent/90" onClick={handleNew}>
               <Plus className="w-4 h-4 mr-2" />
               Nova Despesa
             </Button>
-          </div>
-        }
-      />
+          </div>} />
 
       <div className="glass rounded-lg p-6">
-        {loading ? (
-          <div className="flex items-center justify-center py-12">
+        {loading ? <div className="flex items-center justify-center py-12">
             <Loader2 className="w-8 h-8 animate-spin text-accent" />
             <span className="ml-3 text-muted-foreground">Carregando lançamentos...</span>
-          </div>
-        ) : (
-          <div className="space-y-4">
+          </div> : <div className="space-y-4">
             {/* Filters */}
             <div className="flex flex-col sm:flex-row gap-4 flex-wrap">
               <div className="flex items-center gap-1 flex-1 max-w-sm">
-                <Input
-                  placeholder="Buscar por descrição ou valor..."
-                  value={searchInput}
-                  onChange={(e) => setSearchInput(e.target.value)}
-                  onKeyDown={handleSearchKeyDown}
-                  className="bg-background/50 border-border/50"
-                />
-                <Button
-                  variant="outline"
-                  size="icon"
-                  onClick={handleSearch}
-                  className="shrink-0 border-border/50 hover:bg-accent/10"
-                >
+                <Input placeholder="Buscar por descrição ou valor..." value={searchInput} onChange={e => setSearchInput(e.target.value)} onKeyDown={handleSearchKeyDown} className="bg-background/50 border-border/50" />
+                <Button variant="outline" size="icon" onClick={handleSearch} className="shrink-0 border-border/50 hover:bg-accent/10">
                   <Search className="w-4 h-4" />
                 </Button>
               </div>
@@ -889,11 +744,9 @@ const FinanceiroPagar = () => {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="todos">Todas as contas</SelectItem>
-                  {contas.map((c) => (
-                    <SelectItem key={c.id} value={c.id}>
+                  {contas.map(c => <SelectItem key={c.id} value={c.id}>
                       {getContaDisplayName(c)}
-                    </SelectItem>
-                  ))}
+                    </SelectItem>)}
                 </SelectContent>
               </Select>
 
@@ -904,30 +757,24 @@ const FinanceiroPagar = () => {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="todos">Todas as formas</SelectItem>
-                  {formasPagamento.map((fp) => (
-                    <SelectItem key={fp.id} value={fp.id}>
+                  {formasPagamento.map(fp => <SelectItem key={fp.id} value={fp.id}>
                       {fp.descricao}
-                    </SelectItem>
-                  ))}
+                    </SelectItem>)}
                 </SelectContent>
               </Select>
 
-              {cartoesFiltrados.length > 0 && (
-                <Select value={cartaoFilter} onValueChange={setCartaoFilter}>
+              {cartoesFiltrados.length > 0 && <Select value={cartaoFilter} onValueChange={setCartaoFilter}>
                   <SelectTrigger className="w-[180px] bg-background/50 border-border/50 border-purple-500/50">
                     <CreditCard className="mr-2 h-4 w-4 text-purple-400" />
                     <SelectValue placeholder="Cartão" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="todos">Todos os cartões</SelectItem>
-                    {cartoesFiltrados.map((c) => (
-                      <SelectItem key={c.id} value={c.id}>
+                    {cartoesFiltrados.map(c => <SelectItem key={c.id} value={c.id}>
                         {c.descricao} - {c.final}
-                      </SelectItem>
-                    ))}
+                      </SelectItem>)}
                   </SelectContent>
-                </Select>
-              )}
+                </Select>}
 
               <Select value={competenciaFilter} onValueChange={setCompetenciaFilter}>
                 <SelectTrigger className="w-[150px] bg-background/50 border-border/50">
@@ -935,11 +782,9 @@ const FinanceiroPagar = () => {
                 </SelectTrigger>
                 <SelectContent className="max-h-[300px]">
                   <SelectItem value="todos">Todas</SelectItem>
-                  {opcoesCompetencia.map((opcao) => (
-                    <SelectItem key={opcao.value} value={opcao.value}>
+                  {opcoesCompetencia.map(opcao => <SelectItem key={opcao.value} value={opcao.value}>
                       {opcao.label}
-                    </SelectItem>
-                  ))}
+                    </SelectItem>)}
                 </SelectContent>
               </Select>
 
@@ -956,142 +801,68 @@ const FinanceiroPagar = () => {
 
               <Popover>
                 <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className={cn(
-                      "w-[180px] justify-start text-left font-normal bg-background/50 border-border/50",
-                      !dateFilter && "text-muted-foreground"
-                    )}
-                  >
+                  <Button variant="outline" className={cn("w-[180px] justify-start text-left font-normal bg-background/50 border-border/50", !dateFilter && "text-muted-foreground")}>
                     <CalendarIcon className="mr-2 h-4 w-4" />
-                    {dateFilter ? format(dateFilter, "dd/MM/yyyy", { locale: ptBR }) : "Filtrar data"}
+                    {dateFilter ? format(dateFilter, "dd/MM/yyyy", {
+                  locale: ptBR
+                }) : "Filtrar data"}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar
-                    mode="single"
-                    selected={dateFilter}
-                    onSelect={setDateFilter}
-                    initialFocus
-                    className="pointer-events-auto"
-                  />
+                  <Calendar mode="single" selected={dateFilter} onSelect={setDateFilter} initialFocus className="pointer-events-auto" />
                 </PopoverContent>
               </Popover>
 
-              {hasFiltersActive && (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={handleClearFilters}
-                  className="h-10 w-10"
-                  title="Limpar filtros"
-                >
+              {hasFiltersActive && <Button variant="ghost" size="icon" onClick={handleClearFilters} className="h-10 w-10" title="Limpar filtros">
                   <X className="h-4 w-4" />
-                </Button>
-              )}
+                </Button>}
 
               {/* Page Size Selector */}
               <div className="flex items-center gap-2 ml-auto">
                 <span className="text-sm text-muted-foreground">Registros por página:</span>
-                <Select value={String(pageSize)} onValueChange={(v) => setPageSize(Number(v))}>
+                <Select value={String(pageSize)} onValueChange={v => setPageSize(Number(v))}>
                   <SelectTrigger className="w-[80px] bg-background/50 border-border/50">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {PAGE_SIZE_OPTIONS.map((size) => (
-                      <SelectItem key={size} value={String(size)}>
+                    {PAGE_SIZE_OPTIONS.map(size => <SelectItem key={size} value={String(size)}>
                         {size}
-                      </SelectItem>
-                    ))}
+                      </SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
             </div>
 
             {/* Grouped List */}
-            {movimentos.length === 0 ? (
-              <EmptyState
-                icon={ArrowDownCircle}
-                title="Nenhum registro encontrado"
-                description="Não há lançamentos para os filtros selecionados."
-              />
-            ) : (
-              <MovimentoGroupedList
-                movimentos={movimentos}
-                selectedIds={selectedIds}
-                onSelectAll={handleSelectAll}
-                onSelectOne={handleSelectOne}
-                onEdit={handleEdit}
-                onDelete={handleDeleteClick}
-                onBaixa={handleBaixaIndividual}
-                onEstorno={handleEstornoClick}
-                onConciliar={handleConciliar}
-                tipoMovimento="Pagar"
-                groupBy={groupByField}
-              />
-            )}
+            {movimentos.length === 0 ? <EmptyState icon={ArrowDownCircle} title="Nenhum registro encontrado" description="Não há lançamentos para os filtros selecionados." /> : <MovimentoGroupedList movimentos={movimentos} selectedIds={selectedIds} onSelectAll={handleSelectAll} onSelectOne={handleSelectOne} onEdit={handleEdit} onDelete={handleDeleteClick} onBaixa={handleBaixaIndividual} onEstorno={handleEstornoClick} onConciliar={handleConciliar} tipoMovimento="Pagar" groupBy={groupByField} />}
 
             {/* Pagination Controls */}
-            {totalPages > 0 && (
-              <div className="flex items-center justify-between pt-4 border-t border-border/30">
+            {totalPages > 0 && <div className="flex items-center justify-between pt-4 border-t border-border/30">
                 <span className="text-sm text-muted-foreground">
                   Mostrando {Math.min((currentPage - 1) * pageSize + 1, totalCount)} a {Math.min(currentPage * pageSize, totalCount)} de {totalCount} registros
                 </span>
                 <div className="flex items-center gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setCurrentPage(1)}
-                    disabled={currentPage === 1 || loading}
-                    className="bg-background/50"
-                  >
+                  <Button variant="outline" size="sm" onClick={() => setCurrentPage(1)} disabled={currentPage === 1 || loading} className="bg-background/50">
                     Primeira
                   </Button>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                    disabled={currentPage === 1 || loading}
-                    className="bg-background/50"
-                  >
+                  <Button variant="outline" size="icon" onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1 || loading} className="bg-background/50">
                     <ChevronLeft className="h-4 w-4" />
                   </Button>
                   <span className="text-sm px-3">
                     Página {currentPage} de {totalPages}
                   </span>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                    disabled={currentPage === totalPages || loading}
-                    className="bg-background/50"
-                  >
+                  <Button variant="outline" size="icon" onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages || loading} className="bg-background/50">
                     <ChevronRight className="h-4 w-4" />
                   </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setCurrentPage(totalPages)}
-                    disabled={currentPage === totalPages || loading}
-                    className="bg-background/50"
-                  >
+                  <Button variant="outline" size="sm" onClick={() => setCurrentPage(totalPages)} disabled={currentPage === totalPages || loading} className="bg-background/50">
                     Última
                   </Button>
                 </div>
-              </div>
-            )}
-          </div>
-        )}
+              </div>}
+          </div>}
       </div>
 
-      <MovimentoDialog
-        open={dialogOpen}
-        onOpenChange={setDialogOpen}
-        movimento={selectedMovimento}
-        defaultTipo="Pagar"
-        onSuccess={fetchMovimentos}
-        editScope={editScope}
-      />
+      <MovimentoDialog open={dialogOpen} onOpenChange={setDialogOpen} movimento={selectedMovimento} defaultTipo="Pagar" onSuccess={fetchMovimentos} editScope={editScope} />
 
       {/* Simple delete dialog for non-recurring */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
@@ -1105,11 +876,7 @@ const FinanceiroPagar = () => {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={deleting}>Cancelar</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDeleteConfirm}
-              disabled={deleting}
-              className="bg-destructive hover:bg-destructive/90"
-            >
+            <AlertDialogAction onClick={handleDeleteConfirm} disabled={deleting} className="bg-destructive hover:bg-destructive/90">
               {deleting ? "Excluindo..." : "Excluir"}
             </AlertDialogAction>
           </AlertDialogFooter>
@@ -1117,46 +884,21 @@ const FinanceiroPagar = () => {
       </AlertDialog>
 
       {/* Recurrence edit dialog */}
-      <RecorrenciaActionDialog
-        open={recorrenciaEditDialogOpen}
-        onOpenChange={setRecorrenciaEditDialogOpen}
-        actionType="edit"
-        onConfirm={handleRecorrenciaEditConfirm}
-      />
+      <RecorrenciaActionDialog open={recorrenciaEditDialogOpen} onOpenChange={setRecorrenciaEditDialogOpen} actionType="edit" onConfirm={handleRecorrenciaEditConfirm} />
 
       {/* Recurrence delete dialog */}
-      <RecorrenciaActionDialog
-        open={recorrenciaDeleteDialogOpen}
-        onOpenChange={setRecorrenciaDeleteDialogOpen}
-        actionType="delete"
-        onConfirm={handleRecorrenciaDeleteConfirm}
-        loading={deleting}
-      />
+      <RecorrenciaActionDialog open={recorrenciaDeleteDialogOpen} onOpenChange={setRecorrenciaDeleteDialogOpen} actionType="delete" onConfirm={handleRecorrenciaDeleteConfirm} loading={deleting} />
 
       {/* Baixa em Lote */}
-      <BaixaLoteDialog
-        open={baixaLoteDialogOpen}
-        onOpenChange={setBaixaLoteDialogOpen}
-        movimentosSelecionados={selectedMovimentos.filter((mov) => mov.status !== "Pago").map((mov) => ({
-          id: mov.id,
-          descricao: mov.descricao,
-          valor_bruto: mov.valor_bruto,
-          data_vencimento: mov.data_vencimento,
-        }))}
-        contas={contas}
-        formasPagamento={formasPagamento}
-        onConfirm={handleBaixaLoteConfirm}
-      />
+      <BaixaLoteDialog open={baixaLoteDialogOpen} onOpenChange={setBaixaLoteDialogOpen} movimentosSelecionados={selectedMovimentos.filter(mov => mov.status !== "Pago").map(mov => ({
+      id: mov.id,
+      descricao: mov.descricao,
+      valor_bruto: mov.valor_bruto,
+      data_vencimento: mov.data_vencimento
+    }))} contas={contas} formasPagamento={formasPagamento} onConfirm={handleBaixaLoteConfirm} />
 
       {/* Baixa Individual */}
-      <BaixaIndividualDialog
-        open={baixaIndividualDialogOpen}
-        onOpenChange={setBaixaIndividualDialogOpen}
-        movimento={movimentoBaixa}
-        contas={contas}
-        formasPagamento={formasPagamento}
-        onConfirm={handleBaixaIndividualConfirm}
-      />
+      <BaixaIndividualDialog open={baixaIndividualDialogOpen} onOpenChange={setBaixaIndividualDialogOpen} movimento={movimentoBaixa} contas={contas} formasPagamento={formasPagamento} onConfirm={handleBaixaIndividualConfirm} />
 
       {/* Estorno dialog */}
       <AlertDialog open={estornoDialogOpen} onOpenChange={setEstornoDialogOpen}>
@@ -1173,24 +915,14 @@ const FinanceiroPagar = () => {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={estornando}>Cancelar</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleEstornoConfirm}
-              disabled={estornando}
-              className="bg-orange-500 hover:bg-orange-600"
-            >
+            <AlertDialogAction onClick={handleEstornoConfirm} disabled={estornando} className="bg-orange-500 hover:bg-orange-600">
               {estornando ? "Estornando..." : "Estornar"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
 
-      <GerarFaturaDialog
-        open={faturaDialogOpen}
-        onOpenChange={setFaturaDialogOpen}
-        onSuccess={fetchMovimentos}
-      />
-    </div>
-  );
+      <GerarFaturaDialog open={faturaDialogOpen} onOpenChange={setFaturaDialogOpen} onSuccess={fetchMovimentos} />
+    </div>;
 };
-
 export default FinanceiroPagar;
