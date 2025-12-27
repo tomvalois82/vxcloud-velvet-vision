@@ -51,6 +51,7 @@ const pessoaSchema = z.object({
   eh_cliente: z.boolean(),
   eh_fornecedor: z.boolean(),
   eh_colaborador: z.boolean(),
+  eh_investidor: z.boolean(),
 });
 
 type PessoaFormData = z.infer<typeof pessoaSchema>;
@@ -95,6 +96,7 @@ export function PessoaDialog({ open, onOpenChange, pessoa, onSuccess }: PessoaDi
       eh_cliente: pessoa?.eh_cliente || false,
       eh_fornecedor: pessoa?.eh_fornecedor || false,
       eh_colaborador: pessoa?.eh_colaborador || false,
+      eh_investidor: pessoa?.eh_investidor || false,
     },
   });
 
@@ -124,6 +126,7 @@ export function PessoaDialog({ open, onOpenChange, pessoa, onSuccess }: PessoaDi
         eh_cliente: pessoa?.eh_cliente || false,
         eh_fornecedor: pessoa?.eh_fornecedor || false,
         eh_colaborador: pessoa?.eh_colaborador || false,
+        eh_investidor: pessoa?.eh_investidor || false,
       });
       
       // Resetar estados auxiliares
@@ -255,6 +258,7 @@ export function PessoaDialog({ open, onOpenChange, pessoa, onSuccess }: PessoaDi
         eh_cliente: data.eh_cliente,
         eh_fornecedor: data.eh_fornecedor,
         eh_colaborador: data.eh_colaborador,
+        eh_investidor: data.eh_investidor,
         id_empresa: empresaId,
       };
 
@@ -467,6 +471,24 @@ export function PessoaDialog({ open, onOpenChange, pessoa, onSuccess }: PessoaDi
                         />
                       </FormControl>
                       <FormLabel className="!mt-0">Colaborador</FormLabel>
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="eh_investidor"
+                  render={({ field }) => (
+                    <FormItem className="flex items-center gap-2">
+                      <FormControl>
+                        <input
+                          type="checkbox"
+                          checked={field.value}
+                          onChange={field.onChange}
+                          className="h-4 w-4"
+                        />
+                      </FormControl>
+                      <FormLabel className="!mt-0">Investidor</FormLabel>
                     </FormItem>
                   )}
                 />
