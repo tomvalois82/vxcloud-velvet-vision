@@ -7,13 +7,6 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { 
@@ -35,6 +28,7 @@ import { cn } from "@/lib/utils";
 import { subMonths, format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { maskCurrency } from "@/features/estoque/utils/masks";
+import { MovimentoDialog } from "@/features/financeiro/components/MovimentoDialog";
 
 interface VeiculoOption {
   id: number;
@@ -51,6 +45,30 @@ interface MovimentoResult {
   forma_pagamento: string | null;
   data_compra: string | null;
   valor: number;
+}
+
+interface MovimentoForEdit {
+  id: string;
+  tipo_movimento: string;
+  descricao: string;
+  valor_bruto: number;
+  valor_liquido: number;
+  data_vencimento: string;
+  data_pagamento: string | null;
+  data_compra: string | null;
+  id_conta: string;
+  id_categoria: string;
+  id_empresa: string;
+  id_forma_pagamento: string | null;
+  id_cartao: string | null;
+  id_pessoa: string | null;
+  observacoes: string | null;
+  status: string;
+  id_estoque: number | null;
+  competencia?: string | null;
+  recorrencia_id?: string | null;
+  ordem_ocorrencia?: number | null;
+  total_ocorrencias?: number | null;
 }
 
 const FinanceiroFast = () => {
@@ -79,8 +97,7 @@ const FinanceiroFast = () => {
   // Result state
   const [movimentoResult, setMovimentoResult] = useState<MovimentoResult | null>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
-  const [editDescricao, setEditDescricao] = useState("");
-  const [savingEdit, setSavingEdit] = useState(false);
+  const [movimentoForEdit, setMovimentoForEdit] = useState<MovimentoForEdit | null>(null);
 
   // Fetch webhook URL and vehicles
   useEffect(() => {
@@ -375,46 +392,86 @@ const FinanceiroFast = () => {
     }
   };
 
-  const handleEditDescricao = () => {
-    if (movimentoResult) {
-      setEditDescricao(movimentoResult.descricao || "");
-      setEditDialogOpen(true);
-    }
-  };
-
-  const handleSaveDescricao = async () => {
+  const handleEditMovimento = async () => {
     if (!movimentoResult) return;
 
-    setSavingEdit(true);
     try {
-      const { error } = await supabase
+      // Fetch full movement data for editing
+      const { data: movimento, error } = await supabase
         .from("vx_fin_movimento")
-        .update({ descricao: editDescricao.trim() })
-        .eq("id", movimentoResult.id);
+        .select("*")
+        .eq("id", movimentoResult.id)
+        .maybeSingle();
 
       if (error) throw error;
 
-      // Update local state
-      setMovimentoResult({
-        ...movimentoResult,
-        descricao: editDescricao.trim(),
-      });
-
-      toast({
-        title: "Descrição atualizada!",
-      });
-
-      setEditDialogOpen(false);
+      if (movimento) {
+        setMovimentoForEdit({
+          id: movimento.id,
+          tipo_movimento: movimento.tipo_movimento,
+          descricao: movimento.descricao || "",
+          valor_bruto: movimento.valor_bruto,
+          valor_liquido: movimento.valor_liquido,
+          data_vencimento: movimento.data_vencimento,
+          data_pagamento: movimento.data_pagamento,
+          data_compra: movimento.data_compra,
+          id_conta: movimento.id_conta || "",
+          id_categoria: movimento.id_categoria || "",
+          id_empresa: movimento.id_empresa,
+          id_forma_pagamento: movimento.id_forma_pagamento,
+          id_cartao: movimento.id_cartao,
+          id_pessoa: movimento.id_pessoa,
+          observacoes: movimento.observacoes,
+          status: movimento.status,
+          id_estoque: movimento.id_estoque,
+          competencia: movimento.competencia,
+          recorrencia_id: movimento.recorrencia_id,
+          ordem_ocorrencia: movimento.ordem_ocorrencia,
+          total_ocorrencias: movimento.total_ocorrencias,
+        });
+        setEditDialogOpen(true);
+      }
     } catch (error: any) {
-      console.error("Erro ao atualizar descrição:", error);
+      console.error("Erro ao carregar movimento:", error);
       toast({
-        title: "Erro ao atualizar",
+        title: "Erro ao carregar movimento",
         description: error.message,
         variant: "destructive",
       });
-    } finally {
-      setSavingEdit(false);
     }
+  };
+
+  const handleEditSuccess = async () => {
+    // Refresh movement result data after edit
+    if (movimentoResult) {
+      const { data: movimento } = await supabase
+        .from("vx_fin_movimento")
+        .select(`
+          id,
+          descricao,
+          data_compra,
+          valor_bruto,
+          id_forma_pagamento,
+          id_estoque,
+          vx_forma_pagamento (descricao),
+          estoque (placa)
+        `)
+        .eq("id", movimentoResult.id)
+        .maybeSingle();
+
+      if (movimento) {
+        setMovimentoResult({
+          id: movimento.id,
+          descricao: movimento.descricao,
+          placa: movimento.estoque?.placa || null,
+          forma_pagamento: movimento.vx_forma_pagamento?.descricao || null,
+          data_compra: movimento.data_compra,
+          valor: movimento.valor_bruto,
+        });
+      }
+    }
+    setEditDialogOpen(false);
+    setMovimentoForEdit(null);
   };
 
   const handleBack = () => {
@@ -746,7 +803,7 @@ const FinanceiroFast = () => {
                   variant="ghost"
                   size="icon"
                   className="h-8 w-8"
-                  onClick={handleEditDescricao}
+                  onClick={handleEditMovimento}
                 >
                   <Pencil className="w-4 h-4" />
                 </Button>
@@ -758,44 +815,17 @@ const FinanceiroFast = () => {
         <div className="pb-6" />
       </div>
 
-      {/* Edit Description Dialog */}
-      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Editar Descrição</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <Input
-              value={editDescricao}
-              onChange={(e) => setEditDescricao(e.target.value)}
-              placeholder="Descrição do lançamento"
-              autoFocus
-            />
-          </div>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setEditDialogOpen(false)}
-              disabled={savingEdit}
-            >
-              Cancelar
-            </Button>
-            <Button
-              onClick={handleSaveDescricao}
-              disabled={savingEdit}
-            >
-              {savingEdit ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Salvando...
-                </>
-              ) : (
-                "Salvar"
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* MovimentoDialog for full editing */}
+      <MovimentoDialog
+        open={editDialogOpen}
+        onOpenChange={(open) => {
+          setEditDialogOpen(open);
+          if (!open) setMovimentoForEdit(null);
+        }}
+        movimento={movimentoForEdit}
+        defaultTipo={tipo}
+        onSuccess={handleEditSuccess}
+      />
     </div>
   );
 };
