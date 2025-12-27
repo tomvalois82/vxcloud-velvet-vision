@@ -4,8 +4,16 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { 
@@ -20,10 +28,13 @@ import {
   ArrowUpCircle,
   Car,
   ChevronsUpDown,
-  Check
+  Check,
+  Pencil
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { subMonths } from "date-fns";
+import { subMonths, format } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import { maskCurrency } from "@/features/estoque/utils/masks";
 
 interface VeiculoOption {
   id: number;
@@ -31,6 +42,15 @@ interface VeiculoOption {
   modelo: string | null;
   fabricante: string | null;
   status: string | null;
+}
+
+interface MovimentoResult {
+  id: string;
+  descricao: string | null;
+  placa: string | null;
+  forma_pagamento: string | null;
+  data_compra: string | null;
+  valor: number;
 }
 
 const FinanceiroFast = () => {
@@ -55,6 +75,12 @@ const FinanceiroFast = () => {
   const [selectedVeiculo, setSelectedVeiculo] = useState<VeiculoOption | null>(null);
   const [veiculoOpen, setVeiculoOpen] = useState(false);
   const [loadingVeiculos, setLoadingVeiculos] = useState(false);
+
+  // Result state
+  const [movimentoResult, setMovimentoResult] = useState<MovimentoResult | null>(null);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [editDescricao, setEditDescricao] = useState("");
+  const [savingEdit, setSavingEdit] = useState(false);
 
   // Fetch webhook URL and vehicles
   useEffect(() => {
@@ -232,6 +258,7 @@ const FinanceiroFast = () => {
     }
 
     setSending(true);
+    setMovimentoResult(null);
 
     try {
       // Convert file to base64
@@ -258,7 +285,7 @@ const FinanceiroFast = () => {
         },
       };
 
-      // Send to webhook
+      // Send to webhook and wait for response
       const response = await fetch(webhookUrl, {
         method: "POST",
         headers: {
@@ -271,22 +298,111 @@ const FinanceiroFast = () => {
         throw new Error(`Erro HTTP: ${response.status}`);
       }
 
-      toast({
-        title: "Enviado com sucesso!",
-        description: "O lançamento foi enviado para processamento.",
+      // Parse response to get movement ID
+      const responseData = await response.json();
+      const movimentoId = responseData?.id || responseData;
+
+      // Check if ID is valid
+      if (!movimentoId || movimentoId === "" || movimentoId === null) {
+        throw new Error("Nenhum ID retornado pelo servidor.");
+      }
+
+      // Fetch movement details from database
+      const { data: movimento, error: movimentoError } = await supabase
+        .from("vx_fin_movimento")
+        .select(`
+          id,
+          descricao,
+          data_compra,
+          valor_bruto,
+          id_forma_pagamento,
+          id_estoque,
+          vx_forma_pagamento (descricao),
+          estoque (placa)
+        `)
+        .eq("id", movimentoId)
+        .maybeSingle();
+
+      if (movimentoError) throw movimentoError;
+
+      if (!movimento) {
+        throw new Error("Movimento não encontrado no banco de dados.");
+      }
+
+      // Set result data
+      setMovimentoResult({
+        id: movimento.id,
+        descricao: movimento.descricao,
+        placa: movimento.estoque?.placa || null,
+        forma_pagamento: movimento.vx_forma_pagamento?.descricao || null,
+        data_compra: movimento.data_compra,
+        valor: movimento.valor_bruto,
       });
 
-      // Navigate back
-      navigate(tipo === "Pagar" ? "/financeiro/pagar" : "/financeiro/receber");
+      toast({
+        title: "Enviado com sucesso!",
+        description: "O lançamento foi processado.",
+      });
+
+      // Clear form for next entry
+      setFile(null);
+      setFilePreview(null);
+      setDescricao("");
+      setSelectedVeiculo(null);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
     } catch (error: any) {
       console.error("Erro ao enviar:", error);
       toast({
         title: "Erro ao enviar",
-        description: error.message || "Não foi possível enviar o lançamento.",
+        description: error.message || "Não foi possível enviar o lançamento. Tente novamente.",
         variant: "destructive",
       });
     } finally {
       setSending(false);
+    }
+  };
+
+  const handleEditDescricao = () => {
+    if (movimentoResult) {
+      setEditDescricao(movimentoResult.descricao || "");
+      setEditDialogOpen(true);
+    }
+  };
+
+  const handleSaveDescricao = async () => {
+    if (!movimentoResult) return;
+
+    setSavingEdit(true);
+    try {
+      const { error } = await supabase
+        .from("vx_fin_movimento")
+        .update({ descricao: editDescricao.trim() })
+        .eq("id", movimentoResult.id);
+
+      if (error) throw error;
+
+      // Update local state
+      setMovimentoResult({
+        ...movimentoResult,
+        descricao: editDescricao.trim(),
+      });
+
+      toast({
+        title: "Descrição atualizada!",
+      });
+
+      setEditDialogOpen(false);
+    } catch (error: any) {
+      console.error("Erro ao atualizar descrição:", error);
+      toast({
+        title: "Erro ao atualizar",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setSavingEdit(false);
     }
   };
 
@@ -558,7 +674,7 @@ const FinanceiroFast = () => {
         </div>
 
         {/* Submit Button */}
-        <div className="pt-4 pb-6">
+        <div className="pt-4 pb-2">
           <Button
             onClick={handleSubmit}
             disabled={!file || sending}
@@ -572,7 +688,7 @@ const FinanceiroFast = () => {
             {sending ? (
               <>
                 <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                Enviando...
+                Processando...
               </>
             ) : (
               <>
@@ -582,7 +698,93 @@ const FinanceiroFast = () => {
             )}
           </Button>
         </div>
+
+        {/* Result Display */}
+        {movimentoResult && (
+          <div className="border border-border rounded-lg p-4 bg-muted/20 animate-fade-in">
+            <div className="flex items-center justify-between gap-4">
+              <div className="flex-1 min-w-0 space-y-1">
+                <p className="text-sm font-medium truncate">
+                  {movimentoResult.descricao || "-"}
+                </p>
+                <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
+                  {movimentoResult.placa && (
+                    <span className="flex items-center gap-1">
+                      <Car className="w-3 h-3" />
+                      {movimentoResult.placa}
+                    </span>
+                  )}
+                  {movimentoResult.forma_pagamento && (
+                    <span>{movimentoResult.forma_pagamento}</span>
+                  )}
+                  {movimentoResult.data_compra && (
+                    <span>
+                      {format(new Date(movimentoResult.data_compra + "T00:00:00"), "dd/MM/yyyy", { locale: ptBR })}
+                    </span>
+                  )}
+                </div>
+              </div>
+              <div className="flex items-center gap-3 shrink-0">
+                <span className={cn(
+                  "font-semibold",
+                  tipo === "Pagar" ? "text-red-500" : "text-green-500"
+                )}>
+                  {maskCurrency(movimentoResult.valor)}
+                </span>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={handleEditDescricao}
+                >
+                  <Pencil className="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        <div className="pb-6" />
       </div>
+
+      {/* Edit Description Dialog */}
+      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Editar Descrição</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <Input
+              value={editDescricao}
+              onChange={(e) => setEditDescricao(e.target.value)}
+              placeholder="Descrição do lançamento"
+              autoFocus
+            />
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setEditDialogOpen(false)}
+              disabled={savingEdit}
+            >
+              Cancelar
+            </Button>
+            <Button
+              onClick={handleSaveDescricao}
+              disabled={savingEdit}
+            >
+              {savingEdit ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Salvando...
+                </>
+              ) : (
+                "Salvar"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
