@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Search, Car, Trash2, Handshake, Eye, EyeOff, Printer } from 'lucide-react';
+import { Plus, Search, Car, Trash2, Handshake, Eye, EyeOff, Printer, Zap } from 'lucide-react';
 import { useReactToPrint } from 'react-to-print';
 import { useVehicleMainPhoto } from '@/features/estoque/hooks/useVehicleMainPhoto';
 import { PageHeader } from '@/components/PageHeader';
@@ -382,6 +382,16 @@ const VeiculosEstoque = () => {
             <Button variant="outline" onClick={() => handlePrint()}>
               <Printer className="w-4 h-4 mr-2" />
               Imprimir Listagem
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => navigate('/veiculos/estoque/fast')}
+              className="relative border-amber-500/50 hover:border-amber-500 hover:bg-amber-500/10"
+              style={{
+                boxShadow: '0 0 20px 3px rgba(251, 191, 36, 0.4), 0 0 40px 6px rgba(251, 191, 36, 0.2)',
+              }}
+            >
+              <Zap className="w-5 h-5 text-amber-500" />
             </Button>
             <Button onClick={handleNew} className="bg-accent hover:bg-accent/90">
               <Plus className="w-4 h-4 mr-2" />
