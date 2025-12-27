@@ -1247,6 +1247,7 @@ export type Database = {
       }
       vx_fin_anexo: {
         Row: {
+          base64: string | null
           id: string
           id_movimento: string
           nome_arquivo: string
@@ -1254,6 +1255,7 @@ export type Database = {
           url_arquivo: string
         }
         Insert: {
+          base64?: string | null
           id?: string
           id_movimento: string
           nome_arquivo: string
@@ -1261,6 +1263,7 @@ export type Database = {
           url_arquivo: string
         }
         Update: {
+          base64?: string | null
           id?: string
           id_movimento?: string
           nome_arquivo?: string
