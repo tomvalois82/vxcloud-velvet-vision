@@ -11,6 +11,7 @@ import { ProtectedRoute } from "@/components/ProtectedRoute";
 import Dashboard from "./pages/Dashboard";
 import Login from "./pages/auth/Login";
 import VeiculosEstoque from "./pages/veiculos/VeiculosEstoque";
+import VeiculosEstoqueFast from "./pages/veiculos/VeiculosEstoqueFast";
 import VeiculosRelatorios from "./pages/veiculos/VeiculosRelatorios";
 import PessoasList from "./pages/pessoas/PessoasList";
 import InvestidoresList from "./pages/investidor/InvestidoresList";
@@ -64,6 +65,7 @@ const App = () => (
                             <Routes>
                               <Route path="/" element={<Dashboard />} />
                               <Route path="/veiculos/estoque" element={<VeiculosEstoque />} />
+                              <Route path="/veiculos/estoque/fast" element={<VeiculosEstoqueFast />} />
                               <Route path="/veiculos/relatorios" element={<VeiculosRelatorios />} />
                               <Route path="/pessoas" element={<PessoasList />} />
                               <Route path="/investidores" element={<InvestidoresList />} />
