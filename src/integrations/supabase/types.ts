@@ -1252,7 +1252,7 @@ export type Database = {
           id_movimento: string
           nome_arquivo: string
           tipo_mime: string | null
-          url_arquivo: string
+          url_arquivo: string | null
         }
         Insert: {
           base64?: string | null
@@ -1260,7 +1260,7 @@ export type Database = {
           id_movimento: string
           nome_arquivo: string
           tipo_mime?: string | null
-          url_arquivo: string
+          url_arquivo?: string | null
         }
         Update: {
           base64?: string | null
@@ -1268,7 +1268,7 @@ export type Database = {
           id_movimento?: string
           nome_arquivo?: string
           tipo_mime?: string | null
-          url_arquivo?: string
+          url_arquivo?: string | null
         }
         Relationships: [
           {

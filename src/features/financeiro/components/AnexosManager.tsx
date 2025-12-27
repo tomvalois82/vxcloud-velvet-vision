@@ -42,9 +42,37 @@ interface Anexo {
   id: string;
   id_movimento: string;
   nome_arquivo: string;
-  url_arquivo: string;
+  url_arquivo: string | null;
   tipo_mime: string | null;
+  base64: string | null;
 }
+
+// Helper to get file source (URL or base64 data URI)
+const getFileSource = (anexo: Anexo): string | null => {
+  if (anexo.url_arquivo) {
+    return anexo.url_arquivo;
+  }
+  if (anexo.base64 && anexo.tipo_mime) {
+    return `data:${anexo.tipo_mime};base64,${anexo.base64}`;
+  }
+  if (anexo.base64) {
+    return `data:application/octet-stream;base64,${anexo.base64}`;
+  }
+  return null;
+};
+
+// Helper to download base64 file
+const downloadBase64File = (anexo: Anexo) => {
+  const source = getFileSource(anexo);
+  if (!source) return;
+  
+  const link = document.createElement("a");
+  link.href = source;
+  link.download = anexo.nome_arquivo;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+};
 
 interface AnexosManagerProps {
   movimentoId: string | null;
@@ -242,12 +270,17 @@ export function AnexosManager({ movimentoId, onAnexosChange }: AnexosManagerProp
   };
 
   const handlePreview = (anexo: Anexo) => {
-    setPreviewUrl(anexo.url_arquivo);
+    const source = getFileSource(anexo);
+    setPreviewUrl(source);
     setPreviewType(anexo.tipo_mime);
   };
 
   const handleDownload = (anexo: Anexo) => {
-    window.open(anexo.url_arquivo, "_blank");
+    if (anexo.url_arquivo) {
+      window.open(anexo.url_arquivo, "_blank");
+    } else {
+      downloadBase64File(anexo);
+    }
   };
 
   const handleDeleteClick = (anexo: Anexo) => {
@@ -260,14 +293,14 @@ export function AnexosManager({ movimentoId, onAnexosChange }: AnexosManagerProp
 
     setDeleting(true);
     try {
-      // Extract path from URL
-      const urlParts = anexoToDelete.url_arquivo.split("/");
-      const pathIndex = urlParts.findIndex((p) => p === "movimentos");
-      if (pathIndex !== -1) {
-        const filePath = urlParts.slice(pathIndex).join("/");
-
-        // Delete from storage
-        await supabase.storage.from(BUCKET_NAME).remove([filePath]);
+      // Only delete from storage if we have a url_arquivo
+      if (anexoToDelete.url_arquivo) {
+        const urlParts = anexoToDelete.url_arquivo.split("/");
+        const pathIndex = urlParts.findIndex((p) => p === "movimentos");
+        if (pathIndex !== -1) {
+          const filePath = urlParts.slice(pathIndex).join("/");
+          await supabase.storage.from(BUCKET_NAME).remove([filePath]);
+        }
       }
 
       // Delete from database
