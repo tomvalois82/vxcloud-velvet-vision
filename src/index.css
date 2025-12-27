@@ -47,19 +47,17 @@
     /* Shadow variables */
     --shadow-2xs: 0 1px 3px 0px hsl(0 0% 0% / 0.05);
     --shadow-xs: 0 1px 3px 0px hsl(0 0% 0% / 0.05);
-    --shadow-sm: 0px 1px 10px 0px hsla(0, 0%, 0%, 0.15);
-    --shadow: 0px 1px 20px 0px hsla(0, 0%, 0%, 0.15);
-    --shadow-md: 0px 1px 30px 0px hsla(0, 0%, 0%, 0.15);
-    --shadow-lg: 0px 1px 50px 0px hsla(0, 0%, 0%, 0.15);
+    --shadow-sm: 0px 1px 10px 0px hsla(263, 69%, 42%, 0.15);
+    --shadow: 0px 1px 20px 0px hsla(263, 69%, 42%, 0.15);
+    --shadow-md: 0px 1px 30px 0px hsla(263, 69%, 42%, 0.15);
+    --shadow-lg: 0px 1px 50px 0px hsla(263, 69%, 42%, 0.15);
     --shadow-xl: 0 1px 3px 0px hsl(0 0% 0% / 0.1), 0 8px 10px -1px hsl(0 0% 0% / 0.1);
     --shadow-2xl: 0 1px 3px 0px hsl(0 0% 0% / 0.25);
     --sidebar: 0 0% 98%;
-    --font-sans:
-      "Montserrat", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue",
+    --font-sans: "Montserrat", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue",
       Arial, "Noto Sans", sans-serif;
     --font-serif: "Cormorant Garamond", ui-serif, Georgia, Cambria, "Times New Roman", Times, serif;
-    --font-mono:
-      "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New",
+    --font-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New",
       monospace;
     --tracking-normal: 0em;
     --spacing: 0.25rem;
@@ -101,10 +99,10 @@
 
     --shadow-2xs: 0 1px 3px 0px hsl(0 0% 0% / 0.05);
     --shadow-xs: 0 1px 3px 0px hsl(0 0% 0% / 0.05);
-    --shadow-sm: 0px 0px 19.75px -10px hsla(293, 69%, 49%, 0.95);
-    --shadow: 0px 0px 39.5px -10px hsla(293, 69%, 49%, 0.95);
-    --shadow-md: 0px 0px 59.25px -10px hsla(293, 69%, 49%, 0.95);
-    --shadow-lg: 0px 0px 98.75px -10px hsla(293, 69%, 49%, 0.95);
+    --shadow-sm: 0px 1px 10px 0px hsla(263, 69%, 42%, 0.15);
+    --shadow: 0px 1px 20px 0px hsla(263, 69%, 42%, 0.15);
+    --shadow-md: 0px 1px 30px 0px hsla(263, 69%, 42%, 0.15);
+    --shadow-lg: 0px 1px 50px 0px hsla(263, 69%, 42%, 0.15);
     --shadow-xl: 0 1px 3px 0px hsl(0 0% 0% / 0.1), 0 8px 10px -1px hsl(0 0% 0% / 0.1);
     --shadow-2xl: 0 1px 3px 0px hsl(0 0% 0% / 0.25);
     --sidebar: 240 3% 15%;
