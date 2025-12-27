@@ -44,7 +44,7 @@ async function compressImageForOCR(file: File): Promise<File> {
   }
 }
 
-const WEBHOOK_URL = "https://n8n-n8n-start.ppmwkh.easypanel.host/webhook-test/vxmotors_ocr_estoque";
+
 
 const VeiculosEstoqueFast = () => {
   const navigate = useNavigate();
@@ -118,7 +118,7 @@ const VeiculosEstoqueFast = () => {
     setResult(null);
 
     try {
-      // Get user's empresa
+      // Get user's empresa and webhook URL from config
       const { data: userData } = await supabase.auth.getUser();
       if (!userData.user) throw new Error("Usuário não autenticado");
 
@@ -129,6 +129,14 @@ const VeiculosEstoqueFast = () => {
         .single();
 
       if (!usuario?.config) throw new Error("Configuração não encontrada");
+
+      const { data: config } = await supabase
+        .from("config")
+        .select("link_wh_ocr_estoque")
+        .eq("id", usuario.config)
+        .single();
+
+      if (!config?.link_wh_ocr_estoque) throw new Error("Webhook não configurado");
 
       const { data: empresa } = await supabase
         .from("empresa")
@@ -164,7 +172,7 @@ const VeiculosEstoqueFast = () => {
       };
 
       // Send to webhook
-      const response = await fetch(WEBHOOK_URL, {
+      const response = await fetch(config.link_wh_ocr_estoque, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
