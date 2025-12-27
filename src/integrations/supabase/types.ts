@@ -155,6 +155,7 @@ export type Database = {
           idusuario: number | null
           krayincrm: boolean | null
           link_wh_ocr: string | null
+          link_wh_ocr_estoque: string | null
           mensagens_folowup: string[] | null
           pausa: number | null
           promptolx: string | null
@@ -188,6 +189,7 @@ export type Database = {
           idusuario?: number | null
           krayincrm?: boolean | null
           link_wh_ocr?: string | null
+          link_wh_ocr_estoque?: string | null
           mensagens_folowup?: string[] | null
           pausa?: number | null
           promptolx?: string | null
@@ -221,6 +223,7 @@ export type Database = {
           idusuario?: number | null
           krayincrm?: boolean | null
           link_wh_ocr?: string | null
+          link_wh_ocr_estoque?: string | null
           mensagens_folowup?: string[] | null
           pausa?: number | null
           promptolx?: string | null
@@ -507,6 +510,44 @@ export type Database = {
             columns: ["id_empresa"]
             isOneToOne: false
             referencedRelation: "empresa"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      estoque_anexos: {
+        Row: {
+          base64: string | null
+          criado_at: string | null
+          id: string
+          id_estoque: number
+          nome_arquivo: string
+          tipo_mime: string
+          url_arquivo: string | null
+        }
+        Insert: {
+          base64?: string | null
+          criado_at?: string | null
+          id?: string
+          id_estoque: number
+          nome_arquivo: string
+          tipo_mime: string
+          url_arquivo?: string | null
+        }
+        Update: {
+          base64?: string | null
+          criado_at?: string | null
+          id?: string
+          id_estoque?: number
+          nome_arquivo?: string
+          tipo_mime?: string
+          url_arquivo?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "estoque_anexos_id_estoque_fkey"
+            columns: ["id_estoque"]
+            isOneToOne: false
+            referencedRelation: "estoque"
             referencedColumns: ["id"]
           },
         ]
