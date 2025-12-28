@@ -399,6 +399,34 @@ export function VehicleDialog({ open, onOpenChange, vehicleId, onSuccess }: Vehi
     }
   }, [open, vehicleId]);
 
+  // Função para normalizar cor (masculino/feminino para o padrão do select)
+  const normalizarCor = (cor: string | null): string => {
+    if (!cor) return '';
+    
+    const corUpper = cor.toUpperCase().trim();
+    const coresMap: Record<string, string> = {
+      'PRETO': 'Preto',
+      'PRETA': 'Preto',
+      'BRANCO': 'Branco',
+      'BRANCA': 'Branco',
+      'PRATA': 'Prata',
+      'CINZA': 'Cinza',
+      'VERMELHO': 'Vermelho',
+      'VERMELHA': 'Vermelho',
+      'AZUL': 'Azul',
+      'VERDE': 'Verde',
+      'MARROM': 'Marrom',
+      'BEGE': 'Bege',
+      'AMARELO': 'Amarelo',
+      'AMARELA': 'Amarelo',
+      'LARANJA': 'Laranja',
+      'ROXO': 'Roxo',
+      'ROXA': 'Roxo',
+    };
+    
+    return coresMap[corUpper] || cor;
+  };
+
   const loadVehicle = async () => {
     if (!vehicleId) return;
 
@@ -413,10 +441,24 @@ export function VehicleDialog({ open, onOpenChange, vehicleId, onSuccess }: Vehi
       if (error) throw error;
 
       // Atualizar anos de fabricação ANTES de resetar o formulário
+      // Incluir tanto o ano modelo quanto o ano de fabricação (se diferentes)
       if (data.ano) {
         const anoNum = parseInt(data.ano);
+        const anoFabNum = data.ano_fabricacao ? parseInt(data.ano_fabricacao) : null;
+        
         if (!isNaN(anoNum)) {
-          setAnosFabricacao([String(anoNum), String(anoNum - 1)]);
+          const anosSet = new Set<string>();
+          anosSet.add(String(anoNum));
+          anosSet.add(String(anoNum - 1));
+          
+          // Adicionar o ano de fabricação cadastrado se for diferente
+          if (anoFabNum && !isNaN(anoFabNum)) {
+            anosSet.add(String(anoFabNum));
+          }
+          
+          // Ordenar do maior para o menor
+          const anosArray = Array.from(anosSet).sort((a, b) => parseInt(b) - parseInt(a));
+          setAnosFabricacao(anosArray);
         }
       }
 
@@ -441,7 +483,7 @@ export function VehicleDialog({ open, onOpenChange, vehicleId, onSuccess }: Vehi
         valor: data.valor ? maskCurrency(Number(data.valor)) : '',
         valor_compra: data.valor_aquisicao ? maskCurrency(data.valor_aquisicao) : '',
         km: data.km ? maskKm(data.km) : '',
-        cor: data.cor || '',
+        cor: normalizarCor(data.cor),
         carroceria: data.categoria || '',
         motor: data.motor || '',
         cambio: data.cambio || '',
