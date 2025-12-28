@@ -13,9 +13,11 @@ import {
   Send, 
   FileImage, 
   FileText,
-  Car
+  Car,
+  Pencil
 } from "lucide-react";
 import imageCompression from "browser-image-compression";
+import { VehicleDialog } from "@/features/estoque/components/VehicleDialog";
 
 // Compression options for OCR - good quality for text recognition
 const OCR_COMPRESSION_OPTIONS = {
@@ -56,6 +58,7 @@ const VeiculosEstoqueFast = () => {
   const [filePreview, setFilePreview] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
   const [result, setResult] = useState<{ id: number; placa: string; modelo: string } | null>(null);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
@@ -246,10 +249,14 @@ const VeiculosEstoqueFast = () => {
     }
   };
 
-  const handleViewVehicle = () => {
+  const handleEditVehicle = () => {
     if (result) {
-      navigate(`/veiculos/estoque`);
+      setEditDialogOpen(true);
     }
+  };
+
+  const handleEditDialogSuccess = () => {
+    setEditDialogOpen(false);
   };
 
   return (
@@ -290,9 +297,10 @@ const VeiculosEstoqueFast = () => {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={handleViewVehicle}
+                onClick={handleEditVehicle}
               >
-                Ver Estoque
+                <Pencil className="w-4 h-4 mr-1" />
+                Editar
               </Button>
             </div>
           </div>
@@ -399,6 +407,16 @@ const VeiculosEstoqueFast = () => {
           </p>
         </div>
       </div>
+
+      {/* Vehicle Edit Dialog */}
+      {result && (
+        <VehicleDialog
+          open={editDialogOpen}
+          onOpenChange={setEditDialogOpen}
+          vehicleId={result.id}
+          onSuccess={handleEditDialogSuccess}
+        />
+      )}
     </div>
   );
 };
