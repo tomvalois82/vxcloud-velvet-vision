@@ -197,7 +197,7 @@ const VeiculosEstoqueFast = () => {
       console.log("Webhook response:", responseData);
 
       const veiculoData = Array.isArray(responseData) ? responseData[0] : responseData;
-      const veiculoId = veiculoData?.id ?? veiculoData?.id_veiculo;
+      const veiculoId = veiculoData?.id_estoque;
 
       if (!veiculoId || veiculoId === "" || veiculoId === "erro") {
         throw new Error("Erro ao processar o veículo. Tente novamente.");
