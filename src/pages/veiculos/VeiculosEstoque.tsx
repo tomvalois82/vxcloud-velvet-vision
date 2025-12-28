@@ -385,11 +385,13 @@ const VeiculosEstoque = () => {
             </Button>
             <Button
               variant="outline"
+              size="icon"
               onClick={() => navigate('/veiculos/estoque/fast')}
-              className="relative border-amber-500/50 hover:border-amber-500 hover:bg-amber-500/10"
+              className="rounded-full w-10 h-10 border-amber-500/50 hover:border-amber-500 hover:bg-amber-500/10"
               style={{
                 boxShadow: '0 0 20px 3px rgba(251, 191, 36, 0.4), 0 0 40px 6px rgba(251, 191, 36, 0.2)',
               }}
+              title="Cadastro Rápido"
             >
               <Zap className="w-5 h-5 text-amber-500" />
             </Button>

@@ -800,10 +800,13 @@ const FinanceiroReceber = () => {
               variant="outline"
               size="icon"
               onClick={() => navigate("/financeiro/fast?tipo=Receber")}
-              className="rounded-full w-10 h-10 border-accent/50 hover:bg-accent/10 shadow-lg shadow-accent/20"
               title="Lançamento Rápido"
+              className="rounded-full w-10 h-10 border-amber-500/50 hover:border-amber-500 hover:bg-amber-500/10"
+              style={{
+                boxShadow: '0 0 20px 3px rgba(251, 191, 36, 0.4), 0 0 40px 6px rgba(251, 191, 36, 0.2)',
+              }}
             >
-              <Zap className="w-5 h-5 text-accent" />
+              <Zap className="w-5 h-5 text-amber-500" />
             </Button>
             <Button className="bg-accent hover:bg-accent/90" onClick={handleNew}>
               <Plus className="w-4 h-4 mr-2" />
