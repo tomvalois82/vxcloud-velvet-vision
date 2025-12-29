@@ -164,7 +164,7 @@ Deno.serve(async (req) => {
       }
 
       case "update": {
-        const { id, nome, telefone, cargo, ativo, superadm } = params;
+        const { id, nome, telefone, cargo, ativo, superadm, auth_id } = params;
 
         if (!id) {
           return new Response(
@@ -193,6 +193,20 @@ Deno.serve(async (req) => {
             JSON.stringify({ error: error.message }),
             { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
           );
+        }
+
+        // If superadm was changed and we have auth_id, update auth.users.is_super_admin
+        if (superadm !== undefined && auth_id) {
+          const { error: authUpdateError } = await supabaseAdmin.auth.admin.updateUserById(auth_id, {
+            app_metadata: { is_super_admin: superadm },
+          });
+
+          if (authUpdateError) {
+            console.error("Error updating auth user is_super_admin:", authUpdateError);
+            // Don't fail the request, usuario was already updated
+          } else {
+            console.log("Auth user is_super_admin updated to:", superadm);
+          }
         }
 
         console.log("User updated successfully:", usuario);
