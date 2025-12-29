@@ -155,7 +155,7 @@ export const CriarSnapshotDialog = ({
         const valorAquisicao = Number(veiculo.valor_aquisicao) || 0;
         const custosPreparacao = custosPorVeiculo[veiculo.id] || 0;
         const custoFinal = valorAquisicao + custosPreparacao;
-        const valorVenda = Number(veiculo.valor?.replace(/\D/g, "") || 0) / 100 || 0;
+        const valorVenda = Number(veiculo.valor?.replace(/[^\d,]/g, "").replace(",", ".") || 0) || 0;
         const lucroEstimado = valorVenda - custoFinal;
         const margemPercentual = custoFinal > 0 ? (lucroEstimado / custoFinal) * 100 : 0;
         
