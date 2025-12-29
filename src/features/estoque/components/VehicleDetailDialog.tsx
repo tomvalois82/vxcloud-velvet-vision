@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { differenceInDays, differenceInMonths, format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { Car, Calendar, Gauge, Palette, CreditCard, FileText, Clock, Edit, MapPin, Hash, Settings, Fuel, TrendingUp, Receipt, Printer, Plus, Trash2, Pencil } from 'lucide-react';
+import { Car, Calendar, Gauge, Palette, CreditCard, FileText, Clock, Edit, MapPin, Hash, Settings, Fuel, TrendingUp, Receipt, Printer, Plus, Trash2, Pencil, Copy } from 'lucide-react';
 import { useReactToPrint } from 'react-to-print';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
@@ -81,18 +81,33 @@ function calculateTimeInStock(createdAt: string): string {
 function DetailRow({
   icon: Icon,
   label,
-  value
+  value,
+  copyable = false,
+  onCopy
 }: {
   icon: React.ElementType;
   label: string;
   value: string | null | undefined;
+  copyable?: boolean;
+  onCopy?: (value: string) => void;
 }) {
   if (!value) return null;
   return <div className="flex items-start gap-3 py-2">
       <Icon className="w-4 h-4 text-muted-foreground mt-0.5 shrink-0" />
       <div className="flex-1 min-w-0">
         <p className="text-xs text-muted-foreground">{label}</p>
-        <p className="text-sm text-foreground break-words">{value}</p>
+        <div className="flex items-center gap-1">
+          <p className="text-sm text-foreground break-words">{value}</p>
+          {copyable && onCopy && (
+            <button
+              type="button"
+              className="p-1 hover:bg-accent/20 rounded transition-colors"
+              onClick={() => onCopy(value)}
+            >
+              <Copy className="h-3 w-3 text-muted-foreground hover:text-foreground" />
+            </button>
+          )}
+        </div>
       </div>
     </div>;
 }
@@ -423,9 +438,18 @@ export function VehicleDetailDialog({
               <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6">
                 <div>
                   <h3 className="text-sm font-semibold text-foreground mb-2">Identificação</h3>
-                  <DetailRow icon={MapPin} label="Placa" value={vehicle.placa} />
-                  <DetailRow icon={Hash} label="Renavan" value={vehicle.renavan?.toString()} />
-                  <DetailRow icon={FileText} label="Chassi" value={vehicle.chassi} />
+                  <DetailRow icon={MapPin} label="Placa" value={vehicle.placa} copyable onCopy={(v) => {
+                    navigator.clipboard.writeText(v);
+                    toast({ title: 'Copiado!', description: 'Placa copiada para a área de transferência.' });
+                  }} />
+                  <DetailRow icon={Hash} label="Renavan" value={vehicle.renavan?.toString()} copyable onCopy={(v) => {
+                    navigator.clipboard.writeText(v);
+                    toast({ title: 'Copiado!', description: 'Renavan copiado para a área de transferência.' });
+                  }} />
+                  <DetailRow icon={FileText} label="Chassi" value={vehicle.chassi} copyable onCopy={(v) => {
+                    navigator.clipboard.writeText(v);
+                    toast({ title: 'Copiado!', description: 'Chassi copiado para a área de transferência.' });
+                  }} />
                   <DetailRow icon={Car} label="Tipo" value={vehicle.tipo_veiculo} />
                   <DetailRow icon={Car} label="Categoria" value={vehicle.categoria} />
                 </div>

@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Search, Car, Trash2, Handshake, Eye, EyeOff, Printer, Zap } from 'lucide-react';
+import { Plus, Search, Car, Trash2, Handshake, Eye, EyeOff, Printer, Zap, Copy } from 'lucide-react';
 import { useReactToPrint } from 'react-to-print';
 import { useVehicleMainPhoto } from '@/features/estoque/hooks/useVehicleMainPhoto';
 import { PageHeader } from '@/components/PageHeader';
@@ -112,7 +112,24 @@ function VehicleCard({
             <p className="text-sm text-muted-foreground">Cor: {vehicle.cor}</p>
           )}
           {vehicle.placa && (
-            <p className="text-sm text-muted-foreground">Placa: {vehicle.placa}</p>
+            <div className="flex items-center gap-1 text-sm text-muted-foreground">
+              <span>Placa: {vehicle.placa}</span>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-5 w-5 hover:bg-accent/20"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  navigator.clipboard.writeText(vehicle.placa || '');
+                  toast({
+                    title: 'Copiado!',
+                    description: 'Placa copiada para a área de transferência.',
+                  });
+                }}
+              >
+                <Copy className="h-3 w-3" />
+              </Button>
+            </div>
           )}
           <div className="flex items-center justify-between">
             <p className="text-lg font-bold text-accent">
