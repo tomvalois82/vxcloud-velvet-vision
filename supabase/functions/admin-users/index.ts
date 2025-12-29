@@ -34,15 +34,11 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Verify the requesting user is a super admin
-    const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
-    const supabaseClient = createClient(supabaseUrl, anonKey, {
-      global: {
-        headers: { Authorization: authHeader },
-      },
-    });
+    // Extract the JWT token from the Authorization header
+    const token = authHeader.replace("Bearer ", "");
 
-    const { data: { user: requestingUser }, error: userError } = await supabaseClient.auth.getUser();
+    // Verify the requesting user using the token directly with admin client
+    const { data: { user: requestingUser }, error: userError } = await supabaseAdmin.auth.getUser(token);
     if (userError || !requestingUser) {
       console.error("Failed to get requesting user:", userError);
       return new Response(
