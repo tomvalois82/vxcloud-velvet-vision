@@ -124,9 +124,9 @@ const Usuarios = () => {
 
   // Update user mutation
   const updateMutation = useMutation({
-    mutationFn: async ({ id, ...userData }: { id: number } & Partial<typeof formData>) => {
+    mutationFn: async ({ id, auth_id, ...userData }: { id: number; auth_id?: string | null } & Partial<typeof formData>) => {
       const { data, error } = await supabase.functions.invoke("admin-users", {
-        body: { action: "update", id, ...userData },
+        body: { action: "update", id, auth_id, ...userData },
       });
       if (error) throw error;
       if (data.error) throw new Error(data.error);
@@ -234,6 +234,7 @@ const Usuarios = () => {
     if (selectedUser) {
       updateMutation.mutate({
         id: selectedUser.id,
+        auth_id: selectedUser.auth_id,
         nome: formData.nome,
         telefone: formData.telefone,
         cargo: formData.cargo,
