@@ -1867,6 +1867,50 @@ export type Database = {
           },
         ]
       }
+      vx_snapshots: {
+        Row: {
+          contas_a_receber: number | null
+          created_at: string | null
+          estoque_atual: Json
+          id: string
+          id_empresa: string
+          mes_referencia: string
+          saldo: number | null
+          total_estimado: number | null
+          total_estoque: number | null
+        }
+        Insert: {
+          contas_a_receber?: number | null
+          created_at?: string | null
+          estoque_atual?: Json
+          id?: string
+          id_empresa: string
+          mes_referencia: string
+          saldo?: number | null
+          total_estimado?: number | null
+          total_estoque?: number | null
+        }
+        Update: {
+          contas_a_receber?: number | null
+          created_at?: string | null
+          estoque_atual?: Json
+          id?: string
+          id_empresa?: string
+          mes_referencia?: string
+          saldo?: number | null
+          total_estimado?: number | null
+          total_estoque?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_vx_snapshots_empresa"
+            columns: ["id_empresa"]
+            isOneToOne: false
+            referencedRelation: "empresa"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       vx_veiculos_consultados: {
         Row: {
           ano_fabricacao: number | null

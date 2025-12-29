@@ -36,6 +36,7 @@ import FormasPagamento from "./pages/configuracoes/FormasPagamento";
 import Usuarios from "./pages/configuracoes/Usuarios";
 import Empresa from "./pages/configuracoes/Empresa";
 import GerenciarEmpresas from "./pages/configuracoes/GerenciarEmpresas";
+import Snapshots from "./pages/configuracoes/Snapshots";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -90,6 +91,7 @@ const App = () => (
                               <Route path="/configuracoes/formas-pagamento" element={<FormasPagamento />} />
                               <Route path="/configuracoes/usuarios" element={<Usuarios />} />
                               <Route path="/configuracoes/empresas" element={<GerenciarEmpresas />} />
+                              <Route path="/configuracoes/snapshots" element={<Snapshots />} />
                               <Route path="*" element={<NotFound />} />
                             </Routes>
                           </main>
