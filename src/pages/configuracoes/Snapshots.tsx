@@ -30,6 +30,7 @@ import {
 import { Plus, Trash2, Eye, Calendar, Filter, X } from "lucide-react";
 import { toast } from "sonner";
 import { EmptyState } from "@/components/EmptyState";
+import { CriarSnapshotDialog } from "@/features/snapshots/components/CriarSnapshotDialog";
 
 interface Snapshot {
   id: string;
@@ -48,6 +49,7 @@ const Snapshots = () => {
   const [dataInicio, setDataInicio] = useState<string>("");
   const [dataFim, setDataFim] = useState<string>("");
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [showCreateDialog, setShowCreateDialog] = useState(false);
 
   // Fetch empresa ID on mount
   useEffect(() => {
@@ -202,7 +204,7 @@ const Snapshots = () => {
                   )}
                 </div>
               </div>
-              <Button onClick={() => toast.info("Funcionalidade em desenvolvimento")}>
+              <Button onClick={() => setShowCreateDialog(true)}>
                 <Plus className="w-4 h-4 mr-2" />
                 Criar Snapshot
               </Button>
@@ -315,6 +317,16 @@ const Snapshots = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Create Snapshot Dialog */}
+      {empresaId && (
+        <CriarSnapshotDialog
+          open={showCreateDialog}
+          onOpenChange={setShowCreateDialog}
+          empresaId={empresaId}
+          onSuccess={() => refetch()}
+        />
+      )}
     </div>
   );
 };
