@@ -474,12 +474,12 @@ export function VehicleDetailDialog({
                           {vehicleCosts.map(cost => <tr key={cost.id} className="border-b border-border/30 last:border-0 hover:bg-muted/20">
                               <td className="py-2 px-3 text-foreground">{cost.descricao}</td>
                               <td className="py-2 px-3 text-muted-foreground">
-                                {format(new Date(cost.data_vencimento), 'dd/MM/yyyy', {
+                                {format(new Date(cost.data_vencimento + 'T00:00:00'), 'dd/MM/yyyy', {
                           locale: ptBR
                         })}
                               </td>
                               <td className="py-2 px-3 text-muted-foreground">
-                                {cost.data_pagamento ? format(new Date(cost.data_pagamento), 'dd/MM/yyyy', {
+                                {cost.data_pagamento ? format(new Date(cost.data_pagamento + 'T00:00:00'), 'dd/MM/yyyy', {
                           locale: ptBR
                         }) : '-'}
                               </td>
