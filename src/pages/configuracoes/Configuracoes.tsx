@@ -1,7 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { PageHeader } from "@/components/PageHeader";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Settings, Building2, Users, Bell, CreditCard, ChevronRight } from "lucide-react";
+import { Settings, Building2, Users, Bell, CreditCard, ChevronRight, Camera } from "lucide-react";
 
 const Configuracoes = () => {
   const navigate = useNavigate();
@@ -36,6 +36,12 @@ const Configuracoes = () => {
       title: "Sistema",
       description: "Configurações gerais do sistema",
       path: null,
+    },
+    {
+      icon: Camera,
+      title: "Snapshots",
+      description: "Fotografias patrimoniais e financeiras",
+      path: "/configuracoes/snapshots",
     },
   ];
 
