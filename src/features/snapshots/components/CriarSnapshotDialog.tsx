@@ -106,12 +106,12 @@ export const CriarSnapshotDialog = ({
         .eq("id_empresa", empresaId)
         .single();
 
-      // Get all vehicles in stock (status = 'Disponível' or null)
+      // Get all vehicles in stock (status = 'Em estoque' or 'Em preparação')
       const { data: veiculos } = await supabase
         .from("estoque")
         .select("*")
         .eq("id_empresa", empresaId)
-        .or("status.eq.Disponível,status.is.null");
+        .or("status.eq.Em estoque,status.eq.Em preparação");
 
       // Get all investments for the loja (if found)
       let investimentosLoja: { id_estoque: number; valor_investido: number; percentual_investido: number }[] = [];
@@ -157,7 +157,7 @@ export const CriarSnapshotDialog = ({
         const custoFinal = valorAquisicao + custosPreparacao;
         const valorVenda = Number(veiculo.valor?.replace(/\D/g, "") || 0) / 100 || 0;
         const lucroEstimado = valorVenda - custoFinal;
-        const margemPercentual = valorVenda > 0 ? (lucroEstimado / valorVenda) * 100 : 0;
+        const margemPercentual = custoFinal > 0 ? (lucroEstimado / custoFinal) * 100 : 0;
         
         // Calculate days in stock
         const dataAquisicao = veiculo.data_aquisicao 
