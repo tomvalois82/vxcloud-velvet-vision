@@ -411,12 +411,12 @@ export const CriarSnapshotDialog = ({
                 // Lucro do veículo = valor - custo_total - valor_aquisicao
                 const lucroVeiculo = valorVenda - custoTotal - valorAquisicao;
 
-                // Lucro proporcional = valor * percentual / 100 - custo_proporcional - valor_investido
-                const valorProporcional = (valorVenda * percentualInvestido) / 100;
-                const lucroProporcional = valorProporcional - custoProporcional - valorInvestido;
+                // Lucro proporcional do investidor = (lucro_veiculo * percentual) / 100
+                const lucroProporcional = (lucroVeiculo * percentualInvestido) / 100;
 
-                // Margem = lucro / valor_aquisicao * 100
-                const margem = valorAquisicao > 0 ? (lucroVeiculo / valorAquisicao) * 100 : 0;
+                // Margem = lucro_veiculo / (valor_aquisicao + custo_total) * 100
+                const custoTotalVeiculo = valorAquisicao + custoTotal;
+                const margem = custoTotalVeiculo > 0 ? (lucroVeiculo / custoTotalVeiculo) * 100 : 0;
 
                 // Margem proporcional = lucro_proporcional / valor_investido * 100
                 const margemProporcional = valorInvestido > 0 ? (lucroProporcional / valorInvestido) * 100 : 0;
