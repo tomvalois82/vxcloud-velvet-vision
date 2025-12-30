@@ -33,6 +33,7 @@ import {
   Car,
   Loader2,
   ShoppingCart,
+  PiggyBank,
 } from "lucide-react";
 
 interface EstoqueItem {
@@ -59,12 +60,30 @@ interface VendaItem {
   valor_total_venda: number;
 }
 
+interface InvestimentoItem {
+  id_estoque: number;
+  veiculo: string;
+  valor: number;
+  valor_aquisicao: number;
+  valor_investido: number;
+  percentual_investido: number;
+  custo_total: number;
+  custo_proporcional: number;
+  lucro_veiculo: number;
+  lucro_proporcional: number;
+  margem: number;
+  margem_proporcional: number;
+  data_finalizado: string | null;
+  tipo: "estimado" | "consolidado";
+}
+
 interface SnapshotData {
   mes_referencia: string;
   total_estoque: number;
   total_estimado: number;
   saldo: number;
   contas_a_receber: number;
+  investimento_atual: InvestimentoItem[];
   estoque_atual: EstoqueItem[];
   venda_atual: VendaItem[];
 }
@@ -290,6 +309,142 @@ export const CriarSnapshotDialog = ({
         }
       }
 
+      // ========== INVESTIMENTOS ==========
+      // Get investments: not finalized OR finalized within the reference month
+      // Only for investor whose cpf_cnpj matches empresa.cnpj
+      const investimentoAtual: InvestimentoItem[] = [];
+
+      if (empresa?.cnpj) {
+        // Find the investor pessoa matching the empresa cnpj
+        const { data: investidorPessoa } = await supabase
+          .from("vx_pessoa")
+          .select("id")
+          .eq("cpf_cnpj", empresa.cnpj)
+          .eq("eh_investidor", true)
+          .single();
+
+        if (investidorPessoa) {
+          // Get all investments for this investor
+          const { data: investimentos } = await supabase
+            .from("vx_investimento")
+            .select(`
+              id,
+              id_estoque,
+              id_pessoa,
+              valor_investido,
+              percentual_investido,
+              data_finalizado
+            `)
+            .eq("id_pessoa", investidorPessoa.id);
+
+          if (investimentos && investimentos.length > 0) {
+            // Filter: not finalized OR finalized within the month
+            const investimentosFiltrados = investimentos.filter(inv => {
+              if (!inv.data_finalizado) return true; // Not finalized
+              // Check if finalized within the reference month
+              const dataFinalizado = new Date(inv.data_finalizado);
+              const inicioMesDate = new Date(inicioMes);
+              const fimMesDate = new Date(fimMes + "T23:59:59");
+              return dataFinalizado >= inicioMesDate && dataFinalizado <= fimMesDate;
+            });
+
+            if (investimentosFiltrados.length > 0) {
+              // Get all estoque IDs
+              const estoqueIds = investimentosFiltrados.map(inv => inv.id_estoque);
+
+              // Get vehicle details
+              const { data: veiculosInv } = await supabase
+                .from("estoque")
+                .select("id, fabricante, modelo, motor, cambio, ano_fabricacao, ano, cor, placa, valor, valor_aquisicao")
+                .in("id", estoqueIds);
+
+              // Get costs for all vehicles
+              const { data: custosInv } = await supabase
+                .from("vx_fin_movimento")
+                .select("id_estoque, valor_liquido")
+                .eq("id_empresa", empresaId)
+                .eq("tipo_movimento", "Pagar")
+                .in("id_estoque", estoqueIds);
+
+              // Get sales for sold vehicles
+              const { data: vendasInv } = await supabase
+                .from("vx_vendas")
+                .select("id_veiculo_vendido, valor_total_venda")
+                .eq("id_empresa", empresaId)
+                .eq("fechada", true)
+                .in("id_veiculo_vendido", estoqueIds);
+
+              // Build maps
+              const veiculoInvMap = new Map(veiculosInv?.map(v => [v.id, v]) || []);
+              const custoInvMap: Record<number, number> = {};
+              custosInv?.forEach(mov => {
+                if (mov.id_estoque) {
+                  custoInvMap[mov.id_estoque] = (custoInvMap[mov.id_estoque] || 0) + Number(mov.valor_liquido || 0);
+                }
+              });
+              const vendaInvMap = new Map(vendasInv?.map(v => [v.id_veiculo_vendido, v]) || []);
+
+              for (const inv of investimentosFiltrados) {
+                const veiculoInv = veiculoInvMap.get(inv.id_estoque);
+                if (!veiculoInv) continue;
+
+                const valorAquisicao = Number(veiculoInv.valor_aquisicao) || 0;
+                const custoTotal = custoInvMap[inv.id_estoque] || 0;
+                const valorInvestido = Number(inv.valor_investido) || 0;
+                const percentualInvestido = Number(inv.percentual_investido) || 0;
+
+                // Determine if finalized or not
+                const ehFinalizado = !!inv.data_finalizado;
+                const vendaInv = vendaInvMap.get(inv.id_estoque);
+
+                // Valor: if finalized use sale value, else use estoque.valor
+                let valorVenda = 0;
+                if (ehFinalizado && vendaInv) {
+                  valorVenda = Number(vendaInv.valor_total_venda) || 0;
+                } else {
+                  valorVenda = Number(veiculoInv.valor?.replace(/[^\d,]/g, "").replace(",", ".") || 0) || 0;
+                }
+
+                // Custo proporcional = (custo_total * percentual_investido) / 100
+                const custoProporcional = (custoTotal * percentualInvestido) / 100;
+
+                // Lucro do veículo = valor - custo_total - valor_aquisicao
+                const lucroVeiculo = valorVenda - custoTotal - valorAquisicao;
+
+                // Lucro proporcional = valor * percentual / 100 - custo_proporcional - valor_investido
+                const valorProporcional = (valorVenda * percentualInvestido) / 100;
+                const lucroProporcional = valorProporcional - custoProporcional - valorInvestido;
+
+                // Margem = lucro / valor_aquisicao * 100
+                const margem = valorAquisicao > 0 ? (lucroVeiculo / valorAquisicao) * 100 : 0;
+
+                // Margem proporcional = lucro_proporcional / valor_investido * 100
+                const margemProporcional = valorInvestido > 0 ? (lucroProporcional / valorInvestido) * 100 : 0;
+
+                const veiculoStr = `${veiculoInv.fabricante || ""} ${veiculoInv.modelo || ""} ${veiculoInv.motor || ""} ${veiculoInv.cambio || ""} ${veiculoInv.ano_fabricacao || ""}/${veiculoInv.ano || ""} ${veiculoInv.cor || ""}${veiculoInv.placa ? ` (Placa: ${veiculoInv.placa})` : ""}`.trim();
+
+                investimentoAtual.push({
+                  id_estoque: inv.id_estoque,
+                  veiculo: veiculoStr,
+                  valor: valorVenda,
+                  valor_aquisicao: valorAquisicao,
+                  valor_investido: valorInvestido,
+                  percentual_investido: percentualInvestido,
+                  custo_total: custoTotal,
+                  custo_proporcional: Math.round(custoProporcional * 100) / 100,
+                  lucro_veiculo: Math.round(lucroVeiculo * 100) / 100,
+                  lucro_proporcional: Math.round(lucroProporcional * 100) / 100,
+                  margem: Math.round(margem * 100) / 100,
+                  margem_proporcional: Math.round(margemProporcional * 100) / 100,
+                  data_finalizado: inv.data_finalizado,
+                  tipo: ehFinalizado ? "consolidado" : "estimado",
+                });
+              }
+            }
+          }
+        }
+      }
+
       // Set snapshot data
       setSnapshotData({
         mes_referencia: mesReferencia,
@@ -297,6 +452,7 @@ export const CriarSnapshotDialog = ({
         total_estimado: totalEstimado,
         saldo,
         contas_a_receber: contasAReceber,
+        investimento_atual: investimentoAtual,
         estoque_atual: estoqueAtual,
         venda_atual: vendaAtual,
       });
@@ -320,6 +476,7 @@ export const CriarSnapshotDialog = ({
         total_estimado: snapshotData.total_estimado,
         saldo: snapshotData.saldo,
         contas_a_receber: snapshotData.contas_a_receber,
+        investimento_atual: snapshotData.investimento_atual as unknown as Json,
         estoque_atual: snapshotData.estoque_atual as unknown as Json,
         venda_atual: snapshotData.venda_atual as unknown as Json,
       }]);
@@ -438,6 +595,81 @@ export const CriarSnapshotDialog = ({
                 </CardContent>
               </Card>
             </div>
+
+            {/* Investments Table - Above Vehicles */}
+            <Card>
+              <CardHeader className="py-3">
+                <CardTitle className="text-sm font-medium flex items-center gap-2">
+                  <PiggyBank className="w-4 h-4" />
+                  Investimentos da Loja ({snapshotData.investimento_atual.length})
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-0">
+                <div className="max-h-[350px] overflow-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Veículo</TableHead>
+                        <TableHead className="text-right">Investido</TableHead>
+                        <TableHead className="text-right">%</TableHead>
+                        <TableHead className="text-right">Custo Prop.</TableHead>
+                        <TableHead className="text-right">Lucro Prop.</TableHead>
+                        <TableHead className="text-right">Margem</TableHead>
+                        <TableHead className="text-center">Tipo</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {snapshotData.investimento_atual.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
+                            Nenhum investimento encontrado
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        snapshotData.investimento_atual.map((inv) => (
+                          <TableRow key={inv.id_estoque}>
+                            <TableCell>
+                              <div className="max-w-[200px] truncate font-medium" title={inv.veiculo}>
+                                {inv.veiculo}
+                              </div>
+                            </TableCell>
+                            <TableCell className="text-right">
+                              {formatCurrency(inv.valor_investido)}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <Badge variant="outline">{inv.percentual_investido}%</Badge>
+                            </TableCell>
+                            <TableCell className="text-right text-destructive">
+                              {formatCurrency(inv.custo_proporcional)}
+                            </TableCell>
+                            <TableCell className={`text-right ${inv.lucro_proporcional >= 0 ? "text-emerald-500" : "text-destructive"}`}>
+                              {formatCurrency(inv.lucro_proporcional)}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <Badge
+                                variant={inv.margem_proporcional >= 20 ? "default" : "secondary"}
+                                className={
+                                  inv.margem_proporcional >= 20
+                                    ? "bg-emerald-500/10 text-emerald-500"
+                                    : ""
+                                }
+                              >
+                                {inv.margem_proporcional.toFixed(1)}%
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-center">
+                              <Badge variant={inv.tipo === "consolidado" ? "default" : "secondary"}>
+                                {inv.tipo === "consolidado" ? "Consolidado" : "Estimado"}
+                              </Badge>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+              </CardContent>
+            </Card>
 
             {/* Vehicles Table */}
             <Card>
