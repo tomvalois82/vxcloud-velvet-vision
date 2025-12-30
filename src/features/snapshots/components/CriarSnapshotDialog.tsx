@@ -32,6 +32,7 @@ import {
   CreditCard,
   Car,
   Loader2,
+  ShoppingCart,
 } from "lucide-react";
 
 interface EstoqueItem {
@@ -50,6 +51,14 @@ interface EstoqueItem {
   dias_em_estoque: number;
 }
 
+interface VendaItem {
+  id_venda: string;
+  cliente: string;
+  veiculo: string;
+  data_venda: string;
+  valor_total_venda: number;
+}
+
 interface SnapshotData {
   mes_referencia: string;
   total_estoque: number;
@@ -57,6 +66,7 @@ interface SnapshotData {
   saldo: number;
   contas_a_receber: number;
   estoque_atual: EstoqueItem[];
+  venda_atual: VendaItem[];
 }
 
 interface CriarSnapshotDialogProps {
@@ -219,9 +229,68 @@ export const CriarSnapshotDialog = ({
 
       const contasAReceber = receber?.reduce((acc, mov) => acc + Number(mov.valor_liquido || 0), 0) || 0;
 
-      // Set snapshot data
+      // Get sales from current month (fechada = true)
       const mesReferencia = format(new Date(), "yyyy-MM-dd");
+      const inicioMes = format(new Date(new Date().getFullYear(), new Date().getMonth(), 1), "yyyy-MM-dd");
+      const fimMes = format(new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0), "yyyy-MM-dd");
+
+      const { data: vendas } = await supabase
+        .from("vx_vendas")
+        .select(`
+          id,
+          data_venda,
+          valor_total_venda,
+          id_cliente,
+          id_veiculo_vendido
+        `)
+        .eq("id_empresa", empresaId)
+        .eq("fechada", true)
+        .gte("data_venda", inicioMes)
+        .lte("data_venda", fimMes + "T23:59:59");
+
+      // Fetch client and vehicle data for each sale
+      const vendaAtual: VendaItem[] = [];
       
+      if (vendas && vendas.length > 0) {
+        const clienteIds = [...new Set(vendas.map(v => v.id_cliente))];
+        const veiculoIds = [...new Set(vendas.map(v => v.id_veiculo_vendido))];
+
+        const { data: clientes } = await supabase
+          .from("vx_pessoa")
+          .select("id, nome, cpf_cnpj, telefone")
+          .in("id", clienteIds);
+
+        const { data: veiculosVendidos } = await supabase
+          .from("estoque")
+          .select("id, fabricante, modelo, motor, cambio, ano_fabricacao, ano, cor, placa")
+          .in("id", veiculoIds);
+
+        const clienteMap = new Map(clientes?.map(c => [c.id, c]) || []);
+        const veiculoMap = new Map(veiculosVendidos?.map(v => [v.id, v]) || []);
+
+        for (const venda of vendas) {
+          const cliente = clienteMap.get(venda.id_cliente);
+          const veiculoVendido = veiculoMap.get(venda.id_veiculo_vendido);
+
+          const clienteStr = cliente 
+            ? `${cliente.nome}${cliente.cpf_cnpj ? ` (${cliente.cpf_cnpj})` : ""}${cliente.telefone ? ` - ${cliente.telefone}` : ""}`
+            : "Cliente não encontrado";
+
+          const veiculoStr = veiculoVendido
+            ? `${veiculoVendido.fabricante || ""} ${veiculoVendido.modelo || ""} ${veiculoVendido.motor || ""} ${veiculoVendido.cambio || ""} ${veiculoVendido.ano_fabricacao || ""}/${veiculoVendido.ano || ""} ${veiculoVendido.cor || ""}${veiculoVendido.placa ? ` (Placa: ${veiculoVendido.placa})` : ""}`.trim()
+            : "Veículo não encontrado";
+
+          vendaAtual.push({
+            id_venda: venda.id,
+            cliente: clienteStr,
+            veiculo: veiculoStr,
+            data_venda: venda.data_venda,
+            valor_total_venda: Number(venda.valor_total_venda) || 0,
+          });
+        }
+      }
+
+      // Set snapshot data
       setSnapshotData({
         mes_referencia: mesReferencia,
         total_estoque: totalEstoque,
@@ -229,6 +298,7 @@ export const CriarSnapshotDialog = ({
         saldo,
         contas_a_receber: contasAReceber,
         estoque_atual: estoqueAtual,
+        venda_atual: vendaAtual,
       });
     } catch (error) {
       console.error("Erro ao calcular snapshot:", error);
@@ -251,6 +321,7 @@ export const CriarSnapshotDialog = ({
         saldo: snapshotData.saldo,
         contas_a_receber: snapshotData.contas_a_receber,
         estoque_atual: snapshotData.estoque_atual as unknown as Json,
+        venda_atual: snapshotData.venda_atual as unknown as Json,
       }]);
 
       if (error) throw error;
@@ -434,6 +505,60 @@ export const CriarSnapshotDialog = ({
                             </TableCell>
                             <TableCell className="text-right">
                               <Badge variant="outline">{veiculo.dias_em_estoque}d</Badge>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      )}
+                    </TableBody>
+                  </Table>
+                </ScrollArea>
+              </CardContent>
+            </Card>
+
+            {/* Sales Table */}
+            <Card className="flex-1 overflow-hidden flex flex-col">
+              <CardHeader className="py-3">
+                <CardTitle className="text-sm font-medium flex items-center gap-2">
+                  <ShoppingCart className="w-4 h-4" />
+                  Vendas do Mês ({snapshotData.venda_atual.length})
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-0 flex-1 overflow-hidden">
+                <ScrollArea className="h-[200px]">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Cliente</TableHead>
+                        <TableHead>Veículo</TableHead>
+                        <TableHead className="text-right">Data</TableHead>
+                        <TableHead className="text-right">Valor</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {snapshotData.venda_atual.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={4} className="text-center text-muted-foreground py-8">
+                            Nenhuma venda realizada no mês
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        snapshotData.venda_atual.map((venda) => (
+                          <TableRow key={venda.id_venda}>
+                            <TableCell>
+                              <div className="font-medium max-w-[200px] truncate" title={venda.cliente}>
+                                {venda.cliente}
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <div className="max-w-[250px] truncate text-muted-foreground" title={venda.veiculo}>
+                                {venda.veiculo}
+                              </div>
+                            </TableCell>
+                            <TableCell className="text-right">
+                              {format(new Date(venda.data_venda), "dd/MM/yyyy")}
+                            </TableCell>
+                            <TableCell className="text-right font-medium text-emerald-500">
+                              {formatCurrency(venda.valor_total_venda)}
                             </TableCell>
                           </TableRow>
                         ))
