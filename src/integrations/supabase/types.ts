@@ -1874,10 +1874,12 @@ export type Database = {
           estoque_atual: Json
           id: string
           id_empresa: string
+          investimento_atual: Json | null
           mes_referencia: string
           saldo: number | null
           total_estimado: number | null
           total_estoque: number | null
+          venda_atual: Json | null
         }
         Insert: {
           contas_a_receber?: number | null
@@ -1885,10 +1887,12 @@ export type Database = {
           estoque_atual?: Json
           id?: string
           id_empresa: string
+          investimento_atual?: Json | null
           mes_referencia: string
           saldo?: number | null
           total_estimado?: number | null
           total_estoque?: number | null
+          venda_atual?: Json | null
         }
         Update: {
           contas_a_receber?: number | null
@@ -1896,10 +1900,12 @@ export type Database = {
           estoque_atual?: Json
           id?: string
           id_empresa?: string
+          investimento_atual?: Json | null
           mes_referencia?: string
           saldo?: number | null
           total_estimado?: number | null
           total_estoque?: number | null
+          venda_atual?: Json | null
         }
         Relationships: [
           {
