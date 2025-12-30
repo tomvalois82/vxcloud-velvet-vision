@@ -351,7 +351,7 @@ export const CriarSnapshotDialog = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
+      <DialogContent className="max-w-5xl max-h-[90vh] overflow-hidden flex flex-col">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Package className="w-5 h-5" />
@@ -372,8 +372,9 @@ export const CriarSnapshotDialog = ({
             <Skeleton className="h-48" />
           </div>
         ) : snapshotData ? (
-          <div className="flex-1 overflow-hidden flex flex-col space-y-4">
-            {/* Mês de Referência */}
+          <ScrollArea className="flex-1 pr-4">
+            <div className="space-y-4">
+              {/* Mês de Referência */}
             <div className="text-center">
               <Badge variant="secondary" className="text-base px-4 py-1 capitalize">
                 {formatMonth(snapshotData.mes_referencia)}
@@ -440,15 +441,15 @@ export const CriarSnapshotDialog = ({
             </div>
 
             {/* Vehicles Table */}
-            <Card className="flex-1 overflow-hidden flex flex-col">
+            <Card>
               <CardHeader className="py-3">
                 <CardTitle className="text-sm font-medium flex items-center gap-2">
                   <Car className="w-4 h-4" />
                   Veículos em Estoque ({snapshotData.estoque_atual.length})
                 </CardTitle>
               </CardHeader>
-              <CardContent className="p-0 flex-1 overflow-hidden">
-                <ScrollArea className="h-[250px]">
+              <CardContent className="p-0">
+                <div className="max-h-[350px] overflow-auto">
                   <Table>
                     <TableHeader>
                       <TableRow>
@@ -511,20 +512,20 @@ export const CriarSnapshotDialog = ({
                       )}
                     </TableBody>
                   </Table>
-                </ScrollArea>
+                </div>
               </CardContent>
             </Card>
 
             {/* Sales Table */}
-            <Card className="flex-1 overflow-hidden flex flex-col">
+            <Card>
               <CardHeader className="py-3">
                 <CardTitle className="text-sm font-medium flex items-center gap-2">
                   <ShoppingCart className="w-4 h-4" />
                   Vendas do Mês ({snapshotData.venda_atual.length})
                 </CardTitle>
               </CardHeader>
-              <CardContent className="p-0 flex-1 overflow-hidden">
-                <ScrollArea className="h-[200px]">
+              <CardContent className="p-0">
+                <div className="max-h-[350px] overflow-auto">
                   <Table>
                     <TableHeader>
                       <TableRow>
@@ -565,10 +566,11 @@ export const CriarSnapshotDialog = ({
                       )}
                     </TableBody>
                   </Table>
-                </ScrollArea>
+                </div>
               </CardContent>
             </Card>
-          </div>
+            </div>
+          </ScrollArea>
         ) : (
           <div className="py-8 text-center text-muted-foreground">
             Erro ao carregar dados do snapshot
