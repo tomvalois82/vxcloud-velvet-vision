@@ -351,7 +351,7 @@ export const CriarSnapshotDialog = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-5xl max-h-[90vh] overflow-hidden flex flex-col">
+      <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Package className="w-5 h-5" />
@@ -372,8 +372,7 @@ export const CriarSnapshotDialog = ({
             <Skeleton className="h-48" />
           </div>
         ) : snapshotData ? (
-          <ScrollArea className="flex-1 pr-4">
-            <div className="space-y-4">
+          <div className="space-y-4 pb-4">
               {/* Mês de Referência */}
             <div className="text-center">
               <Badge variant="secondary" className="text-base px-4 py-1 capitalize">
@@ -569,8 +568,7 @@ export const CriarSnapshotDialog = ({
                 </div>
               </CardContent>
             </Card>
-            </div>
-          </ScrollArea>
+          </div>
         ) : (
           <div className="py-8 text-center text-muted-foreground">
             Erro ao carregar dados do snapshot
