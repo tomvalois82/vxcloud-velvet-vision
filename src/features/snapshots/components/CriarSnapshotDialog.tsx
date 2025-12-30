@@ -562,7 +562,7 @@ export const CriarSnapshotDialog = ({
                 </CardHeader>
                 <CardContent>
                   <p className="text-xl font-bold text-emerald-500">
-                    {formatCurrency(snapshotData.total_estimado)}
+                    {formatCurrency(snapshotData.investimento_atual.reduce((acc, inv) => acc + inv.lucro_proporcional, 0))}
                   </p>
                 </CardContent>
               </Card>
