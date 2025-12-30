@@ -542,13 +542,13 @@ export const CriarSnapshotDialog = ({
               <Card className="bg-primary/5 border-primary/20">
                 <CardHeader className="pb-2">
                   <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                    <Package className="w-4 h-4" />
-                    Valor em Estoque
+                    <PiggyBank className="w-4 h-4" />
+                    Valor Investido
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
                   <p className="text-xl font-bold text-primary">
-                    {formatCurrency(snapshotData.total_estoque)}
+                    {formatCurrency(snapshotData.investimento_atual.reduce((acc, inv) => acc + inv.valor_investido, 0))}
                   </p>
                 </CardContent>
               </Card>
