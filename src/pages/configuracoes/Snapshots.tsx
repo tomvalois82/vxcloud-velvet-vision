@@ -31,6 +31,7 @@ import { Plus, Trash2, Eye, Calendar, Filter, X } from "lucide-react";
 import { toast } from "sonner";
 import { EmptyState } from "@/components/EmptyState";
 import { CriarSnapshotDialog } from "@/features/snapshots/components/CriarSnapshotDialog";
+import { SnapshotDetailDialog } from "@/features/snapshots/components/SnapshotDetailDialog";
 
 interface Snapshot {
   id: string;
@@ -41,6 +42,8 @@ interface Snapshot {
   saldo: number;
   contas_a_receber: number;
   estoque_atual: unknown[];
+  venda_atual?: unknown[];
+  investimento_atual?: unknown[];
   created_at: string;
 }
 
@@ -50,6 +53,7 @@ const Snapshots = () => {
   const [dataFim, setDataFim] = useState<string>("");
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [viewSnapshot, setViewSnapshot] = useState<Snapshot | null>(null);
 
   // Fetch empresa ID on mount
   useEffect(() => {
@@ -274,7 +278,7 @@ const Snapshots = () => {
                           <Button
                             variant="ghost"
                             size="icon"
-                            onClick={() => toast.info("Visualização em desenvolvimento")}
+                            onClick={() => setViewSnapshot(snapshot as Snapshot)}
                           >
                             <Eye className="w-4 h-4" />
                           </Button>
@@ -327,6 +331,13 @@ const Snapshots = () => {
           onSuccess={() => refetch()}
         />
       )}
+
+      {/* View Snapshot Dialog */}
+      <SnapshotDetailDialog
+        open={!!viewSnapshot}
+        onOpenChange={(open) => !open && setViewSnapshot(null)}
+        snapshot={viewSnapshot as any}
+      />
     </div>
   );
 };
