@@ -97,16 +97,14 @@ export function useDashboardData(dateRange: DateRange) {
         
         const empresaId = empresaData.id;
         
-        // 1. Buscar todas as despesas do período (movimentos de saída pagos)
+        // 1. Buscar todas as despesas do período (tipo_movimento = 'Saída' com data_vencimento no período)
         const { data: despesas } = await supabase
           .from('vx_fin_movimento')
-          .select('valor_liquido, id_categoria, tipo_movimento')
+          .select('valor_liquido')
           .eq('id_empresa', empresaId)
           .eq('tipo_movimento', 'Saída')
-          .eq('status', 'Pago')
-          .gte('data_pagamento', fromStr)
-          .lte('data_pagamento', toStr)
-          .is('id_estoque', null); // Despesas não vinculadas a veículos
+          .gte('data_vencimento', fromStr)
+          .lte('data_vencimento', toStr);
         
         const totalDespesas = despesas?.reduce((sum, d) => sum + Number(d.valor_liquido || 0), 0) || 0;
         
@@ -126,7 +124,20 @@ export function useDashboardData(dateRange: DateRange) {
         const quantidadeVendas = vendas?.length || 0;
         const faturamentoVendas = vendas?.reduce((sum, v) => sum + Number(v.valor_total_venda || 0), 0) || 0;
         
-        // 3. Buscar custos dos veículos vendidos (valor_aquisicao + custos vinculados)
+        // 3. Buscar produtos/serviços das vendas
+        let totalServicosProdutos = 0;
+        if (vendas && vendas.length > 0) {
+          const vendaIds = vendas.map(v => v.id);
+          
+          const { data: servicosProdutos } = await supabase
+            .from('vx_vendas_servico_produto')
+            .select('valor')
+            .in('id_venda', vendaIds);
+          
+          totalServicosProdutos = servicosProdutos?.reduce((sum, sp) => sum + Number(sp.valor || 0), 0) || 0;
+        }
+        
+        // 4. Buscar custos dos veículos vendidos (custos vinculados ao id_estoque)
         let custoVenda = 0;
         
         if (vendas && vendas.length > 0) {
@@ -140,13 +151,12 @@ export function useDashboardData(dateRange: DateRange) {
           
           const valorAquisicao = veiculos?.reduce((sum, v) => sum + Number(v.valor_aquisicao || 0), 0) || 0;
           
-          // Custos vinculados aos veículos vendidos
+          // Custos vinculados aos veículos vendidos (movimentos com id_estoque)
           const { data: custosVeiculos } = await supabase
             .from('vx_fin_movimento')
             .select('valor_liquido')
             .eq('id_empresa', empresaId)
             .eq('tipo_movimento', 'Saída')
-            .eq('status', 'Pago')
             .in('id_estoque', veiculoIds);
           
           const custoVinculado = custosVeiculos?.reduce((sum, c) => sum + Number(c.valor_liquido || 0), 0) || 0;
@@ -154,7 +164,8 @@ export function useDashboardData(dateRange: DateRange) {
           custoVenda = valorAquisicao + custoVinculado;
         }
         
-        const lucroVendas = faturamentoVendas - custoVenda;
+        // Lucro = (valor_total_venda + serviços/produtos) - custos do veículo
+        const lucroVendas = (faturamentoVendas + totalServicosProdutos) - custoVenda;
         const balanco = lucroVendas - totalDespesas;
         
         setData({

@@ -18,17 +18,6 @@ export function BalancoCard({ totalDespesas, lucroVendas, balanco, loading }: Ba
     });
   };
 
-  const formatGaugeValue = (value: number) => {
-    const absValue = Math.abs(value);
-    if (absValue >= 1000000) {
-      return `${(value / 1000000).toFixed(1)}Mi`;
-    }
-    if (absValue >= 1000) {
-      return `${(value / 1000).toFixed(1)}K`;
-    }
-    return value.toFixed(0);
-  };
-
   const { status, message, icon: Icon, colorClass } = useMemo(() => {
     if (balanco < 0) {
       return {
@@ -54,16 +43,18 @@ export function BalancoCard({ totalDespesas, lucroVendas, balanco, loading }: Ba
     };
   }, [balanco]);
 
-  // Calculate gauge limits based on values
-  const maxValue = Math.max(Math.abs(balanco), totalDespesas, lucroVendas, 1000) * 1.2;
-  const minValue = balanco < 0 ? balanco * 1.2 : 0;
+  // Calculate percentage: how much of expenses is covered by sales profit
+  // 100% = lucro covers all expenses, 0% = no coverage
+  const percentage = totalDespesas > 0 
+    ? Math.max(0, Math.min(200, (lucroVendas / totalDespesas) * 100))
+    : lucroVendas > 0 ? 100 : 0;
 
   if (loading) {
     return (
       <div className="flex-1 bg-card/50 rounded-lg p-4 animate-pulse">
         <div className="h-4 bg-muted rounded w-20 mb-4" />
         <div className="flex justify-center">
-          <div className="w-32 h-16 bg-muted rounded-full" />
+          <div className="w-32 h-32 bg-muted rounded-full" />
         </div>
         <div className="h-3 bg-muted rounded w-full mt-4" />
       </div>
@@ -76,10 +67,9 @@ export function BalancoCard({ totalDespesas, lucroVendas, balanco, loading }: Ba
       
       <div className="flex justify-center">
         <GaugeChart
-          value={balanco}
-          minValue={minValue}
-          maxValue={maxValue}
-          formatValue={formatGaugeValue}
+          value={percentage}
+          minValue={0}
+          maxValue={100}
           size={160}
         />
       </div>
