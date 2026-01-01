@@ -97,14 +97,29 @@ export function useDashboardData(dateRange: DateRange) {
         
         const empresaId = empresaData.id;
         
-        // 1. Buscar todas as despesas do período (tipo_movimento = 'Pagar' com data_vencimento no período)
-        const { data: despesas } = await supabase
+        // 1. Buscar categoria "Compras de veículos" para excluir do total de despesas
+        const { data: categoriaCompras } = await supabase
+          .from('vx_fin_categoria')
+          .select('id')
+          .eq('categoria', 'Compras de veículos')
+          .eq('operacao', 'Pagar')
+          .single();
+        
+        // 2. Buscar todas as despesas do período (tipo_movimento = 'Pagar' com data_vencimento no período)
+        // Excluindo a categoria "Compras de veículos"
+        let despesasQuery = supabase
           .from('vx_fin_movimento')
           .select('valor_liquido')
           .eq('id_empresa', empresaId)
           .eq('tipo_movimento', 'Pagar')
           .gte('data_vencimento', fromStr)
           .lte('data_vencimento', toStr);
+        
+        if (categoriaCompras?.id) {
+          despesasQuery = despesasQuery.neq('id_categoria', categoriaCompras.id);
+        }
+        
+        const { data: despesas } = await despesasQuery;
         
         const totalDespesas = despesas?.reduce((sum, d) => sum + Number(d.valor_liquido || 0), 0) || 0;
         
