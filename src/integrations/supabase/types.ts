@@ -302,6 +302,7 @@ export type Database = {
           id: string
           id_config: number
           logradouro: string
+          meta_crescimento: number | null
           municipio: string
           nome_fantasia: string
           numero: string
@@ -322,6 +323,7 @@ export type Database = {
           id?: string
           id_config: number
           logradouro: string
+          meta_crescimento?: number | null
           municipio: string
           nome_fantasia: string
           numero: string
@@ -342,6 +344,7 @@ export type Database = {
           id?: string
           id_config?: number
           logradouro?: string
+          meta_crescimento?: number | null
           municipio?: string
           nome_fantasia?: string
           numero?: string
