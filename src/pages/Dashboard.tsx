@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import { PageHeader } from "@/components/PageHeader";
-import { Scale, Wallet, TrendingUp, PiggyBank } from "lucide-react";
+import { PiggyBank, TrendingUp } from "lucide-react";
 import { DashboardFilters } from '@/features/dashboard/components/DashboardFilters';
 import { BalancoCard } from '@/features/dashboard/components/BalancoCard';
+import { BalancoGeralCard } from '@/features/dashboard/components/BalancoGeralCard';
 import { PlaceholderCard } from '@/features/dashboard/components/PlaceholderCard';
 import { TrendChart } from '@/features/dashboard/components/TrendChart';
 import { 
@@ -56,7 +57,12 @@ const Dashboard = () => {
           loading={dashboardData.loading}
         />
         
-        <PlaceholderCard title="Balanço Geral" icon={Scale} />
+        <BalancoGeralCard
+          totalReceitas={dashboardData.totalReceitas}
+          totalDespesasGeral={dashboardData.totalDespesasGeral}
+          balancoGeral={dashboardData.balancoGeral}
+          loading={dashboardData.loading}
+        />
         
         <PlaceholderCard title="Patrimônio" icon={PiggyBank} />
         
