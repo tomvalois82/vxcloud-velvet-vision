@@ -1,6 +1,11 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { GaugeChart } from './GaugeChart';
-import { TrendingUp, TrendingDown, Minus } from 'lucide-react';
+import { TrendingUp, TrendingDown, Minus, Info } from 'lucide-react';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
 
 interface BalancoCardProps {
   totalDespesas: number;
@@ -63,7 +68,28 @@ export function BalancoCard({ totalDespesas, lucroVendas, balanco, loading }: Ba
 
   return (
     <div className="flex-1 bg-card/50 rounded-lg p-4 transition-all duration-300 hover:bg-card/70">
-      <h3 className="text-sm font-medium text-muted-foreground mb-2">Balanço</h3>
+      <div className="flex items-center justify-between mb-2">
+        <h3 className="text-sm font-medium text-muted-foreground">Balanço</h3>
+        <Popover>
+          <PopoverTrigger asChild>
+            <button className="p-1 rounded-full hover:bg-muted/50 transition-colors">
+              <Info className="h-4 w-4 text-muted-foreground hover:text-foreground" />
+            </button>
+          </PopoverTrigger>
+          <PopoverContent className="w-72 text-sm" side="top" align="end">
+            <div className="space-y-2">
+              <p className="font-medium">Como é calculado o Balanço?</p>
+              <p className="text-muted-foreground">
+                <strong>Balanço</strong> = Lucro das Vendas - Total de Despesas
+              </p>
+              <div className="text-xs text-muted-foreground space-y-1">
+                <p><strong>Lucro das Vendas:</strong> Valor total das vendas + serviços/produtos - custos dos veículos vendidos</p>
+                <p><strong>Total de Despesas:</strong> Soma das despesas do período (exceto compras de veículos)</p>
+              </div>
+            </div>
+          </PopoverContent>
+        </Popover>
+      </div>
       
       <div className="flex justify-center">
         <GaugeChart
