@@ -97,12 +97,12 @@ export function useDashboardData(dateRange: DateRange) {
         
         const empresaId = empresaData.id;
         
-        // 1. Buscar todas as despesas do período (tipo_movimento = 'Saída' com data_vencimento no período)
+        // 1. Buscar todas as despesas do período (tipo_movimento = 'Pagar' com data_vencimento no período)
         const { data: despesas } = await supabase
           .from('vx_fin_movimento')
           .select('valor_liquido')
           .eq('id_empresa', empresaId)
-          .eq('tipo_movimento', 'Saída')
+          .eq('tipo_movimento', 'Pagar')
           .gte('data_vencimento', fromStr)
           .lte('data_vencimento', toStr);
         
@@ -156,7 +156,7 @@ export function useDashboardData(dateRange: DateRange) {
             .from('vx_fin_movimento')
             .select('valor_liquido')
             .eq('id_empresa', empresaId)
-            .eq('tipo_movimento', 'Saída')
+            .eq('tipo_movimento', 'Pagar')
             .in('id_estoque', veiculoIds);
           
           const custoVinculado = custosVeiculos?.reduce((sum, c) => sum + Number(c.valor_liquido || 0), 0) || 0;
