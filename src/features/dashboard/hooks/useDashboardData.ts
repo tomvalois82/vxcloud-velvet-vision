@@ -14,6 +14,10 @@ export interface DashboardData {
   lucroVendas: number;
   balanco: number;
   quantidadeVendas: number;
+  // Balanço Geral
+  totalReceitas: number;
+  totalDespesasGeral: number;
+  balancoGeral: number;
   loading: boolean;
 }
 
@@ -73,6 +77,9 @@ export function useDashboardData(dateRange: DateRange) {
     lucroVendas: 0,
     balanco: 0,
     quantidadeVendas: 0,
+    totalReceitas: 0,
+    totalDespesasGeral: 0,
+    balancoGeral: 0,
     loading: true,
   });
 
@@ -123,7 +130,30 @@ export function useDashboardData(dateRange: DateRange) {
         
         const totalDespesas = despesas?.reduce((sum, d) => sum + Number(d.valor_liquido || 0), 0) || 0;
         
-        // 2. Buscar vendas do período
+        // 3. Buscar TODAS as receitas do período (tipo_movimento = 'Receber')
+        const { data: receitas } = await supabase
+          .from('vx_fin_movimento')
+          .select('valor_liquido')
+          .eq('id_empresa', empresaId)
+          .eq('tipo_movimento', 'Receber')
+          .gte('data_vencimento', fromStr)
+          .lte('data_vencimento', toStr);
+        
+        const totalReceitas = receitas?.reduce((sum, r) => sum + Number(r.valor_liquido || 0), 0) || 0;
+        
+        // 4. Buscar TODAS as despesas do período sem exceção (para Balanço Geral)
+        const { data: despesasGeral } = await supabase
+          .from('vx_fin_movimento')
+          .select('valor_liquido')
+          .eq('id_empresa', empresaId)
+          .eq('tipo_movimento', 'Pagar')
+          .gte('data_vencimento', fromStr)
+          .lte('data_vencimento', toStr);
+        
+        const totalDespesasGeral = despesasGeral?.reduce((sum, d) => sum + Number(d.valor_liquido || 0), 0) || 0;
+        const balancoGeral = totalReceitas - totalDespesasGeral;
+        
+        // 5. Buscar vendas do período
         const { data: vendas } = await supabase
           .from('vx_vendas')
           .select(`
@@ -139,7 +169,7 @@ export function useDashboardData(dateRange: DateRange) {
         const quantidadeVendas = vendas?.length || 0;
         const faturamentoVendas = vendas?.reduce((sum, v) => sum + Number(v.valor_total_venda || 0), 0) || 0;
         
-        // 3. Buscar produtos/serviços das vendas
+        // 6. Buscar produtos/serviços das vendas
         let totalServicosProdutos = 0;
         if (vendas && vendas.length > 0) {
           const vendaIds = vendas.map(v => v.id);
@@ -152,7 +182,7 @@ export function useDashboardData(dateRange: DateRange) {
           totalServicosProdutos = servicosProdutos?.reduce((sum, sp) => sum + Number(sp.valor || 0), 0) || 0;
         }
         
-        // 4. Buscar custos dos veículos vendidos (custos vinculados ao id_estoque)
+        // 7. Buscar custos dos veículos vendidos (custos vinculados ao id_estoque)
         let custoVenda = 0;
         
         if (vendas && vendas.length > 0) {
@@ -190,6 +220,9 @@ export function useDashboardData(dateRange: DateRange) {
           lucroVendas,
           balanco,
           quantidadeVendas,
+          totalReceitas,
+          totalDespesasGeral,
+          balancoGeral,
           loading: false,
         });
       } catch (error) {
