@@ -77,17 +77,13 @@ export function CrescimentoCard() {
           // Base: valor_investido + saldo
           const base = totalInvestido + saldo;
 
-          // Ganhos Previsto: valor_investido + lucro_proporcional + saldo
-          const ganhosPrevisto = totalInvestido + totalLucroProporcional + saldo;
-
-          return { base, ganhosPrevisto };
+          return { base, totalInvestido, totalLucroProporcional };
         });
 
-        // Calculate accumulated percentage growth
-        // Starting from the first month as reference (0%)
+        // Calculate accumulated percentage growth for Base
         const firstMonth = monthlyData[0];
         
-        if (firstMonth.base === 0 || firstMonth.ganhosPrevisto === 0) {
+        if (firstMonth.base === 0) {
           setCrescimentoBase(null);
           setCrescimentoGanhos(null);
           setLoading(false);
@@ -95,27 +91,29 @@ export function CrescimentoCard() {
         }
 
         let acumuladoBase = 0;
-        let acumuladoGanhos = 0;
 
         for (let i = 1; i < monthlyData.length; i++) {
           const prevBase = monthlyData[i - 1].base;
           const currBase = monthlyData[i].base;
-          const prevGanhos = monthlyData[i - 1].ganhosPrevisto;
-          const currGanhos = monthlyData[i].ganhosPrevisto;
 
           if (prevBase > 0) {
             const variacaoBase = ((currBase - prevBase) / prevBase) * 100;
             acumuladoBase += variacaoBase;
           }
+        }
 
-          if (prevGanhos > 0) {
-            const variacaoGanhos = ((currGanhos - prevGanhos) / prevGanhos) * 100;
-            acumuladoGanhos += variacaoGanhos;
-          }
+        // Ganhos Previsto: percentual de lucro proporcional sobre o investimento total
+        // Usa o último snapshot para calcular a rentabilidade prevista
+        const lastMonth = monthlyData[monthlyData.length - 1];
+        let ganhosPrevisto: number | null = null;
+
+        if (lastMonth.totalInvestido > 0) {
+          // Rentabilidade = (lucro proporcional / valor investido) * 100
+          ganhosPrevisto = (lastMonth.totalLucroProporcional / lastMonth.totalInvestido) * 100;
         }
 
         setCrescimentoBase(acumuladoBase);
-        setCrescimentoGanhos(acumuladoGanhos);
+        setCrescimentoGanhos(ganhosPrevisto);
       } catch (error) {
         console.error('Erro ao buscar snapshots:', error);
       } finally {
@@ -161,15 +159,15 @@ export function CrescimentoCard() {
             <div className="space-y-2">
               <p className="font-medium">Como é calculado:</p>
               <div className="space-y-1 text-muted-foreground text-xs">
-                <p><span className="font-medium text-foreground">Crescimento Acumulado:</span> Soma das variações percentuais mês a mês dos últimos 12 meses.</p>
-                <p><span className="font-medium text-[hsl(var(--chart-1))]">Base:</span> Variação acumulada do patrimônio (Investimentos + Saldo)</p>
-                <p><span className="font-medium text-[hsl(var(--chart-2))]">Ganhos Previsto:</span> Variação acumulada incluindo lucro proporcional</p>
+                <p><span className="font-medium text-[hsl(var(--chart-1))]">Base:</span> Crescimento acumulado do patrimônio (Investimentos + Saldo) nos últimos 12 meses.</p>
+                <p><span className="font-medium text-[hsl(var(--chart-2))]">Ganhos Previsto:</span> Percentual de rentabilidade prevista = (Lucro Proporcional Total / Investimento Total) × 100</p>
               </div>
               <div className="border-t pt-2 mt-2">
                 <p className="text-xs text-muted-foreground">
-                  <span className="font-medium">Exemplo:</span><br />
-                  Out: R$100K (0%) → Nov: R$110K (+10%) → Dez: R$107K (-3%)<br />
-                  <span className="font-medium">Acumulado: +7%</span>
+                  <span className="font-medium">Exemplo Ganhos Previsto:</span><br />
+                  Investimento Total: R$100K<br />
+                  Lucro Proporcional: R$15K<br />
+                  <span className="font-medium">Rentabilidade: +15%</span>
                 </p>
               </div>
             </div>
