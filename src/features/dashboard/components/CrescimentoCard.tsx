@@ -82,18 +82,28 @@ export function CrescimentoCard() {
           }
         }
 
-        // Buscar Ganhos Previsto diretamente da view vw_rentabilidade_investidor
+        // Buscar id_pessoa que tenha o mesmo cpf_cnpj da empresa
         let ganhosPrevisto: number | null = null;
 
         if (empresaCnpj) {
-          const { data: rentabilidade } = await supabase
-            .from('vw_rentabilidade_investidor')
-            .select('lucro_proporcional_percentual')
+          // Primeiro, buscar o id_pessoa onde cpf_cnpj = empresa.cnpj
+          const { data: pessoaLoja } = await supabase
+            .from('vx_pessoa')
+            .select('id')
             .eq('cpf_cnpj', empresaCnpj)
             .single();
 
-          if (rentabilidade) {
-            ganhosPrevisto = Number(rentabilidade.lucro_proporcional_percentual) || 0;
+          if (pessoaLoja) {
+            // Depois, buscar na view usando o id_pessoa
+            const { data: rentabilidade } = await supabase
+              .from('vw_rentabilidade_investidor')
+              .select('lucro_proporcional_percentual')
+              .eq('id_pessoa', pessoaLoja.id)
+              .single();
+
+            if (rentabilidade) {
+              ganhosPrevisto = Number(rentabilidade.lucro_proporcional_percentual) || 0;
+            }
           }
         }
 

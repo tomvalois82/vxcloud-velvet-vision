@@ -2384,12 +2384,13 @@ export type Database = {
       }
       vw_rentabilidade_investidor: {
         Row: {
-          cpf_cnpj: string | null
           id_pessoa: string | null
           lucro_proporcional_percentual: number | null
-          nome: string | null
-          total_investido: number | null
-          total_lucro: number | null
+          nome_pessoa: string | null
+          qtd_veiculos_ativos: number | null
+          rentabilidade_proporcional_reais: number | null
+          rentabilidade_total_reais: number | null
+          valor_total_investido: number | null
         }
         Relationships: []
       }
