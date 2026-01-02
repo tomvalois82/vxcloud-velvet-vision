@@ -11,6 +11,8 @@ import {
 interface InvestimentoItem {
   valor_investido?: number;
   lucro_proporcional?: number;
+  id_pessoa?: string;
+  cpf_cnpj?: string;
 }
 
 export function CrescimentoCard() {
@@ -28,16 +30,18 @@ export function CrescimentoCard() {
     const fetchSnapshots = async () => {
       setLoading(true);
       try {
-        // Buscar empresa do usuário
+        // Buscar empresa do usuário com CNPJ
         const { data: empresaData } = await supabase
           .from('empresa')
-          .select('id')
+          .select('id, cnpj')
           .single();
 
         if (!empresaData) {
           setLoading(false);
           return;
         }
+
+        const empresaCnpj = empresaData.cnpj;
 
         // Get last 12 months range
         const endDate = new Date();
@@ -64,20 +68,32 @@ export function CrescimentoCard() {
           const investimentos = (snapshot.investimento_atual as InvestimentoItem[] | null) || [];
           const saldo = Number(snapshot.saldo) || 0;
 
+          // Total de todos os investimentos (para base)
           const totalInvestido = investimentos.reduce(
             (acc, inv) => acc + (Number(inv.valor_investido) || 0),
             0
           );
 
-          const totalLucroProporcional = investimentos.reduce(
-            (acc, inv) => acc + (Number(inv.lucro_proporcional) || 0),
-            0
-          );
+          // Lucro proporcional apenas da loja (filtrado por CNPJ)
+          const lucroProporcionalLoja = investimentos
+            .filter(inv => inv.cpf_cnpj === empresaCnpj)
+            .reduce(
+              (acc, inv) => acc + (Number(inv.lucro_proporcional) || 0),
+              0
+            );
+
+          // Investido da loja (para cálculo do ganhos previsto)
+          const investidoLoja = investimentos
+            .filter(inv => inv.cpf_cnpj === empresaCnpj)
+            .reduce(
+              (acc, inv) => acc + (Number(inv.valor_investido) || 0),
+              0
+            );
 
           // Base: valor_investido + saldo
           const base = totalInvestido + saldo;
 
-          return { base, totalInvestido, totalLucroProporcional };
+          return { base, totalInvestido, lucroProporcionalLoja, investidoLoja };
         });
 
         // Calculate accumulated percentage growth for Base
@@ -102,14 +118,13 @@ export function CrescimentoCard() {
           }
         }
 
-        // Ganhos Previsto: percentual previsto de crescimento do patrimônio
-        // Mesma base do Card 3 (Base = Investimentos + Saldo)
-        // Crescimento previsto = (Lucro Proporcional Total / Base) × 100
+        // Ganhos Previsto: percentual previsto de crescimento baseado nos investimentos da loja
+        // Crescimento previsto = (Lucro Proporcional Loja / Investido Loja) × 100
         const lastMonth = monthlyData[monthlyData.length - 1];
         let ganhosPrevisto: number | null = null;
 
-        if (lastMonth.base > 0) {
-          ganhosPrevisto = (lastMonth.totalLucroProporcional / lastMonth.base) * 100;
+        if (lastMonth.investidoLoja > 0) {
+          ganhosPrevisto = (lastMonth.lucroProporcionalLoja / lastMonth.investidoLoja) * 100;
         }
 
         setCrescimentoBase(acumuladoBase);
@@ -160,7 +175,7 @@ export function CrescimentoCard() {
               <p className="font-medium">Como é calculado:</p>
               <div className="space-y-1 text-muted-foreground text-xs">
                 <p><span className="font-medium text-[hsl(var(--chart-1))]">Base:</span> Crescimento acumulado do patrimônio (Investimentos + Saldo) nos últimos 12 meses.</p>
-                <p><span className="font-medium text-[hsl(var(--chart-2))]">Ganhos Previsto:</span> Percentual previsto de crescimento = (Lucro Proporcional Total / Base) × 100</p>
+                <p><span className="font-medium text-[hsl(var(--chart-2))]">Ganhos Previsto:</span> Percentual de rentabilidade da loja = (Lucro Proporcional da Loja / Investido pela Loja) × 100</p>
               </div>
               <div className="border-t pt-2 mt-2">
                 <p className="text-xs text-muted-foreground">
