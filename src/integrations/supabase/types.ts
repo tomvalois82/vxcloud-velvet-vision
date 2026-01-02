@@ -491,6 +491,13 @@ export type Database = {
             foreignKeyName: "estoque_adquirido_de_fkey"
             columns: ["adquirido_de"]
             isOneToOne: false
+            referencedRelation: "vw_rentabilidade_investidor"
+            referencedColumns: ["id_pessoa"]
+          },
+          {
+            foreignKeyName: "estoque_adquirido_de_fkey"
+            columns: ["adquirido_de"]
+            isOneToOne: false
             referencedRelation: "vx_pessoa"
             referencedColumns: ["id"]
           },
@@ -1606,6 +1613,13 @@ export type Database = {
             foreignKeyName: "vx_fin_movimento_id_pessoa_fkey"
             columns: ["id_pessoa"]
             isOneToOne: false
+            referencedRelation: "vw_rentabilidade_investidor"
+            referencedColumns: ["id_pessoa"]
+          },
+          {
+            foreignKeyName: "vx_fin_movimento_id_pessoa_fkey"
+            columns: ["id_pessoa"]
+            isOneToOne: false
             referencedRelation: "vx_pessoa"
             referencedColumns: ["id"]
           },
@@ -1717,6 +1731,13 @@ export type Database = {
             foreignKeyName: "vx_investimento_id_pessoa_fkey"
             columns: ["id_pessoa"]
             isOneToOne: false
+            referencedRelation: "vw_rentabilidade_investidor"
+            referencedColumns: ["id_pessoa"]
+          },
+          {
+            foreignKeyName: "vx_investimento_id_pessoa_fkey"
+            columns: ["id_pessoa"]
+            isOneToOne: false
             referencedRelation: "vx_pessoa"
             referencedColumns: ["id"]
           },
@@ -1776,6 +1797,13 @@ export type Database = {
             columns: ["id_pessoa"]
             isOneToOne: false
             referencedRelation: "vw_investidor_carteira"
+            referencedColumns: ["id_pessoa"]
+          },
+          {
+            foreignKeyName: "vx_investimento_carteira_id_pessoa_fkey"
+            columns: ["id_pessoa"]
+            isOneToOne: false
+            referencedRelation: "vw_rentabilidade_investidor"
             referencedColumns: ["id_pessoa"]
           },
           {
@@ -2032,6 +2060,13 @@ export type Database = {
             foreignKeyName: "vx_vendas_id_cliente_fkey"
             columns: ["id_cliente"]
             isOneToOne: false
+            referencedRelation: "vw_rentabilidade_investidor"
+            referencedColumns: ["id_pessoa"]
+          },
+          {
+            foreignKeyName: "vx_vendas_id_cliente_fkey"
+            columns: ["id_cliente"]
+            isOneToOne: false
             referencedRelation: "vx_pessoa"
             referencedColumns: ["id"]
           },
@@ -2054,6 +2089,13 @@ export type Database = {
             columns: ["id_vendedor"]
             isOneToOne: false
             referencedRelation: "vw_investidor_carteira"
+            referencedColumns: ["id_pessoa"]
+          },
+          {
+            foreignKeyName: "vx_vendas_id_vendedor_fkey"
+            columns: ["id_vendedor"]
+            isOneToOne: false
+            referencedRelation: "vw_rentabilidade_investidor"
             referencedColumns: ["id_pessoa"]
           },
           {
@@ -2337,6 +2379,17 @@ export type Database = {
           lucro_bruto_vendas: number | null
           saldo_ponto_equilibrio: number | null
           status_loja: string | null
+        }
+        Relationships: []
+      }
+      vw_rentabilidade_investidor: {
+        Row: {
+          cpf_cnpj: string | null
+          id_pessoa: string | null
+          lucro_proporcional_percentual: number | null
+          nome: string | null
+          total_investido: number | null
+          total_lucro: number | null
         }
         Relationships: []
       }

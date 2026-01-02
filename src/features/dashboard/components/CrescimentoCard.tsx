@@ -43,14 +43,6 @@ export function CrescimentoCard() {
 
         const empresaCnpj = empresaData.cnpj;
 
-        // Buscar pessoa da loja (onde cpf_cnpj = cnpj da empresa)
-        const { data: pessoaLoja } = await supabase
-          .from('vx_pessoa')
-          .select('id')
-          .eq('cpf_cnpj', empresaCnpj)
-          .eq('eh_investidor', true)
-          .single();
-
         // Buscar snapshots para cálculo da Base
         const endDate = new Date();
         const startDate = startOfMonth(subMonths(endDate, 11));
@@ -90,29 +82,18 @@ export function CrescimentoCard() {
           }
         }
 
-        // Calcular Ganhos Previsto usando investimentos ativos da loja
+        // Buscar Ganhos Previsto diretamente da view vw_rentabilidade_investidor
         let ganhosPrevisto: number | null = null;
 
-        if (pessoaLoja) {
-          const { data: investimentos } = await supabase
-            .from('vx_investimento')
-            .select('valor_investido, valor_lucro')
-            .eq('id_pessoa', pessoaLoja.id)
-            .is('data_finalizado', null);
+        if (empresaCnpj) {
+          const { data: rentabilidade } = await supabase
+            .from('vw_rentabilidade_investidor')
+            .select('lucro_proporcional_percentual')
+            .eq('cpf_cnpj', empresaCnpj)
+            .single();
 
-          if (investimentos && investimentos.length > 0) {
-            const totalInvestido = investimentos.reduce(
-              (acc, inv) => acc + (Number(inv.valor_investido) || 0),
-              0
-            );
-            const totalLucro = investimentos.reduce(
-              (acc, inv) => acc + (Number(inv.valor_lucro) || 0),
-              0
-            );
-
-            if (totalInvestido > 0) {
-              ganhosPrevisto = (totalLucro / totalInvestido) * 100;
-            }
+          if (rentabilidade) {
+            ganhosPrevisto = Number(rentabilidade.lucro_proporcional_percentual) || 0;
           }
         }
 
