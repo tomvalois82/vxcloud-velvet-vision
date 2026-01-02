@@ -40,10 +40,10 @@ const formSchema = z.object({
 type FormData = z.infer<typeof formSchema>;
 
 const CLASSIFICACAO_OPTIONS = [
-  { value: "DESPESA FIXA", label: "Despesa Fixa" },
-  { value: "CUSTO DIRETO", label: "Custo Direto" },
-  { value: "RECEITA DE VENDA", label: "Receita de Venda" },
-  { value: "NÃO OPERACIONAL", label: "Não Operacional" },
+  { value: "DESPESA_FIXA", label: "Despesa Fixa" },
+  { value: "CUSTO_DIRETO", label: "Custo Direto" },
+  { value: "RECEITA_VENDA", label: "Receita de Venda" },
+  { value: "NAO_OPERACIONAL", label: "Não Operacional" },
 ];
 
 interface Categoria {
