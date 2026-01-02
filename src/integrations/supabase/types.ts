@@ -2330,6 +2330,16 @@ export type Database = {
         }
         Relationships: []
       }
+      vw_ponto_equilibrio: {
+        Row: {
+          cobertura_percentual: number | null
+          despesa_loja: number | null
+          lucro_bruto_vendas: number | null
+          saldo_ponto_equilibrio: number | null
+          status_loja: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       get_user_config_id: { Args: never; Returns: number }
