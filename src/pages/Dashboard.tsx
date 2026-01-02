@@ -1,13 +1,12 @@
 import { useState, useEffect } from 'react';
 import { PageHeader } from "@/components/PageHeader";
-import { TrendingUp } from "lucide-react";
 import { DashboardFilters } from '@/features/dashboard/components/DashboardFilters';
 import { BalancoCard } from '@/features/dashboard/components/BalancoCard';
 import { BalancoGeralCard } from '@/features/dashboard/components/BalancoGeralCard';
 import { PatrimonioCard } from '@/features/dashboard/components/PatrimonioCard';
-import { PlaceholderCard } from '@/features/dashboard/components/PlaceholderCard';
+import { CrescimentoCard } from '@/features/dashboard/components/CrescimentoCard';
 import { TrendChart } from '@/features/dashboard/components/TrendChart';
-import { 
+import {
   useDashboardData, 
   getDateRangeFromPeriod, 
   DateRange, 
@@ -67,7 +66,7 @@ const Dashboard = () => {
         
         <PatrimonioCard />
         
-        <PlaceholderCard title="Crescimento" icon={TrendingUp} />
+        <CrescimentoCard />
       </div>
 
       {/* Trend Chart */}
