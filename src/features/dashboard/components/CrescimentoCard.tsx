@@ -102,14 +102,14 @@ export function CrescimentoCard() {
           }
         }
 
-        // Ganhos Previsto: percentual de lucro proporcional sobre o investimento total
-        // Usa o último snapshot para calcular a rentabilidade prevista
+        // Ganhos Previsto: percentual previsto de crescimento do patrimônio
+        // Mesma base do Card 3 (Base = Investimentos + Saldo)
+        // Crescimento previsto = (Lucro Proporcional Total / Base) × 100
         const lastMonth = monthlyData[monthlyData.length - 1];
         let ganhosPrevisto: number | null = null;
 
-        if (lastMonth.totalInvestido > 0) {
-          // Rentabilidade = (lucro proporcional / valor investido) * 100
-          ganhosPrevisto = (lastMonth.totalLucroProporcional / lastMonth.totalInvestido) * 100;
+        if (lastMonth.base > 0) {
+          ganhosPrevisto = (lastMonth.totalLucroProporcional / lastMonth.base) * 100;
         }
 
         setCrescimentoBase(acumuladoBase);
@@ -160,14 +160,13 @@ export function CrescimentoCard() {
               <p className="font-medium">Como é calculado:</p>
               <div className="space-y-1 text-muted-foreground text-xs">
                 <p><span className="font-medium text-[hsl(var(--chart-1))]">Base:</span> Crescimento acumulado do patrimônio (Investimentos + Saldo) nos últimos 12 meses.</p>
-                <p><span className="font-medium text-[hsl(var(--chart-2))]">Ganhos Previsto:</span> Percentual de rentabilidade prevista = (Lucro Proporcional Total / Investimento Total) × 100</p>
+                <p><span className="font-medium text-[hsl(var(--chart-2))]">Ganhos Previsto:</span> Percentual previsto de crescimento = (Lucro Proporcional Total / Base) × 100</p>
               </div>
               <div className="border-t pt-2 mt-2">
                 <p className="text-xs text-muted-foreground">
-                  <span className="font-medium">Exemplo Ganhos Previsto:</span><br />
-                  Investimento Total: R$100K<br />
-                  Lucro Proporcional: R$15K<br />
-                  <span className="font-medium">Rentabilidade: +15%</span>
+                  <span className="font-medium">Exemplo:</span><br />
+                  Base: R$100K • Lucro Proporcional: R$15K<br />
+                  <span className="font-medium">Ganhos Previsto: +15%</span>
                 </p>
               </div>
             </div>
