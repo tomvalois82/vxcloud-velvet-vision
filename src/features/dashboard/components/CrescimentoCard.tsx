@@ -27,7 +27,7 @@ export function CrescimentoCard() {
   }, []);
 
   useEffect(() => {
-    const fetchSnapshots = async () => {
+    const fetchData = async () => {
       setLoading(true);
       try {
         // Buscar empresa do usuário com CNPJ
@@ -43,7 +43,15 @@ export function CrescimentoCard() {
 
         const empresaCnpj = empresaData.cnpj;
 
-        // Get last 12 months range
+        // Buscar pessoa da loja (onde cpf_cnpj = cnpj da empresa)
+        const { data: pessoaLoja } = await supabase
+          .from('vx_pessoa')
+          .select('id')
+          .eq('cpf_cnpj', empresaCnpj)
+          .eq('eh_investidor', true)
+          .single();
+
+        // Buscar snapshots para cálculo da Base
         const endDate = new Date();
         const startDate = startOfMonth(subMonths(endDate, 11));
 
@@ -56,87 +64,68 @@ export function CrescimentoCard() {
 
         if (error) throw error;
 
-        if (!snapshots || snapshots.length < 2) {
-          setCrescimentoBase(null);
-          setCrescimentoGanhos(null);
-          setLoading(false);
-          return;
-        }
+        // Calcular crescimento Base (acumulado 12 meses)
+        let acumuladoBase: number | null = null;
 
-        // Calculate values for each month
-        const monthlyData = snapshots.map((snapshot) => {
-          const investimentos = (snapshot.investimento_atual as InvestimentoItem[] | null) || [];
-          const saldo = Number(snapshot.saldo) || 0;
-
-          // Total de todos os investimentos (para base)
-          const totalInvestido = investimentos.reduce(
-            (acc, inv) => acc + (Number(inv.valor_investido) || 0),
-            0
-          );
-
-          // Lucro proporcional apenas da loja (filtrado por CNPJ)
-          const lucroProporcionalLoja = investimentos
-            .filter(inv => inv.cpf_cnpj === empresaCnpj)
-            .reduce(
-              (acc, inv) => acc + (Number(inv.lucro_proporcional) || 0),
-              0
-            );
-
-          // Investido da loja (para cálculo do ganhos previsto)
-          const investidoLoja = investimentos
-            .filter(inv => inv.cpf_cnpj === empresaCnpj)
-            .reduce(
+        if (snapshots && snapshots.length >= 2) {
+          const monthlyData = snapshots.map((snapshot) => {
+            const investimentos = (snapshot.investimento_atual as InvestimentoItem[] | null) || [];
+            const saldo = Number(snapshot.saldo) || 0;
+            const totalInvestido = investimentos.reduce(
               (acc, inv) => acc + (Number(inv.valor_investido) || 0),
               0
             );
+            return totalInvestido + saldo;
+          });
 
-          // Base: valor_investido + saldo
-          const base = totalInvestido + saldo;
-
-          return { base, totalInvestido, lucroProporcionalLoja, investidoLoja };
-        });
-
-        // Calculate accumulated percentage growth for Base
-        const firstMonth = monthlyData[0];
-        
-        if (firstMonth.base === 0) {
-          setCrescimentoBase(null);
-          setCrescimentoGanhos(null);
-          setLoading(false);
-          return;
-        }
-
-        let acumuladoBase = 0;
-
-        for (let i = 1; i < monthlyData.length; i++) {
-          const prevBase = monthlyData[i - 1].base;
-          const currBase = monthlyData[i].base;
-
-          if (prevBase > 0) {
-            const variacaoBase = ((currBase - prevBase) / prevBase) * 100;
-            acumuladoBase += variacaoBase;
+          if (monthlyData[0] > 0) {
+            acumuladoBase = 0;
+            for (let i = 1; i < monthlyData.length; i++) {
+              const prev = monthlyData[i - 1];
+              const curr = monthlyData[i];
+              if (prev > 0) {
+                acumuladoBase += ((curr - prev) / prev) * 100;
+              }
+            }
           }
         }
 
-        // Ganhos Previsto: percentual previsto de crescimento baseado nos investimentos da loja
-        // Crescimento previsto = (Lucro Proporcional Loja / Investido Loja) × 100
-        const lastMonth = monthlyData[monthlyData.length - 1];
+        // Calcular Ganhos Previsto usando investimentos ativos da loja
         let ganhosPrevisto: number | null = null;
 
-        if (lastMonth.investidoLoja > 0) {
-          ganhosPrevisto = (lastMonth.lucroProporcionalLoja / lastMonth.investidoLoja) * 100;
+        if (pessoaLoja) {
+          const { data: investimentos } = await supabase
+            .from('vx_investimento')
+            .select('valor_investido, valor_lucro')
+            .eq('id_pessoa', pessoaLoja.id)
+            .is('data_finalizado', null);
+
+          if (investimentos && investimentos.length > 0) {
+            const totalInvestido = investimentos.reduce(
+              (acc, inv) => acc + (Number(inv.valor_investido) || 0),
+              0
+            );
+            const totalLucro = investimentos.reduce(
+              (acc, inv) => acc + (Number(inv.valor_lucro) || 0),
+              0
+            );
+
+            if (totalInvestido > 0) {
+              ganhosPrevisto = (totalLucro / totalInvestido) * 100;
+            }
+          }
         }
 
         setCrescimentoBase(acumuladoBase);
         setCrescimentoGanhos(ganhosPrevisto);
       } catch (error) {
-        console.error('Erro ao buscar snapshots:', error);
+        console.error('Erro ao buscar dados de crescimento:', error);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchSnapshots();
+    fetchData();
   }, []);
 
   const formatPercentage = (value: number | null) => {
