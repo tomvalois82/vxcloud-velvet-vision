@@ -25,6 +25,7 @@ interface Categoria {
   ativo: boolean;
   operacao: string;
   dre: boolean;
+  classificacao: string | null;
   children?: Categoria[];
   hasChildren?: boolean;
 }

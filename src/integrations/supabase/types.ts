@@ -1388,6 +1388,7 @@ export type Database = {
         Row: {
           ativo: boolean
           categoria: string
+          classificacao: string | null
           dre: boolean
           id: string
           id_categoria_pai: string | null
@@ -1396,6 +1397,7 @@ export type Database = {
         Insert: {
           ativo?: boolean
           categoria: string
+          classificacao?: string | null
           dre?: boolean
           id?: string
           id_categoria_pai?: string | null
@@ -1404,6 +1406,7 @@ export type Database = {
         Update: {
           ativo?: boolean
           categoria?: string
+          classificacao?: string | null
           dre?: boolean
           id?: string
           id_categoria_pai?: string | null

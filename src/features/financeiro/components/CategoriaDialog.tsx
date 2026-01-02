@@ -34,9 +34,17 @@ const formSchema = z.object({
   categoria: z.string().min(1, "Nome da categoria é obrigatório"),
   operacao: z.string().min(1, "Tipo de operação é obrigatório"),
   id_categoria_pai: z.string().nullable(),
+  classificacao: z.string().nullable(),
 });
 
 type FormData = z.infer<typeof formSchema>;
+
+const CLASSIFICACAO_OPTIONS = [
+  { value: "Operacional", label: "Operacional" },
+  { value: "Não Operacional", label: "Não Operacional" },
+  { value: "Investimento", label: "Investimento" },
+  { value: "Financeiro", label: "Financeiro" },
+];
 
 interface Categoria {
   id: string;
@@ -44,6 +52,7 @@ interface Categoria {
   id_categoria_pai: string | null;
   ativo: boolean;
   operacao: string;
+  classificacao: string | null;
 }
 
 interface CategoriaDialogProps {
@@ -70,6 +79,7 @@ export function CategoriaDialog({
       categoria: "",
       operacao: "Pagar",
       id_categoria_pai: null,
+      classificacao: null,
     },
   });
 
@@ -83,6 +93,7 @@ export function CategoriaDialog({
           categoria: categoria.categoria,
           operacao: categoria.operacao,
           id_categoria_pai: categoria.id_categoria_pai,
+          classificacao: categoria.classificacao,
         });
       } else if (parentCategoria) {
         // Creating subcategory
@@ -90,6 +101,7 @@ export function CategoriaDialog({
           categoria: "",
           operacao: parentCategoria.operacao, // Inherit parent's operation type
           id_categoria_pai: parentCategoria.id,
+          classificacao: null,
         });
       } else {
         // Creating new root category
@@ -97,6 +109,7 @@ export function CategoriaDialog({
           categoria: "",
           operacao: "Pagar",
           id_categoria_pai: null,
+          classificacao: null,
         });
       }
     }
@@ -152,6 +165,7 @@ export function CategoriaDialog({
             categoria: data.categoria,
             operacao: data.operacao,
             id_categoria_pai: data.id_categoria_pai,
+            classificacao: data.classificacao,
           })
           .eq("id", categoria.id);
 
@@ -165,6 +179,7 @@ export function CategoriaDialog({
             categoria: data.categoria,
             operacao: data.operacao,
             id_categoria_pai: data.id_categoria_pai,
+            classificacao: data.classificacao,
             ativo: true,
           });
 
@@ -292,6 +307,35 @@ export function CategoriaDialog({
                 )}
               />
             )}
+
+            <FormField
+              control={form.control}
+              name="classificacao"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Classificação (opcional)</FormLabel>
+                  <Select
+                    onValueChange={(value) => field.onChange(value === "__none__" ? null : value)}
+                    value={field.value || "__none__"}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione a classificação" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="__none__">Nenhuma</SelectItem>
+                      {CLASSIFICACAO_OPTIONS.map((option) => (
+                        <SelectItem key={option.value} value={option.value}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
             <div className="flex justify-end gap-3 pt-4">
               <Button
