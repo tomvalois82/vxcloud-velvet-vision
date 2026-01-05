@@ -39,6 +39,10 @@ const menuItems: MenuItem[] = [{
   url: "/pessoas",
   icon: Users
 }, {
+  title: "Financeiras",
+  url: "/financeiras",
+  icon: Building2
+}, {
   title: "Investidores",
   icon: TrendingUp,
   items: [{
