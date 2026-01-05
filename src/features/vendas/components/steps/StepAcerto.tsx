@@ -53,6 +53,14 @@ function parseDecimal(value: string): number | null {
   const num = parseFloat(normalized);
   return isNaN(num) ? null : num;
 }
+
+// Converte string de data (YYYY-MM-DD) para Date local (evita -1 dia por fuso)
+function parseDateOnlyAsLocal(dateString: string): Date {
+  if (/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
+    return new Date(`${dateString}T00:00:00`);
+  }
+  return new Date(dateString);
+}
 import { toast } from 'sonner';
 import type { SaleData, PaymentEntry, FormaPagamento, ContaFinanceira, Financeira, FinanciamentoEntry, ServicoProdutoEntry, CategoriaFinanceira } from '../../types';
 import { ServicoProdutoDialog } from '../ServicoProdutoDialog';
@@ -493,7 +501,7 @@ export function StepAcerto({
                         </span>
                       </div>
                       <p className="text-sm text-muted-foreground">
-                        {payment.conta_descricao} • {format(new Date(payment.data_lancamento), 'dd/MM/yyyy')}
+                        {payment.conta_descricao} • {format(parseDateOnlyAsLocal(payment.data_lancamento), 'dd/MM/yyyy')}
                       </p>
                     </div>
                   </div>
