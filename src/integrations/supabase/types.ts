@@ -1486,6 +1486,7 @@ export type Database = {
           id_estoque: number | null
           id_forma_pagamento: string | null
           id_pessoa: string | null
+          id_venda: string | null
           motivo_ajuste: string | null
           observacoes: string | null
           ordem_ocorrencia: number | null
@@ -1514,6 +1515,7 @@ export type Database = {
           id_estoque?: number | null
           id_forma_pagamento?: string | null
           id_pessoa?: string | null
+          id_venda?: string | null
           motivo_ajuste?: string | null
           observacoes?: string | null
           ordem_ocorrencia?: number | null
@@ -1542,6 +1544,7 @@ export type Database = {
           id_estoque?: number | null
           id_forma_pagamento?: string | null
           id_pessoa?: string | null
+          id_venda?: string | null
           motivo_ajuste?: string | null
           observacoes?: string | null
           ordem_ocorrencia?: number | null
@@ -1553,6 +1556,13 @@ export type Database = {
           valor_liquido?: number
         }
         Relationships: [
+          {
+            foreignKeyName: "fk_vx_fin_movimento_venda"
+            columns: ["id_venda"]
+            isOneToOne: false
+            referencedRelation: "vx_vendas"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "vx_fin_movimento_id_cartao_fkey"
             columns: ["id_cartao"]
