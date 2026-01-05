@@ -23,6 +23,8 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Loader2, Upload, X, Building } from "lucide-react";
 
+const BUCKET_NAME = "bucket";
+
 const financeiraSchema = z.object({
   nome: z.string().min(1, "Nome é obrigatório"),
   ativa: z.boolean(),
@@ -88,10 +90,10 @@ export function FinanceiraDialog({ open, onOpenChange, financeira, onSuccess }: 
     try {
       const fileExt = file.name.split(".").pop();
       const fileName = `${Date.now()}.${fileExt}`;
-      const filePath = `financeiras/${fileName}`;
+      const filePath = `financeiras/logos/${fileName}`;
 
       const { error: uploadError } = await supabase.storage
-        .from("logos")
+        .from(BUCKET_NAME)
         .upload(filePath, file);
 
       if (uploadError) {
@@ -104,7 +106,7 @@ export function FinanceiraDialog({ open, onOpenChange, financeira, onSuccess }: 
       }
 
       const { data: urlData } = supabase.storage
-        .from("logos")
+        .from(BUCKET_NAME)
         .getPublicUrl(filePath);
 
       setLogoUrl(urlData.publicUrl);
