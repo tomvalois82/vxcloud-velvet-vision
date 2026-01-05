@@ -27,6 +27,32 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { cn } from '@/lib/utils';
 import { maskCurrency, unmaskCurrency } from '@/features/estoque/utils/masks';
+
+// Máscara para número decimal com 1 casa (ex: 3,6; 2,8; 4,0)
+function maskDecimal(value: string | number): string {
+  if (typeof value === 'number') {
+    return value.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+  }
+  // Remove tudo exceto dígitos e vírgula
+  let clean = value.replace(/[^\d,]/g, '');
+  // Garante apenas uma vírgula
+  const parts = clean.split(',');
+  if (parts.length > 2) {
+    clean = parts[0] + ',' + parts.slice(1).join('');
+  }
+  // Limita a 1 casa decimal
+  if (parts.length === 2 && parts[1].length > 1) {
+    clean = parts[0] + ',' + parts[1].slice(0, 1);
+  }
+  return clean;
+}
+
+function parseDecimal(value: string): number | null {
+  if (!value) return null;
+  const normalized = value.replace(',', '.');
+  const num = parseFloat(normalized);
+  return isNaN(num) ? null : num;
+}
 import { toast } from 'sonner';
 import type { SaleData, PaymentEntry, FormaPagamento, ContaFinanceira, Financeira, FinanciamentoEntry, ServicoProdutoEntry, CategoriaFinanceira } from '../../types';
 import { ServicoProdutoDialog } from '../ServicoProdutoDialog';
@@ -146,7 +172,7 @@ export function StepAcerto({
       setIdFinanceira(fin.id_financeira || '');
       setIdContaDestino(fin.id_conta_destino || '');
       setValorFinanciado(maskCurrency(fin.valor || 0));
-      setValorR(fin.valor_r ? maskCurrency(fin.valor_r) : '');
+      setValorR(fin.valor_r ? maskDecimal(fin.valor_r) : '');
       setPlus(fin.plus ? maskCurrency(fin.plus) : '');
       setTac(fin.tac ? String(fin.tac) : '');
       setValorTac(fin.valor_tac ? maskCurrency(fin.valor_tac) : '');
@@ -178,7 +204,7 @@ export function StepAcerto({
       id_financeira: idFinanceira || null,
       id_conta_destino: idContaDestino,
       valor: valorNum,
-      valor_r: valorR ? unmaskCurrency(valorR) : null,
+      valor_r: valorR ? parseDecimal(valorR) : null,
       plus: plus ? unmaskCurrency(plus) : null,
       tac: tac ? Number(tac) : null,
       valor_tac: valorTac ? unmaskCurrency(valorTac) : null,
@@ -550,7 +576,7 @@ export function StepAcerto({
                     {saleData.financiamento.valor_r && (
                       <div>
                         <span className="text-muted-foreground">Valor R: </span>
-                        <span className="font-medium">{maskCurrency(saleData.financiamento.valor_r)}</span>
+                        <span className="font-medium">{maskDecimal(saleData.financiamento.valor_r)}</span>
                       </div>
                     )}
                     {saleData.financiamento.plus && (
@@ -1100,7 +1126,7 @@ export function StepAcerto({
                 </div>
                 <div className="space-y-2">
                   <Label>Valor R</Label>
-                  <Input value={valorR} onChange={(e) => setValorR(maskCurrency(unmaskCurrency(e.target.value)))} placeholder="R$ 0,00" />
+                  <Input value={valorR} onChange={(e) => setValorR(maskDecimal(e.target.value))} placeholder="0,0" />
                 </div>
               </div>
 
