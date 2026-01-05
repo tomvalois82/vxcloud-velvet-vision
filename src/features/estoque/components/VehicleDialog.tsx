@@ -1302,6 +1302,7 @@ export function VehicleDialog({ open, onOpenChange, vehicleId, onSuccess }: Vehi
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
+                            <SelectItem value="Em preparação">Em preparação</SelectItem>
                             <SelectItem value="Em estoque">Em estoque</SelectItem>
                             <SelectItem value="Reservado">Reservado</SelectItem>
                             <SelectItem value="Fora de Estoque">Fora de Estoque</SelectItem>

@@ -487,6 +487,7 @@ const VeiculosEstoque = () => {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="todos">Todos</SelectItem>
+                <SelectItem value="Em preparação">Em preparação</SelectItem>
                 <SelectItem value="Em estoque">Em estoque</SelectItem>
                 <SelectItem value="Vendido">Vendido</SelectItem>
                 <SelectItem value="Reservado">Reservado</SelectItem>
