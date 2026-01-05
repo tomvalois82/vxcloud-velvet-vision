@@ -1,6 +1,23 @@
 import { supabase } from '@/integrations/supabase/client';
 import { normalizePlaca } from './masks';
 
+export interface VeiculoVendido {
+  id: number;
+  modelo: string | null;
+  ano: string | null;
+  fabricante: string | null;
+  ano_fabricacao: string | null;
+  motor: string | null;
+  cambio: string | null;
+  cor: string | null;
+  categoria: string | null;
+  tipo_veiculo: string | null;
+  placa: string | null;
+  id_empresa: string;
+  renavan: number | null;
+  chassi: string | null;
+}
+
 export async function validatePlacaDuplicada(
   placa: string,
   currentVehicleId?: number
@@ -13,16 +30,19 @@ export async function validatePlacaDuplicada(
 
   const { data, error } = await supabase
     .from('estoque')
-    .select('id, placa')
+    .select('id, placa, status')
     .eq('placa', normalizedPlaca)
-    .maybeSingle();
+    .neq('status', 'Vendido');
 
   if (error) {
     console.error('Erro ao validar placa:', error);
     return { valid: true }; // Em caso de erro, deixa passar
   }
 
-  if (data && (!currentVehicleId || data.id !== currentVehicleId)) {
+  // Verifica se existe algum veículo (não vendido) com essa placa
+  const veiculoAtivo = data?.find(v => !currentVehicleId || v.id !== currentVehicleId);
+  
+  if (veiculoAtivo) {
     return {
       valid: false,
       message: 'Já existe um veículo cadastrado com esta placa.',
@@ -30,6 +50,54 @@ export async function validatePlacaDuplicada(
   }
 
   return { valid: true };
+}
+
+// Verifica se existe veículo VENDIDO com placa, renavan ou chassi
+export async function checkVeiculoVendidoParaCiclo(
+  placa?: string,
+  renavan?: string,
+  chassi?: string
+): Promise<VeiculoVendido | null> {
+  if (!placa && !renavan && !chassi) {
+    return null;
+  }
+
+  const normalizedPlaca = placa ? normalizePlaca(placa) : null;
+  const renavamNum = renavan ? parseInt(renavan.replace(/\D/g, '')) : null;
+  const chassiNorm = chassi ? chassi.toUpperCase().trim() : null;
+
+  // Buscar veículos vendidos que correspondam a qualquer um dos identificadores
+  let query = supabase
+    .from('estoque')
+    .select('id, modelo, ano, fabricante, ano_fabricacao, motor, cambio, cor, categoria, tipo_veiculo, placa, id_empresa, renavan, chassi')
+    .eq('status', 'Vendido');
+
+  const { data, error } = await query;
+
+  if (error) {
+    console.error('Erro ao verificar veículo vendido:', error);
+    return null;
+  }
+
+  if (!data || data.length === 0) {
+    return null;
+  }
+
+  // Procurar match por placa, renavan ou chassi
+  const veiculoEncontrado = data.find(v => {
+    if (normalizedPlaca && v.placa && normalizePlaca(v.placa) === normalizedPlaca) {
+      return true;
+    }
+    if (renavamNum && v.renavan && v.renavan === renavamNum) {
+      return true;
+    }
+    if (chassiNorm && v.chassi && v.chassi.toUpperCase().trim() === chassiNorm) {
+      return true;
+    }
+    return false;
+  });
+
+  return veiculoEncontrado || null;
 }
 
 export function validateAnoModelo(anoModelo: string, anoFabricacao: string): {

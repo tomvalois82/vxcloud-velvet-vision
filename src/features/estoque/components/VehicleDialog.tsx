@@ -54,7 +54,19 @@ import {
   validateKm,
   validateDataAquisicao,
   validateChassi,
+  checkVeiculoVendidoParaCiclo,
+  VeiculoVendido,
 } from '../utils/validations';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import {
   Select,
   SelectContent,
@@ -120,6 +132,9 @@ export function VehicleDialog({ open, onOpenChange, vehicleId, onSuccess }: Vehi
   const [anosDisponiveis, setAnosDisponiveis] = useState<number[]>([]);
   const [anosFabricacao, setAnosFabricacao] = useState<string[]>([]);
   const [tipoVeiculoFipe, setTipoVeiculoFipe] = useState<TipoVeiculo>('carros');
+  const [veiculoVendidoParaCiclo, setVeiculoVendidoParaCiclo] = useState<VeiculoVendido | null>(null);
+  const [showCicloDialog, setShowCicloDialog] = useState(false);
+  const [checkingCiclo, setCheckingCiclo] = useState(false);
   const isEditing = !!vehicleId;
 
   const form = useForm<VehicleFormData>({
@@ -210,6 +225,89 @@ export function VehicleDialog({ open, onOpenChange, vehicleId, onSuccess }: Vehi
     }
   };
 
+  // Verifica ciclo de vida para placa, renavan ou chassi
+  const checkCicloDeVida = async (campo: 'placa' | 'renavan' | 'chassi') => {
+    // Só verifica para novos veículos
+    if (isEditing) return;
+
+    const placa = campo === 'placa' ? form.getValues('placa') : undefined;
+    const renavan = campo === 'renavan' ? form.getValues('renavan') : undefined;
+    const chassi = campo === 'chassi' ? form.getValues('chassi') : undefined;
+
+    if (!placa && !renavan && !chassi) return;
+
+    setCheckingCiclo(true);
+    try {
+      const veiculoVendido = await checkVeiculoVendidoParaCiclo(placa, renavan, chassi);
+      if (veiculoVendido) {
+        setVeiculoVendidoParaCiclo(veiculoVendido);
+        setShowCicloDialog(true);
+      }
+    } catch (error) {
+      console.error('Erro ao verificar ciclo de vida:', error);
+    } finally {
+      setCheckingCiclo(false);
+    }
+  };
+
+  const handleConfirmarCiclo = () => {
+    if (!veiculoVendidoParaCiclo) return;
+
+    const v = veiculoVendidoParaCiclo;
+    
+    // Preencher formulário com dados do veículo vendido
+    form.setValue('modelo', v.modelo || '');
+    form.setValue('fabricante', v.fabricante || '');
+    form.setValue('ano', v.ano || '');
+    form.setValue('ano_fabricacao', v.ano_fabricacao || '');
+    form.setValue('motor', v.motor || '');
+    form.setValue('cambio', v.cambio || '');
+    form.setValue('cor', v.cor || '');
+    form.setValue('carroceria', v.categoria || '');
+    if (v.placa) form.setValue('placa', maskPlaca(v.placa));
+    if (v.renavan) form.setValue('renavan', String(v.renavan));
+    if (v.chassi) form.setValue('chassi', v.chassi);
+    
+    // Mapear tipo_veiculo para tipo_veiculo_fipe
+    const tipoVeiculoMap: Record<string, TipoVeiculo> = {
+      'Carros': 'carros',
+      'Motos': 'motos',
+      'Caminhões': 'caminhoes',
+    };
+    const tipoFipe = tipoVeiculoMap[v.tipo_veiculo || ''] || 'carros';
+    form.setValue('tipo_veiculo_fipe', tipoFipe);
+    setTipoVeiculoFipe(tipoFipe);
+
+    // Atualizar anos de fabricação disponíveis
+    if (v.ano) {
+      const anoNum = parseInt(v.ano);
+      if (!isNaN(anoNum)) {
+        const anosSet = new Set<string>();
+        anosSet.add(String(anoNum));
+        anosSet.add(String(anoNum - 1));
+        if (v.ano_fabricacao) anosSet.add(v.ano_fabricacao);
+        setAnosFabricacao(Array.from(anosSet).sort((a, b) => parseInt(b) - parseInt(a)));
+      }
+    }
+
+    // Status e data de aquisição para novo ciclo
+    form.setValue('status', 'Em preparação');
+    form.setValue('data_aquisicao', new Date().toISOString().split('T')[0]);
+
+    setShowCicloDialog(false);
+    setVeiculoVendidoParaCiclo(null);
+
+    toast({
+      title: 'Novo ciclo iniciado',
+      description: 'Os dados do veículo foram carregados. Complete as informações de aquisição.',
+    });
+  };
+
+  const handleCancelarCiclo = () => {
+    setShowCicloDialog(false);
+    setVeiculoVendidoParaCiclo(null);
+  };
+
   const handlePlacaBlur = async () => {
     const placa = form.getValues('placa');
     if (!placa) {
@@ -224,10 +322,20 @@ export function VehicleDialog({ open, onOpenChange, vehicleId, onSuccess }: Vehi
     } else {
       setPlacaError('');
       form.clearErrors('placa');
+      // Verificar ciclo de vida apenas se passou na validação
+      if (!isEditing) {
+        await checkCicloDeVida('placa');
+      }
     }
   };
 
-  const handleChassiBlur = () => {
+  const handleRenavamBlur = async () => {
+    if (!isEditing) {
+      await checkCicloDeVida('renavan');
+    }
+  };
+
+  const handleChassiBlurWithCiclo = async () => {
     const chassi = form.getValues('chassi');
     if (!chassi) {
       setChassiError('');
@@ -241,8 +349,13 @@ export function VehicleDialog({ open, onOpenChange, vehicleId, onSuccess }: Vehi
     } else {
       setChassiError('');
       form.clearErrors('chassi');
+      // Verificar ciclo de vida apenas se passou na validação
+      if (!isEditing) {
+        await checkCicloDeVida('chassi');
+      }
     }
   };
+
 
   const handleAnoModeloBlur = () => {
     const anoModelo = form.getValues('ano');
@@ -393,6 +506,8 @@ export function VehicleDialog({ open, onOpenChange, vehicleId, onSuccess }: Vehi
       setAnosFabricacao([]);
       setFipeValorSugerido(null);
       setTipoVeiculoFipe('carros');
+      setVeiculoVendidoParaCiclo(null);
+      setShowCicloDialog(false);
     } else if (!open) {
       // Clear photos when dialog closes
       setPhotos([]);
@@ -734,6 +849,7 @@ export function VehicleDialog({ open, onOpenChange, vehicleId, onSuccess }: Vehi
                               placeholder="Ex: 12345678901"
                               {...field}
                               onChange={(e) => field.onChange(maskRenavan(e.target.value))}
+                              onBlur={handleRenavamBlur}
                               maxLength={11}
                             />
                           </FormControl>
@@ -756,7 +872,7 @@ export function VehicleDialog({ open, onOpenChange, vehicleId, onSuccess }: Vehi
                                 field.onChange(maskChassi(e.target.value));
                                 setChassiError('');
                               }}
-                              onBlur={handleChassiBlur}
+                              onBlur={handleChassiBlurWithCiclo}
                               maxLength={17}
                             />
                           </FormControl>
@@ -1275,6 +1391,37 @@ export function VehicleDialog({ open, onOpenChange, vehicleId, onSuccess }: Vehi
           </TabsContent>
         </Tabs>
       </DialogContent>
+
+      {/* Dialog de Ciclo de Vida */}
+      <AlertDialog open={showCicloDialog} onOpenChange={setShowCicloDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Veículo já foi da loja</AlertDialogTitle>
+            <AlertDialogDescription className="space-y-2">
+              <p>
+                Esse veículo já foi cadastrado anteriormente e está marcado como <strong>Vendido</strong>.
+              </p>
+              {veiculoVendidoParaCiclo && (
+                <p className="text-sm text-muted-foreground">
+                  {veiculoVendidoParaCiclo.fabricante} {veiculoVendidoParaCiclo.modelo} - {veiculoVendidoParaCiclo.ano}
+                  {veiculoVendidoParaCiclo.placa && ` • Placa: ${veiculoVendidoParaCiclo.placa}`}
+                </p>
+              )}
+              <p className="font-medium mt-2">
+                Deseja iniciar um novo ciclo de vida para esse veículo?
+              </p>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={handleCancelarCiclo}>
+              Não, cadastrar como novo
+            </AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmarCiclo}>
+              Sim, iniciar novo ciclo
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Dialog>
   );
 }
