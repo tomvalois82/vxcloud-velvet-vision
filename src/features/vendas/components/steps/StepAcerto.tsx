@@ -268,12 +268,20 @@ export function StepAcerto({
     const valorNum = unmaskCurrency(valor);
     const valorFinal = paymentType === 'pagamento' ? -Math.abs(valorNum) : Math.abs(valorNum);
 
+    // Usa toISOString local para evitar problemas de fuso horário
+    const formatLocalDate = (date: Date) => {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    };
+
     addPayment({
       id_forma_pagamento: idFormaPagamento,
       id_conta: idConta,
       valor: valorFinal,
-      data_lancamento: format(dataLancamento, 'yyyy-MM-dd'),
-      data_pagamento: recebido ? format(dataPagamento, 'yyyy-MM-dd') : null,
+      data_lancamento: formatLocalDate(dataLancamento),
+      data_pagamento: recebido ? formatLocalDate(dataPagamento) : null,
       numero: numero || '1',
       observacao: observacao || null,
       forma_descricao: forma?.descricao,
@@ -302,6 +310,14 @@ export function StepAcerto({
     const forma = formasPagamento.find(f => f.id === idFormaPagamento);
     const conta = contas.find(c => c.id === idConta);
 
+    // Usa toISOString local para evitar problemas de fuso horário
+    const formatLocalDate = (date: Date) => {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    };
+
     // Gerar cada parcela a partir da data selecionada
     for (let i = 0; i < parcelas; i++) {
       const dataVencimento = addDays(dataInicioParcelamento, intervalo * i);
@@ -310,7 +326,7 @@ export function StepAcerto({
         id_forma_pagamento: idFormaPagamento,
         id_conta: idConta,
         valor: valorNum, // Parcelamento é sempre recebimento (positivo)
-        data_lancamento: format(dataVencimento, 'yyyy-MM-dd'),
+        data_lancamento: formatLocalDate(dataVencimento),
         data_pagamento: null,
         numero: `${i + 1}/${parcelas}`,
         observacao: observacao || null,
