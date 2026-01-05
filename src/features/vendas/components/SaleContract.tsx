@@ -25,9 +25,16 @@ const formatCPFCNPJ = (value: string | null) => {
   return value;
 };
 
+const parseDateOnlyAsLocal = (dateString: string) => {
+  if (/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
+    return new Date(`${dateString}T00:00:00`);
+  }
+  return new Date(dateString);
+};
+
 const formatDate = (dateString: string) => {
   try {
-    return format(new Date(dateString), 'dd/MM/yyyy', { locale: ptBR });
+    return format(parseDateOnlyAsLocal(dateString), 'dd/MM/yyyy', { locale: ptBR });
   } catch {
     return '-';
   }
@@ -35,7 +42,7 @@ const formatDate = (dateString: string) => {
 
 const formatDateLong = (dateString: string) => {
   try {
-    return format(new Date(dateString), "dd 'de' MMMM 'de' yyyy", { locale: ptBR });
+    return format(parseDateOnlyAsLocal(dateString), "dd 'de' MMMM 'de' yyyy", { locale: ptBR });
   } catch {
     return '-';
   }
