@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { startOfMonth, endOfMonth, subMonths, format } from 'date-fns';
 
@@ -83,12 +83,20 @@ export function useDashboardData(dateRange: DateRange) {
     loading: true,
   });
 
+  // Use ref to store dateRange for stable reference in realtime callback
+  const dateRangeRef = useRef(dateRange);
+  dateRangeRef.current = dateRange;
+
+  // Stable dependency values
+  const fromTime = dateRange.from.getTime();
+  const toTime = dateRange.to.getTime();
+
   const fetchData = useCallback(async () => {
     setData(prev => ({ ...prev, loading: true }));
     
     try {
-      const fromStr = format(dateRange.from, 'yyyy-MM-dd');
-      const toStr = format(dateRange.to, 'yyyy-MM-dd');
+      const fromStr = format(dateRangeRef.current.from, 'yyyy-MM-dd');
+      const toStr = format(dateRangeRef.current.to, 'yyyy-MM-dd');
       
       // Buscar empresa do usuário
       const { data: empresaData } = await supabase
@@ -228,7 +236,7 @@ export function useDashboardData(dateRange: DateRange) {
       console.error('Erro ao buscar dados do dashboard:', error);
       setData(prev => ({ ...prev, loading: false }));
     }
-  }, [dateRange.from, dateRange.to]);
+  }, [fromTime, toTime]);
 
   useEffect(() => {
     fetchData();
