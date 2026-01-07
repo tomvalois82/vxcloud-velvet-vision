@@ -53,7 +53,7 @@ import { RecorrenciaActionDialog } from "@/features/financeiro/components/Recorr
 import { BaixaLoteDialog } from "@/features/financeiro/components/BaixaLoteDialog";
 import { BaixaIndividualDialog } from "@/features/financeiro/components/BaixaIndividualDialog";
 import { MovimentoGroupedList } from "@/features/financeiro/components/MovimentoGroupedList";
-import { atualizarSaldoConta, calcularValorFinal } from "@/features/financeiro/utils/saldoUtils";
+
 import { deleteAnexosDoMovimento, deleteAnexosDeMovimentos } from "@/features/financeiro/utils/anexosUtils";
 
 interface Movimento {
@@ -488,9 +488,7 @@ const FinanceiroReceber = () => {
 
       if (error) throw error;
 
-      // Calcular valor final e atualizar saldo da conta
-      const valorFinal = calcularValorFinal(movimento.valor_bruto, data.desconto, data.acrescimo);
-      await atualizarSaldoConta(data.contaId, valorFinal, "Receber");
+      // O saldo da conta é atualizado automaticamente pela trigger do banco de dados
 
       toast({
         title: "Título baixado",
@@ -536,8 +534,7 @@ const FinanceiroReceber = () => {
         totalAtualizado += mov.valor_bruto;
       }
 
-      // Atualizar saldo da conta uma única vez com o total
-      await atualizarSaldoConta(contaId, totalAtualizado, "Receber");
+      // O saldo da conta é atualizado automaticamente pela trigger do banco de dados
 
       toast({
         title: "Títulos baixados",
@@ -646,15 +643,7 @@ const FinanceiroReceber = () => {
 
     setEstornando(true);
     try {
-      // Calcular valor que foi creditado/debitado originalmente
-      const valorFinal = calcularValorFinal(
-        movimentoEstorno.valor_bruto,
-        movimentoEstorno.desconto || 0,
-        movimentoEstorno.acrescimo || 0
-      );
-
-      // Reverter o saldo da conta (estorno)
-      await atualizarSaldoConta(movimentoEstorno.id_conta, valorFinal, "Receber", true);
+      // O saldo da conta é revertido automaticamente pela trigger do banco de dados
 
       const { error } = await supabase
         .from("vx_fin_movimento")
