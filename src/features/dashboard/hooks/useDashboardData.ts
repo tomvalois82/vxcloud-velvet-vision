@@ -137,23 +137,25 @@ export function useDashboardData(dateRange: DateRange) {
       
       const totalDespesas = despesas?.reduce((sum, d) => sum + Number(d.valor_liquido || 0), 0) || 0;
       
-      // 3. Buscar TODAS as receitas do período (tipo_movimento = 'Receber')
-      const { data: receitas } = await supabase
+      // 3. Balanço Geral - Receitas: status='Pago', tipo_movimento='Receber', data_pagamento no período
+      const { data: receitasGeral } = await supabase
         .from('vx_fin_movimento')
         .select('valor_liquido')
         .eq('id_empresa', empresaId)
         .eq('tipo_movimento', 'Receber')
-        .gte('data_vencimento', fromStr)
-        .lte('data_vencimento', toStr);
+        .eq('status', 'Pago')
+        .gte('data_pagamento', fromStr)
+        .lte('data_pagamento', toStr);
       
-      const totalReceitas = receitas?.reduce((sum, r) => sum + Number(r.valor_liquido || 0), 0) || 0;
+      const totalReceitas = receitasGeral?.reduce((sum, r) => sum + Number(r.valor_liquido || 0), 0) || 0;
       
-      // 4. Buscar TODAS as despesas do período sem exceção (para Balanço Geral)
+      // 4. Balanço Geral - Despesas: status='Pendente', tipo_movimento='Pagar', data_vencimento no período
       const { data: despesasGeral } = await supabase
         .from('vx_fin_movimento')
         .select('valor_liquido')
         .eq('id_empresa', empresaId)
         .eq('tipo_movimento', 'Pagar')
+        .eq('status', 'Pendente')
         .gte('data_vencimento', fromStr)
         .lte('data_vencimento', toStr);
       
