@@ -1789,6 +1789,13 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "fk_id_movimento_carteira"
+            columns: ["id_movimento"]
+            isOneToOne: false
+            referencedRelation: "vx_fin_movimento"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "vx_investimento_carteira_id_investimento_fkey"
             columns: ["id_investimento"]
             isOneToOne: false

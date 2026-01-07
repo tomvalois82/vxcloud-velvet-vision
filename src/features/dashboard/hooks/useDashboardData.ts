@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { startOfMonth, endOfMonth, subMonths, format } from 'date-fns';
 
@@ -83,156 +83,179 @@ export function useDashboardData(dateRange: DateRange) {
     loading: true,
   });
 
-  useEffect(() => {
-    async function fetchData() {
-      setData(prev => ({ ...prev, loading: true }));
-      
-      try {
-        const fromStr = format(dateRange.from, 'yyyy-MM-dd');
-        const toStr = format(dateRange.to, 'yyyy-MM-dd');
-        
-        // Buscar empresa do usuário
-        const { data: empresaData } = await supabase
-          .from('empresa')
-          .select('id')
-          .single();
-        
-        if (!empresaData) {
-          setData(prev => ({ ...prev, loading: false }));
-          return;
-        }
-        
-        const empresaId = empresaData.id;
-        
-        // 1. Buscar categoria "Compras de veículos" para excluir do total de despesas
-        const { data: categoriaCompras } = await supabase
-          .from('vx_fin_categoria')
-          .select('id')
-          .eq('categoria', 'Compras de veículos')
-          .eq('operacao', 'Pagar')
-          .single();
-        
-        // 2. Buscar todas as despesas do período (tipo_movimento = 'Pagar' com data_vencimento no período)
-        // Excluindo a categoria "Compras de veículos"
-        let despesasQuery = supabase
-          .from('vx_fin_movimento')
-          .select('valor_liquido')
-          .eq('id_empresa', empresaId)
-          .eq('tipo_movimento', 'Pagar')
-          .gte('data_vencimento', fromStr)
-          .lte('data_vencimento', toStr);
-        
-        if (categoriaCompras?.id) {
-          despesasQuery = despesasQuery.neq('id_categoria', categoriaCompras.id);
-        }
-        
-        const { data: despesas } = await despesasQuery;
-        
-        const totalDespesas = despesas?.reduce((sum, d) => sum + Number(d.valor_liquido || 0), 0) || 0;
-        
-        // 3. Buscar TODAS as receitas do período (tipo_movimento = 'Receber')
-        const { data: receitas } = await supabase
-          .from('vx_fin_movimento')
-          .select('valor_liquido')
-          .eq('id_empresa', empresaId)
-          .eq('tipo_movimento', 'Receber')
-          .gte('data_vencimento', fromStr)
-          .lte('data_vencimento', toStr);
-        
-        const totalReceitas = receitas?.reduce((sum, r) => sum + Number(r.valor_liquido || 0), 0) || 0;
-        
-        // 4. Buscar TODAS as despesas do período sem exceção (para Balanço Geral)
-        const { data: despesasGeral } = await supabase
-          .from('vx_fin_movimento')
-          .select('valor_liquido')
-          .eq('id_empresa', empresaId)
-          .eq('tipo_movimento', 'Pagar')
-          .gte('data_vencimento', fromStr)
-          .lte('data_vencimento', toStr);
-        
-        const totalDespesasGeral = despesasGeral?.reduce((sum, d) => sum + Number(d.valor_liquido || 0), 0) || 0;
-        const balancoGeral = totalReceitas - totalDespesasGeral;
-        
-        // 5. Buscar vendas do período
-        const { data: vendas } = await supabase
-          .from('vx_vendas')
-          .select(`
-            id,
-            valor_total_venda,
-            id_veiculo_vendido,
-            data_venda
-          `)
-          .eq('id_empresa', empresaId)
-          .gte('data_venda', fromStr)
-          .lte('data_venda', toStr);
-        
-        const quantidadeVendas = vendas?.length || 0;
-        const faturamentoVendas = vendas?.reduce((sum, v) => sum + Number(v.valor_total_venda || 0), 0) || 0;
-        
-        // 6. Buscar produtos/serviços das vendas
-        let totalServicosProdutos = 0;
-        if (vendas && vendas.length > 0) {
-          const vendaIds = vendas.map(v => v.id);
-          
-          const { data: servicosProdutos } = await supabase
-            .from('vx_vendas_servico_produto')
-            .select('valor')
-            .in('id_venda', vendaIds);
-          
-          totalServicosProdutos = servicosProdutos?.reduce((sum, sp) => sum + Number(sp.valor || 0), 0) || 0;
-        }
-        
-        // 7. Buscar custos dos veículos vendidos (custos vinculados ao id_estoque)
-        let custoVenda = 0;
-        
-        if (vendas && vendas.length > 0) {
-          const veiculoIds = vendas.map(v => v.id_veiculo_vendido);
-          
-          // Valor de aquisição dos veículos vendidos
-          const { data: veiculos } = await supabase
-            .from('estoque')
-            .select('id, valor_aquisicao')
-            .in('id', veiculoIds);
-          
-          const valorAquisicao = veiculos?.reduce((sum, v) => sum + Number(v.valor_aquisicao || 0), 0) || 0;
-          
-          // Custos vinculados aos veículos vendidos (movimentos com id_estoque)
-          const { data: custosVeiculos } = await supabase
-            .from('vx_fin_movimento')
-            .select('valor_liquido')
-            .eq('id_empresa', empresaId)
-            .eq('tipo_movimento', 'Pagar')
-            .in('id_estoque', veiculoIds);
-          
-          const custoVinculado = custosVeiculos?.reduce((sum, c) => sum + Number(c.valor_liquido || 0), 0) || 0;
-          
-          custoVenda = valorAquisicao + custoVinculado;
-        }
-        
-        // Lucro = (valor_total_venda + serviços/produtos) - custos do veículo
-        const lucroVendas = (faturamentoVendas + totalServicosProdutos) - custoVenda;
-        const balanco = lucroVendas - totalDespesas;
-        
-        setData({
-          totalDespesas,
-          faturamentoVendas,
-          custoVenda,
-          lucroVendas,
-          balanco,
-          quantidadeVendas,
-          totalReceitas,
-          totalDespesasGeral,
-          balancoGeral,
-          loading: false,
-        });
-      } catch (error) {
-        console.error('Erro ao buscar dados do dashboard:', error);
-        setData(prev => ({ ...prev, loading: false }));
-      }
-    }
+  const fetchData = useCallback(async () => {
+    setData(prev => ({ ...prev, loading: true }));
     
+    try {
+      const fromStr = format(dateRange.from, 'yyyy-MM-dd');
+      const toStr = format(dateRange.to, 'yyyy-MM-dd');
+      
+      // Buscar empresa do usuário
+      const { data: empresaData } = await supabase
+        .from('empresa')
+        .select('id')
+        .single();
+      
+      if (!empresaData) {
+        setData(prev => ({ ...prev, loading: false }));
+        return;
+      }
+      
+      const empresaId = empresaData.id;
+      
+      // 1. Buscar categoria "Compras de veículos" para excluir do total de despesas
+      const { data: categoriaCompras } = await supabase
+        .from('vx_fin_categoria')
+        .select('id')
+        .eq('categoria', 'Compras de veículos')
+        .eq('operacao', 'Pagar')
+        .single();
+      
+      // 2. Buscar todas as despesas do período (tipo_movimento = 'Pagar' com data_vencimento no período)
+      // Excluindo a categoria "Compras de veículos"
+      let despesasQuery = supabase
+        .from('vx_fin_movimento')
+        .select('valor_liquido')
+        .eq('id_empresa', empresaId)
+        .eq('tipo_movimento', 'Pagar')
+        .gte('data_vencimento', fromStr)
+        .lte('data_vencimento', toStr);
+      
+      if (categoriaCompras?.id) {
+        despesasQuery = despesasQuery.neq('id_categoria', categoriaCompras.id);
+      }
+      
+      const { data: despesas } = await despesasQuery;
+      
+      const totalDespesas = despesas?.reduce((sum, d) => sum + Number(d.valor_liquido || 0), 0) || 0;
+      
+      // 3. Buscar TODAS as receitas do período (tipo_movimento = 'Receber')
+      const { data: receitas } = await supabase
+        .from('vx_fin_movimento')
+        .select('valor_liquido')
+        .eq('id_empresa', empresaId)
+        .eq('tipo_movimento', 'Receber')
+        .gte('data_vencimento', fromStr)
+        .lte('data_vencimento', toStr);
+      
+      const totalReceitas = receitas?.reduce((sum, r) => sum + Number(r.valor_liquido || 0), 0) || 0;
+      
+      // 4. Buscar TODAS as despesas do período sem exceção (para Balanço Geral)
+      const { data: despesasGeral } = await supabase
+        .from('vx_fin_movimento')
+        .select('valor_liquido')
+        .eq('id_empresa', empresaId)
+        .eq('tipo_movimento', 'Pagar')
+        .gte('data_vencimento', fromStr)
+        .lte('data_vencimento', toStr);
+      
+      const totalDespesasGeral = despesasGeral?.reduce((sum, d) => sum + Number(d.valor_liquido || 0), 0) || 0;
+      const balancoGeral = totalReceitas - totalDespesasGeral;
+      
+      // 5. Buscar vendas do período
+      const { data: vendas } = await supabase
+        .from('vx_vendas')
+        .select(`
+          id,
+          valor_total_venda,
+          id_veiculo_vendido,
+          data_venda
+        `)
+        .eq('id_empresa', empresaId)
+        .gte('data_venda', fromStr)
+        .lte('data_venda', toStr);
+      
+      const quantidadeVendas = vendas?.length || 0;
+      const faturamentoVendas = vendas?.reduce((sum, v) => sum + Number(v.valor_total_venda || 0), 0) || 0;
+      
+      // 6. Buscar produtos/serviços das vendas
+      let totalServicosProdutos = 0;
+      if (vendas && vendas.length > 0) {
+        const vendaIds = vendas.map(v => v.id);
+        
+        const { data: servicosProdutos } = await supabase
+          .from('vx_vendas_servico_produto')
+          .select('valor')
+          .in('id_venda', vendaIds);
+        
+        totalServicosProdutos = servicosProdutos?.reduce((sum, sp) => sum + Number(sp.valor || 0), 0) || 0;
+      }
+      
+      // 7. Buscar custos dos veículos vendidos (custos vinculados ao id_estoque)
+      let custoVenda = 0;
+      
+      if (vendas && vendas.length > 0) {
+        const veiculoIds = vendas.map(v => v.id_veiculo_vendido);
+        
+        // Valor de aquisição dos veículos vendidos
+        const { data: veiculos } = await supabase
+          .from('estoque')
+          .select('id, valor_aquisicao')
+          .in('id', veiculoIds);
+        
+        const valorAquisicao = veiculos?.reduce((sum, v) => sum + Number(v.valor_aquisicao || 0), 0) || 0;
+        
+        // Custos vinculados aos veículos vendidos (movimentos com id_estoque)
+        const { data: custosVeiculos } = await supabase
+          .from('vx_fin_movimento')
+          .select('valor_liquido')
+          .eq('id_empresa', empresaId)
+          .eq('tipo_movimento', 'Pagar')
+          .in('id_estoque', veiculoIds);
+        
+        const custoVinculado = custosVeiculos?.reduce((sum, c) => sum + Number(c.valor_liquido || 0), 0) || 0;
+        
+        custoVenda = valorAquisicao + custoVinculado;
+      }
+      
+      // Lucro = (valor_total_venda + serviços/produtos) - custos do veículo
+      const lucroVendas = (faturamentoVendas + totalServicosProdutos) - custoVenda;
+      const balanco = lucroVendas - totalDespesas;
+      
+      setData({
+        totalDespesas,
+        faturamentoVendas,
+        custoVenda,
+        lucroVendas,
+        balanco,
+        quantidadeVendas,
+        totalReceitas,
+        totalDespesasGeral,
+        balancoGeral,
+        loading: false,
+      });
+    } catch (error) {
+      console.error('Erro ao buscar dados do dashboard:', error);
+      setData(prev => ({ ...prev, loading: false }));
+    }
+  }, [dateRange.from, dateRange.to]);
+
+  useEffect(() => {
     fetchData();
-  }, [dateRange.from.getTime(), dateRange.to.getTime()]);
+  }, [fetchData]);
+
+  // Subscribe to realtime changes on vx_fin_movimento table
+  useEffect(() => {
+    const channel = supabase
+      .channel('dashboard-movimento-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'vx_fin_movimento',
+        },
+        () => {
+          // Re-fetch data when any change occurs
+          fetchData();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [fetchData]);
   
   return data;
 }
