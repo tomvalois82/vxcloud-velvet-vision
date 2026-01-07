@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { format, isPast, isToday, addMonths } from "date-fns";
+import { format, isPast, isToday, startOfMonth, endOfMonth } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { PageHeader } from "@/components/PageHeader";
 import { EmptyState } from "@/components/EmptyState";
@@ -105,34 +105,6 @@ interface Cartao {
   id_forma_pagamento: string;
 }
 
-// Generate competencia options from 01/2019 to current month/year
-const gerarOpcoesCompetencia = (): { value: string; label: string }[] => {
-  const opcoes: { value: string; label: string }[] = [];
-  const dataInicio = new Date(2019, 0, 1);
-  const dataAtual = new Date();
-  
-  let dataIteracao = new Date(dataInicio);
-  while (dataIteracao <= dataAtual) {
-    const mes = String(dataIteracao.getMonth() + 1).padStart(2, '0');
-    const ano = dataIteracao.getFullYear();
-    const value = `${mes}/${ano}`;
-    opcoes.push({ value, label: value });
-    dataIteracao = addMonths(dataIteracao, 1);
-  }
-  
-  return opcoes.reverse();
-};
-
-const opcoesCompetencia = gerarOpcoesCompetencia();
-
-// Get current month/year competencia
-const getCompetenciaAtual = (): string => {
-  const now = new Date();
-  const mes = String(now.getMonth() + 1).padStart(2, '0');
-  const ano = now.getFullYear();
-  return `${mes}/${ano}`;
-};
-
 const PAGE_SIZE_OPTIONS = [25, 50, 100, 200];
 
 const FinanceiroReceber = () => {
@@ -151,8 +123,8 @@ const FinanceiroReceber = () => {
   const [contaFilter, setContaFilter] = useState<string>("todos");
   const [formaPagamentoFilter, setFormaPagamentoFilter] = useState<string>("todos");
   const [cartaoFilter, setCartaoFilter] = useState<string>("todos");
-  const [competenciaFilter, setCompetenciaFilter] = useState<string>(getCompetenciaAtual());
-  const [dateFilter, setDateFilter] = useState<Date | undefined>(undefined);
+  const [dateFilterStart, setDateFilterStart] = useState<Date | undefined>(startOfMonth(new Date()));
+  const [dateFilterEnd, setDateFilterEnd] = useState<Date | undefined>(endOfMonth(new Date()));
   
   // Group by / Filter date field - controls both grouping and date filter field
   const storageKey = "financeiro-groupBy-Receber";
@@ -164,7 +136,6 @@ const FinanceiroReceber = () => {
   const handleGroupByChange = (value: "data_compra" | "data_vencimento" | "data_pagamento") => {
     setGroupByField(value);
     localStorage.setItem(storageKey, value);
-    setDateFilter(undefined); // Clear date filter when changing field
   };
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedMovimento, setSelectedMovimento] = useState<Movimento | null>(null);
@@ -210,8 +181,10 @@ const FinanceiroReceber = () => {
         .eq("tipo_movimento", "Receber");
 
       // Apply filters at database level
-      if (competenciaFilter && competenciaFilter !== "todos") {
-        query = query.eq("competencia", competenciaFilter);
+      if (dateFilterStart && dateFilterEnd) {
+        const startStr = format(dateFilterStart, "yyyy-MM-dd");
+        const endStr = format(dateFilterEnd, "yyyy-MM-dd");
+        query = query.gte(groupByField, startStr).lte(groupByField, endStr);
       }
       if (contaFilter && contaFilter !== "todos") {
         query = query.eq("id_conta", contaFilter);
@@ -234,10 +207,6 @@ const FinanceiroReceber = () => {
         query = query.eq("conciliado", true);
       } else if (conciliacaoFilter === "a_conciliar") {
         query = query.eq("conciliado", false);
-      }
-      if (dateFilter) {
-        const dateStr = format(dateFilter, "yyyy-MM-dd");
-        query = query.eq(groupByField, dateStr);
       }
       if (searchTerm) {
         const rawSearch = searchTerm.trim();
@@ -345,12 +314,12 @@ const FinanceiroReceber = () => {
   useEffect(() => {
     fetchMovimentos();
     setSelectedIds(new Set());
-  }, [searchTerm, statusFilter, conciliacaoFilter, contaFilter, formaPagamentoFilter, cartaoFilter, competenciaFilter, dateFilter, groupByField, currentPage, pageSize]);
+  }, [searchTerm, statusFilter, conciliacaoFilter, contaFilter, formaPagamentoFilter, cartaoFilter, dateFilterStart, dateFilterEnd, groupByField, currentPage, pageSize]);
 
   // Reset to page 1 when filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, statusFilter, conciliacaoFilter, contaFilter, formaPagamentoFilter, cartaoFilter, competenciaFilter, dateFilter, pageSize]);
+  }, [searchTerm, statusFilter, conciliacaoFilter, contaFilter, formaPagamentoFilter, cartaoFilter, dateFilterStart, dateFilterEnd, pageSize]);
 
   const getContaDisplayName = (conta: Conta) => {
     return conta.descricao ? `${conta.banco} - ${conta.descricao}` : conta.banco;
@@ -741,14 +710,16 @@ const FinanceiroReceber = () => {
 
   // Pagination calculations
   const totalPages = Math.ceil(totalCount / pageSize);
-  const hasFiltersActive = dateFilter || contaFilter !== "todos" || formaPagamentoFilter !== "todos" || cartaoFilter !== "todos" || competenciaFilter !== getCompetenciaAtual() || statusFilter !== "todos" || conciliacaoFilter !== "todos" || searchTerm;
+  const defaultStart = startOfMonth(new Date());
+  const defaultEnd = endOfMonth(new Date());
+  const hasFiltersActive = (dateFilterStart?.getTime() !== defaultStart.getTime()) || (dateFilterEnd?.getTime() !== defaultEnd.getTime()) || contaFilter !== "todos" || formaPagamentoFilter !== "todos" || cartaoFilter !== "todos" || statusFilter !== "todos" || conciliacaoFilter !== "todos" || searchTerm;
 
   const handleClearFilters = () => {
-    setDateFilter(undefined);
+    setDateFilterStart(startOfMonth(new Date()));
+    setDateFilterEnd(endOfMonth(new Date()));
     setContaFilter("todos");
     setFormaPagamentoFilter("todos");
     setCartaoFilter("todos");
-    setCompetenciaFilter(getCompetenciaAtual());
     setStatusFilter("todos");
     setConciliacaoFilter("todos");
     setSearchInput("");
@@ -914,20 +885,6 @@ const FinanceiroReceber = () => {
                 </Select>
               )}
 
-              <Select value={competenciaFilter} onValueChange={setCompetenciaFilter}>
-                <SelectTrigger className="w-[150px] bg-background/50 border-border/50">
-                  <SelectValue placeholder="Competência" />
-                </SelectTrigger>
-                <SelectContent className="max-h-[300px]">
-                  <SelectItem value="todos">Todas</SelectItem>
-                  {opcoesCompetencia.map((opcao) => (
-                    <SelectItem key={opcao.value} value={opcao.value}>
-                      {opcao.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
               <Select value={groupByField} onValueChange={handleGroupByChange}>
                 <SelectTrigger className="w-[180px] bg-background/50 border-border/50">
                   <SelectValue placeholder="Agrupar por" />
@@ -939,29 +896,31 @@ const FinanceiroReceber = () => {
                 </SelectContent>
               </Select>
 
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className={cn(
-                      "w-[180px] justify-start text-left font-normal bg-background/50 border-border/50",
-                      !dateFilter && "text-muted-foreground"
-                    )}
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {dateFilter ? format(dateFilter, "dd/MM/yyyy", { locale: ptBR }) : "Filtrar data"}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar
-                    mode="single"
-                    selected={dateFilter}
-                    onSelect={setDateFilter}
-                    initialFocus
-                    className="pointer-events-auto"
-                  />
-                </PopoverContent>
-              </Popover>
+              <div className="flex items-center gap-2">
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" className={cn("w-[140px] justify-start text-left font-normal bg-background/50 border-border/50", !dateFilterStart && "text-muted-foreground")}>
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {dateFilterStart ? format(dateFilterStart, "dd/MM/yyyy", { locale: ptBR }) : "Data inicial"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar mode="single" selected={dateFilterStart} onSelect={setDateFilterStart} initialFocus className="pointer-events-auto" />
+                  </PopoverContent>
+                </Popover>
+                <span className="text-muted-foreground">até</span>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" className={cn("w-[140px] justify-start text-left font-normal bg-background/50 border-border/50", !dateFilterEnd && "text-muted-foreground")}>
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {dateFilterEnd ? format(dateFilterEnd, "dd/MM/yyyy", { locale: ptBR }) : "Data final"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar mode="single" selected={dateFilterEnd} onSelect={setDateFilterEnd} initialFocus className="pointer-events-auto" />
+                  </PopoverContent>
+                </Popover>
+              </div>
 
               {hasFiltersActive && (
                 <Button
