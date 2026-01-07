@@ -21,7 +21,7 @@ import { BaixaLoteDialog } from "@/features/financeiro/components/BaixaLoteDialo
 import { BaixaIndividualDialog } from "@/features/financeiro/components/BaixaIndividualDialog";
 import { MovimentoGroupedList } from "@/features/financeiro/components/MovimentoGroupedList";
 import { GerarFaturaDialog } from "@/features/financeiro/components/GerarFaturaDialog";
-import { atualizarSaldoConta, calcularValorFinal } from "@/features/financeiro/utils/saldoUtils";
+
 import { deleteAnexosDoMovimento, deleteAnexosDeMovimentos } from "@/features/financeiro/utils/anexosUtils";
 interface Movimento {
   id: string;
@@ -432,9 +432,7 @@ const FinanceiroPagar = () => {
       }).eq("id", data.id);
       if (error) throw error;
 
-      // Calcular valor final e atualizar saldo da conta
-      const valorFinal = calcularValorFinal(movimento.valor_bruto, data.desconto, data.acrescimo);
-      await atualizarSaldoConta(data.contaId, valorFinal, "Pagar");
+      // O saldo da conta é atualizado automaticamente pela trigger do banco de dados
       toast({
         title: "Título baixado",
         description: "O título foi baixado e o saldo da conta atualizado com sucesso."
@@ -470,8 +468,7 @@ const FinanceiroPagar = () => {
         totalAtualizado += mov.valor_bruto;
       }
 
-      // Atualizar saldo da conta uma única vez com o total
-      await atualizarSaldoConta(contaId, totalAtualizado, "Pagar");
+      // O saldo da conta é atualizado automaticamente pela trigger do banco de dados
       toast({
         title: "Títulos baixados",
         description: `${selectedMovimentosLote.length} título(s) baixado(s) e saldo atualizado com sucesso.`
@@ -568,11 +565,7 @@ const FinanceiroPagar = () => {
     if (!movimentoEstorno) return;
     setEstornando(true);
     try {
-      // Calcular valor que foi creditado/debitado originalmente
-      const valorFinal = calcularValorFinal(movimentoEstorno.valor_bruto, movimentoEstorno.desconto || 0, movimentoEstorno.acrescimo || 0);
-
-      // Reverter o saldo da conta (estorno)
-      await atualizarSaldoConta(movimentoEstorno.id_conta, valorFinal, "Pagar", true);
+      // O saldo da conta é revertido automaticamente pela trigger do banco de dados
       const {
         error
       } = await supabase.from("vx_fin_movimento").update({
