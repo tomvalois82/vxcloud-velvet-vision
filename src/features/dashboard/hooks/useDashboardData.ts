@@ -111,31 +111,29 @@ export function useDashboardData(dateRange: DateRange) {
       
       const empresaId = empresaData.id;
       
-      // 1. Buscar categoria "Compras de veículos" para excluir do total de despesas
-      const { data: categoriaCompras } = await supabase
+      // 1. Buscar categorias com classificação 'DESPESA_FIXA' para o Card 1 (Balanço)
+      const { data: categoriasDespesaFixa } = await supabase
         .from('vx_fin_categoria')
         .select('id')
-        .eq('categoria', 'Compras de veículos')
-        .eq('operacao', 'Pagar')
-        .single();
+        .eq('classificacao', 'DESPESA_FIXA');
       
-      // 2. Buscar todas as despesas do período (tipo_movimento = 'Pagar' com data_vencimento no período)
-      // Excluindo a categoria "Compras de veículos"
-      let despesasQuery = supabase
-        .from('vx_fin_movimento')
-        .select('valor_liquido')
-        .eq('id_empresa', empresaId)
-        .eq('tipo_movimento', 'Pagar')
-        .gte('data_vencimento', fromStr)
-        .lte('data_vencimento', toStr);
+      const categoriasDespesaFixaIds = categoriasDespesaFixa?.map(c => c.id) || [];
       
-      if (categoriaCompras?.id) {
-        despesasQuery = despesasQuery.neq('id_categoria', categoriaCompras.id);
+      // 2. Buscar despesas do período com classificação 'DESPESA_FIXA'
+      let totalDespesas = 0;
+      
+      if (categoriasDespesaFixaIds.length > 0) {
+        const { data: despesas } = await supabase
+          .from('vx_fin_movimento')
+          .select('valor_liquido')
+          .eq('id_empresa', empresaId)
+          .eq('tipo_movimento', 'Pagar')
+          .in('id_categoria', categoriasDespesaFixaIds)
+          .gte('data_vencimento', fromStr)
+          .lte('data_vencimento', toStr);
+        
+        totalDespesas = despesas?.reduce((sum, d) => sum + Number(d.valor_liquido || 0), 0) || 0;
       }
-      
-      const { data: despesas } = await despesasQuery;
-      
-      const totalDespesas = despesas?.reduce((sum, d) => sum + Number(d.valor_liquido || 0), 0) || 0;
       
       // 3. Balanço Geral - Receitas: tipo_movimento='Receber', data_pagamento no período
       const { data: receitasGeral } = await supabase
