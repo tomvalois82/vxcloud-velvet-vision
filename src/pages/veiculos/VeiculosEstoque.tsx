@@ -13,27 +13,11 @@ import { VehicleDialog } from '@/features/estoque/components/VehicleDialog';
 import { VehicleDetailDialog } from '@/features/estoque/components/VehicleDetailDialog';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { StorageManager } from '@/features/estoque/utils/storageManager';
 import { maskCurrency } from '@/features/estoque/utils/masks';
 import { VehicleListPrint } from '@/features/estoque/components/VehicleListPrint';
-
 interface Vehicle {
   id: number;
   modelo: string;
@@ -51,52 +35,33 @@ interface Vehicle {
   motor?: string;
   cambio?: string;
 }
-
 interface VehicleCosts {
   [vehicleId: number]: number;
 }
-
 function VehicleCard({
   vehicle,
   onView,
   onDelete,
-  onSell,
+  onSell
 }: {
   vehicle: Vehicle;
   onView: (id: number) => void;
   onDelete: (e: React.MouseEvent, vehicle: Vehicle) => void;
   onSell: (e: React.MouseEvent, vehicleId: number) => void;
 }) {
-  const { mainPhoto, loading } = useVehicleMainPhoto(vehicle.id, vehicle.foto);
-
-  return (
-    <Card
-      className="glass hover:border-accent/50 transition-all cursor-pointer group"
-      onClick={() => onView(vehicle.id)}
-    >
+  const {
+    mainPhoto,
+    loading
+  } = useVehicleMainPhoto(vehicle.id, vehicle.foto);
+  return <Card className="glass hover:border-accent/50 transition-all cursor-pointer group" onClick={() => onView(vehicle.id)}>
       <CardContent className="p-0">
         <div className="relative h-48 overflow-hidden rounded-t-lg bg-muted">
-          {loading ? (
-            <div className="w-full h-full flex items-center justify-center">
+          {loading ? <div className="w-full h-full flex items-center justify-center">
               <Car className="w-16 h-16 text-muted-foreground animate-pulse" />
-            </div>
-          ) : mainPhoto ? (
-            <img
-              src={mainPhoto}
-              alt={`${vehicle.fabricante} ${vehicle.modelo}`}
-              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-            />
-          ) : (
-            <div className="w-full h-full flex items-center justify-center">
+            </div> : mainPhoto ? <img src={mainPhoto} alt={`${vehicle.fabricante} ${vehicle.modelo}`} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" /> : <div className="w-full h-full flex items-center justify-center">
               <Car className="w-16 h-16 text-muted-foreground" />
-            </div>
-          )}
-          <Button
-            variant="destructive"
-            size="icon"
-            className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity"
-            onClick={(e) => onDelete(e, vehicle)}
-          >
+            </div>}
+          <Button variant="destructive" size="icon" className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity" onClick={e => onDelete(e, vehicle)}>
             <Trash2 className="w-4 h-4" />
           </Button>
         </div>
@@ -108,48 +73,33 @@ function VehicleCard({
             <span>Ano: {vehicle.ano}</span>
             {vehicle.km && <span>{vehicle.km} km</span>}
           </div>
-          {vehicle.cor && (
-            <p className="text-sm text-muted-foreground">Cor: {vehicle.cor}</p>
-          )}
-          {vehicle.placa && (
-            <div className="flex items-center gap-1 text-sm text-muted-foreground">
+          {vehicle.cor && <p className="text-sm text-muted-foreground">Cor: {vehicle.cor}</p>}
+          {vehicle.placa && <div className="flex items-center gap-1 text-sm text-muted-foreground">
               <span>Placa: {vehicle.placa}</span>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-5 w-5 hover:bg-accent/20"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  navigator.clipboard.writeText(vehicle.placa || '');
-                  toast({
-                    title: 'Copiado!',
-                    description: 'Placa copiada para a área de transferência.',
-                  });
-                }}
-              >
+              <Button variant="ghost" size="icon" className="h-5 w-5 hover:bg-accent/20" onClick={e => {
+            e.stopPropagation();
+            navigator.clipboard.writeText(vehicle.placa || '');
+            toast({
+              title: 'Copiado!',
+              description: 'Placa copiada para a área de transferência.'
+            });
+          }}>
                 <Copy className="h-3 w-3" />
               </Button>
-            </div>
-          )}
+            </div>}
           <div className="flex items-center justify-between">
-            <p className="text-lg font-bold text-accent">
+            <p className="text-lg font-bold text-lime-500">
               {vehicle.valor ? maskCurrency(Number(vehicle.valor)) : 'R$ 0,00'}
             </p>
-            <Button
-              size="sm"
-              onClick={(e) => onSell(e, vehicle.id)}
-              className="bg-accent hover:bg-accent/90"
-            >
+            <Button size="sm" onClick={e => onSell(e, vehicle.id)} className="bg-accent hover:bg-accent/90">
               <Handshake className="w-4 h-4 mr-1" />
               Vender
             </Button>
           </div>
         </div>
       </CardContent>
-    </Card>
-  );
+    </Card>;
 }
-
 interface Empresa {
   foto_url: string | null;
   nome_fantasia: string;
@@ -163,7 +113,6 @@ interface Empresa {
   telefone: string | null;
   site: string | null;
 }
-
 const VeiculosEstoque = () => {
   const navigate = useNavigate();
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
@@ -181,25 +130,20 @@ const VeiculosEstoque = () => {
   const [vehicleToDelete, setVehicleToDelete] = useState<Vehicle | null>(null);
   const [deleting, setDeleting] = useState(false);
   const printRef = useRef<HTMLDivElement>(null);
-
   const handlePrint = useReactToPrint({
     contentRef: printRef,
-    documentTitle: 'Listagem de Veículos',
+    documentTitle: 'Listagem de Veículos'
   });
-
   useEffect(() => {
     loadVehicles();
     loadEmpresa();
   }, []);
-
   const loadEmpresa = async () => {
     try {
-      const { data, error } = await supabase
-        .from('empresa')
-        .select('foto_url, nome_fantasia, logradouro, numero, complemento, bairro, municipio, estado, cep, telefone, site')
-        .limit(1)
-        .single();
-
+      const {
+        data,
+        error
+      } = await supabase.from('empresa').select('foto_url, nome_fantasia, logradouro, numero, complemento, bairro, municipio, estado, cep, telefone, site').limit(1).single();
       if (!error && data) {
         setEmpresa(data);
       }
@@ -207,28 +151,25 @@ const VeiculosEstoque = () => {
       console.error('Error loading empresa:', error);
     }
   };
-
   const loadVehicles = async () => {
     try {
-      const { data, error } = await supabase
-        .from('estoque')
-        .select('id, modelo, fabricante, ano, ano_fabricacao, valor, valor_aquisicao, km, cor, foto, placa, status, tipo_aquisicao, motor, cambio')
-        .order('created_at', { ascending: false });
-
+      const {
+        data,
+        error
+      } = await supabase.from('estoque').select('id, modelo, fabricante, ano, ano_fabricacao, valor, valor_aquisicao, km, cor, foto, placa, status, tipo_aquisicao, motor, cambio').order('created_at', {
+        ascending: false
+      });
       if (error) throw error;
-      
       const vehicleData = data || [];
       setVehicles(vehicleData);
 
       // Carregar custos dos veículos
       if (vehicleData.length > 0) {
         const vehicleIds = vehicleData.map(v => v.id);
-        const { data: movimentos, error: movError } = await supabase
-          .from('vx_fin_movimento')
-          .select('id_estoque, valor_liquido')
-          .in('id_estoque', vehicleIds)
-          .eq('tipo_movimento', 'Pagar');
-
+        const {
+          data: movimentos,
+          error: movError
+        } = await supabase.from('vx_fin_movimento').select('id_estoque, valor_liquido').in('id_estoque', vehicleIds).eq('tipo_movimento', 'Pagar');
         if (!movError && movimentos) {
           const costs: VehicleCosts = {};
           movimentos.forEach(m => {
@@ -244,7 +185,7 @@ const VeiculosEstoque = () => {
       toast({
         title: 'Erro',
         description: 'Falha ao carregar veículos',
-        variant: 'destructive',
+        variant: 'destructive'
       });
     } finally {
       setLoading(false);
@@ -253,43 +194,29 @@ const VeiculosEstoque = () => {
 
   // Contagem por tipo de aquisição (antes do filtro de tipo)
   const tipoAquisicaoCounts = useMemo(() => {
-    const baseFiltered = vehicles.filter((vehicle) => {
+    const baseFiltered = vehicles.filter(vehicle => {
       const searchLower = searchTerm.toLowerCase();
-      const matchesSearch =
-        vehicle.modelo?.toLowerCase().includes(searchLower) ||
-        vehicle.placa?.toLowerCase().includes(searchLower);
-      
-      const matchesStatus = statusFilter === 'todos' || 
-        (vehicle.status || 'Em estoque') === statusFilter;
-      
+      const matchesSearch = vehicle.modelo?.toLowerCase().includes(searchLower) || vehicle.placa?.toLowerCase().includes(searchLower);
+      const matchesStatus = statusFilter === 'todos' || (vehicle.status || 'Em estoque') === statusFilter;
       return matchesSearch && matchesStatus;
     });
-
     return {
       'Próprio': baseFiltered.filter(v => v.tipo_aquisicao === 'Próprio').length,
       'Consignado': baseFiltered.filter(v => v.tipo_aquisicao === 'Consignado' || v.tipo_aquisicao === 'Agenciado').length,
-      'Parceria': baseFiltered.filter(v => v.tipo_aquisicao === 'Parceria').length,
+      'Parceria': baseFiltered.filter(v => v.tipo_aquisicao === 'Parceria').length
     };
   }, [vehicles, searchTerm, statusFilter]);
-
   const filteredVehicles = useMemo(() => {
-    return vehicles.filter((vehicle) => {
+    return vehicles.filter(vehicle => {
       const searchLower = searchTerm.toLowerCase();
-      const matchesSearch =
-        vehicle.modelo?.toLowerCase().includes(searchLower) ||
-        vehicle.placa?.toLowerCase().includes(searchLower);
-      
-      const matchesStatus = statusFilter === 'todos' || 
-        (vehicle.status || 'Em estoque') === statusFilter;
-      
-      const matchesTipoAquisicao = tipoAquisicaoFilter.length === 0 || 
-        tipoAquisicaoFilter.some(tipo => {
-          if (tipo === 'Consignado') {
-            return vehicle.tipo_aquisicao === 'Consignado' || vehicle.tipo_aquisicao === 'Agenciado';
-          }
-          return vehicle.tipo_aquisicao === tipo;
-        });
-      
+      const matchesSearch = vehicle.modelo?.toLowerCase().includes(searchLower) || vehicle.placa?.toLowerCase().includes(searchLower);
+      const matchesStatus = statusFilter === 'todos' || (vehicle.status || 'Em estoque') === statusFilter;
+      const matchesTipoAquisicao = tipoAquisicaoFilter.length === 0 || tipoAquisicaoFilter.some(tipo => {
+        if (tipo === 'Consignado') {
+          return vehicle.tipo_aquisicao === 'Consignado' || vehicle.tipo_aquisicao === 'Agenciado';
+        }
+        return vehicle.tipo_aquisicao === tipo;
+      });
       return matchesSearch && matchesStatus && matchesTipoAquisicao;
     });
   }, [vehicles, searchTerm, statusFilter, tipoAquisicaoFilter]);
@@ -305,77 +232,63 @@ const VeiculosEstoque = () => {
     }, 0);
     // Margem = Valor de Venda - (Valor de Compra + Custos)
     const margem = totalEstoque - custoEstoque;
-
-    return { quantidade, totalEstoque, custoEstoque, margem };
+    return {
+      quantidade,
+      totalEstoque,
+      custoEstoque,
+      margem
+    };
   }, [filteredVehicles, vehicleCosts]);
-
   const handleTipoAquisicaoToggle = (tipo: string) => {
-    setTipoAquisicaoFilter(prev => 
-      prev.includes(tipo) 
-        ? prev.filter(t => t !== tipo)
-        : [...prev, tipo]
-    );
+    setTipoAquisicaoFilter(prev => prev.includes(tipo) ? prev.filter(t => t !== tipo) : [...prev, tipo]);
   };
-
   const handleView = (vehicleId: number) => {
     setSelectedVehicleId(vehicleId);
     setDetailDialogOpen(true);
   };
-
   const handleEdit = (vehicleId: number) => {
     setSelectedVehicleId(vehicleId);
     setDetailDialogOpen(false);
     setDialogOpen(true);
   };
-
   const handleNew = () => {
     setSelectedVehicleId(undefined);
     setDialogOpen(true);
   };
-
   const handleDialogClose = () => {
     setDialogOpen(false);
     setSelectedVehicleId(undefined);
   };
-
   const handleDeleteClick = (e: React.MouseEvent, vehicle: Vehicle) => {
     e.stopPropagation();
     setVehicleToDelete(vehicle);
     setDeleteDialogOpen(true);
   };
-
   const handleSellClick = (e: React.MouseEvent, vehicleId: number) => {
     e.stopPropagation();
     navigate(`/vendas/nova?veiculoId=${vehicleId}`);
   };
-
   const handleDeleteConfirm = async () => {
     if (!vehicleToDelete) return;
-
     setDeleting(true);
     try {
       const storageManager = new StorageManager(vehicleToDelete.id);
       await storageManager.deleteAllPhotos();
-
-      const { error } = await supabase
-        .from('estoque')
-        .delete()
-        .eq('id', vehicleToDelete.id);
-
+      const {
+        error
+      } = await supabase.from('estoque').delete().eq('id', vehicleToDelete.id);
       if (error) throw error;
-
-      setVehicles((prev) => prev.filter((v) => v.id !== vehicleToDelete.id));
-
+      setVehicles(prev => prev.filter(v => v.id !== vehicleToDelete.id));
       toast({
         title: 'Veículo excluído',
-        description: 'O veículo foi removido com sucesso',
+        description: 'O veículo foi removido com sucesso'
       });
     } catch (error) {
       console.error('Error deleting vehicle:', error);
       toast({
         title: 'Erro',
         description: 'Falha ao excluir veículo',
-        variant: 'destructive',
+        variant: 'destructive'
       });
     } finally {
       setDeleting(false);
@@ -383,42 +296,26 @@ const VeiculosEstoque = () => {
       setVehicleToDelete(null);
     }
   };
-
   const formatValue = (value: number) => {
     if (!showValues) return '••••••';
     return maskCurrency(value);
   };
-
-  return (
-    <div className="animate-fade-in">
-      <PageHeader
-        title="Estoque"
-        description="Controle de estoque de veículos"
-        action={
-          <div className="flex gap-2">
+  return <div className="animate-fade-in">
+      <PageHeader title="Estoque" description="Controle de estoque de veículos" action={<div className="flex gap-2">
             <Button variant="outline" onClick={() => handlePrint()}>
               <Printer className="w-4 h-4 mr-2" />
               Imprimir Listagem
             </Button>
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={() => navigate('/veiculos/estoque/fast')}
-              className="rounded-full w-10 h-10 border-amber-500/50 hover:border-amber-500 hover:bg-amber-500/10"
-              style={{
-                boxShadow: '0 0 20px 3px rgba(251, 191, 36, 0.4), 0 0 40px 6px rgba(251, 191, 36, 0.2)',
-              }}
-              title="Cadastro Rápido"
-            >
+            <Button variant="outline" size="icon" onClick={() => navigate('/veiculos/estoque/fast')} className="rounded-full w-10 h-10 border-amber-500/50 hover:border-amber-500 hover:bg-amber-500/10" style={{
+        boxShadow: '0 0 20px 3px rgba(251, 191, 36, 0.4), 0 0 40px 6px rgba(251, 191, 36, 0.2)'
+      }} title="Cadastro Rápido">
               <Zap className="w-5 h-5 text-amber-500" />
             </Button>
             <Button onClick={handleNew} className="bg-accent hover:bg-accent/90">
               <Plus className="w-4 h-4 mr-2" />
               Novo Veículo
             </Button>
-          </div>
-        }
-      />
+          </div>} />
 
       <div className="space-y-6">
         {/* Cards Estatísticos */}
@@ -430,12 +327,7 @@ const VeiculosEstoque = () => {
                   <p className="text-sm text-muted-foreground">Quantidade</p>
                   <p className="text-2xl font-bold text-foreground">{statsCards.quantidade}</p>
                 </div>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => setShowValues(!showValues)}
-                  className="text-muted-foreground hover:text-foreground"
-                >
+                <Button variant="ghost" size="icon" onClick={() => setShowValues(!showValues)} className="text-muted-foreground hover:text-foreground">
                   {showValues ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
                 </Button>
               </div>
@@ -472,12 +364,7 @@ const VeiculosEstoque = () => {
             {/* Busca por Modelo ou Placa */}
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input
-                placeholder="Buscar por modelo ou placa..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
-              />
+              <Input placeholder="Buscar por modelo ou placa..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="pl-10" />
             </div>
 
             {/* Filtro por Status */}
@@ -498,46 +385,20 @@ const VeiculosEstoque = () => {
 
           {/* Filtro por Tipo de Aquisição (Marcadores) */}
           <div className="flex flex-wrap gap-2">
-            <Badge
-              variant={tipoAquisicaoFilter.includes('Próprio') ? 'default' : 'outline'}
-              className={`cursor-pointer transition-all ${
-                tipoAquisicaoFilter.includes('Próprio') 
-                  ? 'bg-accent text-accent-foreground hover:bg-accent/90' 
-                  : 'hover:bg-accent/20'
-              }`}
-              onClick={() => handleTipoAquisicaoToggle('Próprio')}
-            >
+            <Badge variant={tipoAquisicaoFilter.includes('Próprio') ? 'default' : 'outline'} className={`cursor-pointer transition-all ${tipoAquisicaoFilter.includes('Próprio') ? 'bg-accent text-accent-foreground hover:bg-accent/90' : 'hover:bg-accent/20'}`} onClick={() => handleTipoAquisicaoToggle('Próprio')}>
               {tipoAquisicaoCounts['Próprio']} | Próprios
             </Badge>
-            <Badge
-              variant={tipoAquisicaoFilter.includes('Consignado') ? 'default' : 'outline'}
-              className={`cursor-pointer transition-all ${
-                tipoAquisicaoFilter.includes('Consignado') 
-                  ? 'bg-accent text-accent-foreground hover:bg-accent/90' 
-                  : 'hover:bg-accent/20'
-              }`}
-              onClick={() => handleTipoAquisicaoToggle('Consignado')}
-            >
+            <Badge variant={tipoAquisicaoFilter.includes('Consignado') ? 'default' : 'outline'} className={`cursor-pointer transition-all ${tipoAquisicaoFilter.includes('Consignado') ? 'bg-accent text-accent-foreground hover:bg-accent/90' : 'hover:bg-accent/20'}`} onClick={() => handleTipoAquisicaoToggle('Consignado')}>
               {tipoAquisicaoCounts['Consignado']} | Consignados
             </Badge>
-            <Badge
-              variant={tipoAquisicaoFilter.includes('Parceria') ? 'default' : 'outline'}
-              className={`cursor-pointer transition-all ${
-                tipoAquisicaoFilter.includes('Parceria') 
-                  ? 'bg-accent text-accent-foreground hover:bg-accent/90' 
-                  : 'hover:bg-accent/20'
-              }`}
-              onClick={() => handleTipoAquisicaoToggle('Parceria')}
-            >
+            <Badge variant={tipoAquisicaoFilter.includes('Parceria') ? 'default' : 'outline'} className={`cursor-pointer transition-all ${tipoAquisicaoFilter.includes('Parceria') ? 'bg-accent text-accent-foreground hover:bg-accent/90' : 'hover:bg-accent/20'}`} onClick={() => handleTipoAquisicaoToggle('Parceria')}>
               {tipoAquisicaoCounts['Parceria']} | Parcerias
             </Badge>
           </div>
         </div>
 
-        {loading ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {[1, 2, 3, 4, 5, 6].map((i) => (
-              <Card key={i} className="glass">
+        {loading ? <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {[1, 2, 3, 4, 5, 6].map(i => <Card key={i} className="glass">
                 <CardContent className="p-0">
                   <Skeleton className="w-full h-48 rounded-t-lg" />
                   <div className="p-4 space-y-3">
@@ -546,57 +407,27 @@ const VeiculosEstoque = () => {
                     <Skeleton className="h-4 w-1/2" />
                   </div>
                 </CardContent>
-              </Card>
-            ))}
-          </div>
-        ) : filteredVehicles.length === 0 ? (
-          <div className="glass rounded-lg p-12 text-center">
+              </Card>)}
+          </div> : filteredVehicles.length === 0 ? <div className="glass rounded-lg p-12 text-center">
             <Car className="w-16 h-16 mx-auto mb-4 text-muted-foreground" />
             <h3 className="text-xl font-semibold mb-2">
-              {searchTerm || statusFilter !== 'todos' || tipoAquisicaoFilter.length > 0
-                ? 'Nenhum veículo encontrado'
-                : 'Estoque vazio'}
+              {searchTerm || statusFilter !== 'todos' || tipoAquisicaoFilter.length > 0 ? 'Nenhum veículo encontrado' : 'Estoque vazio'}
             </h3>
             <p className="text-muted-foreground mb-6">
-              {searchTerm || statusFilter !== 'todos' || tipoAquisicaoFilter.length > 0
-                ? 'Tente ajustar os filtros de busca'
-                : 'Adicione o primeiro veículo ao estoque'}
+              {searchTerm || statusFilter !== 'todos' || tipoAquisicaoFilter.length > 0 ? 'Tente ajustar os filtros de busca' : 'Adicione o primeiro veículo ao estoque'}
             </p>
-            {!searchTerm && statusFilter === 'todos' && tipoAquisicaoFilter.length === 0 && (
-              <Button onClick={handleNew} className="bg-accent hover:bg-accent/90">
+            {!searchTerm && statusFilter === 'todos' && tipoAquisicaoFilter.length === 0 && <Button onClick={handleNew} className="bg-accent hover:bg-accent/90">
                 <Plus className="w-4 h-4 mr-2" />
                 Adicionar Veículo
-              </Button>
-            )}
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredVehicles.map((vehicle) => (
-              <VehicleCard
-                key={vehicle.id}
-                vehicle={vehicle}
-                onView={handleView}
-                onDelete={handleDeleteClick}
-                onSell={handleSellClick}
-              />
-            ))}
-          </div>
-        )}
+              </Button>}
+          </div> : <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filteredVehicles.map(vehicle => <VehicleCard key={vehicle.id} vehicle={vehicle} onView={handleView} onDelete={handleDeleteClick} onSell={handleSellClick} />)}
+          </div>}
       </div>
 
-      <VehicleDetailDialog
-        open={detailDialogOpen}
-        onOpenChange={setDetailDialogOpen}
-        vehicleId={selectedVehicleId}
-        onEdit={handleEdit}
-      />
+      <VehicleDetailDialog open={detailDialogOpen} onOpenChange={setDetailDialogOpen} vehicleId={selectedVehicleId} onEdit={handleEdit} />
 
-      <VehicleDialog
-        open={dialogOpen}
-        onOpenChange={handleDialogClose}
-        vehicleId={selectedVehicleId}
-        onSuccess={loadVehicles}
-      />
+      <VehicleDialog open={dialogOpen} onOpenChange={handleDialogClose} vehicleId={selectedVehicleId} onSuccess={loadVehicles} />
 
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
@@ -612,11 +443,7 @@ const VeiculosEstoque = () => {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={deleting}>Cancelar</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDeleteConfirm}
-              disabled={deleting}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
+            <AlertDialogAction onClick={handleDeleteConfirm} disabled={deleting} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
               {deleting ? 'Excluindo...' : 'Excluir'}
             </AlertDialogAction>
           </AlertDialogFooter>
@@ -627,8 +454,6 @@ const VeiculosEstoque = () => {
       <div className="hidden">
         <VehicleListPrint ref={printRef} vehicles={filteredVehicles} empresa={empresa} />
       </div>
-    </div>
-  );
+    </div>;
 };
-
 export default VeiculosEstoque;
