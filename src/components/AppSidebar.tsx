@@ -170,7 +170,7 @@ export function AppSidebar() {
                               <SidebarMenuSubButton asChild>
                                 <NavLink to={subItem.url} className="flex items-center gap-3 transition-all hover:text-accent" activeClassName="text-accent font-medium">
                                   <subItem.icon className="w-4 h-4 text-primary-foreground border-white" />
-                                  <span>{subItem.title}</span>
+                                  <span className="text-[#e3e3e3]">{subItem.title}</span>
                                 </NavLink>
                               </SidebarMenuSubButton>
                             </SidebarMenuSubItem>)}
