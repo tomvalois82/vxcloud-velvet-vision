@@ -115,7 +115,6 @@ const menuItems: MenuItem[] = [{
   url: "/configuracoes",
   icon: Settings
 }];
-
 const superUserMenuItems: MenuItem[] = [{
   title: "Empresas",
   url: "/configuracoes/empresas",
@@ -133,7 +132,9 @@ export function AppSidebar() {
     theme,
     setTheme
   } = useTheme();
-  const { isSuperUser } = useSuperUser();
+  const {
+    isSuperUser
+  } = useSuperUser();
   const isItemActive = (item: MenuItem) => {
     if (item.url) {
       return location.pathname === item.url;
@@ -168,7 +169,7 @@ export function AppSidebar() {
                           {item.items.map(subItem => <SidebarMenuSubItem key={subItem.url}>
                               <SidebarMenuSubButton asChild>
                                 <NavLink to={subItem.url} className="flex items-center gap-3 transition-all hover:text-accent" activeClassName="text-accent font-medium">
-                                  <subItem.icon className="w-4 h-4 text-primary-foreground" />
+                                  <subItem.icon className="w-4 h-4 text-primary-foreground border-white" />
                                   <span>{subItem.title}</span>
                                 </NavLink>
                               </SidebarMenuSubButton>
@@ -187,25 +188,21 @@ export function AppSidebar() {
         </SidebarGroup>
 
         {/* Super User Menu */}
-        {isSuperUser && (
-          <SidebarGroup>
+        {isSuperUser && <SidebarGroup>
             <SidebarGroupLabel>Super Usuário</SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
-                {superUserMenuItems.map(item => (
-                  <SidebarMenuItem key={item.title}>
+                {superUserMenuItems.map(item => <SidebarMenuItem key={item.title}>
                     <SidebarMenuButton asChild tooltip={item.title}>
                       <NavLink to={item.url!} className="flex items-center gap-3 transition-all hover:text-accent" activeClassName="text-accent font-medium">
                         <item.icon className="w-5 h-5" />
                         <span>{item.title}</span>
                       </NavLink>
                     </SidebarMenuButton>
-                  </SidebarMenuItem>
-                ))}
+                  </SidebarMenuItem>)}
               </SidebarMenu>
             </SidebarGroupContent>
-          </SidebarGroup>
-        )}
+          </SidebarGroup>}
 
         {/* Theme Toggle & Logout */}
         <div className="mt-auto p-4 border-t border-sidebar-border space-y-2">
