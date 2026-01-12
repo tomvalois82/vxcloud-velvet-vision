@@ -674,127 +674,133 @@ const FinanceiroPagar = () => {
             <span className="ml-3 text-muted-foreground">Carregando lançamentos...</span>
           </div> : <div className="space-y-4">
             {/* Filters */}
-            <div className="flex flex-col sm:flex-row gap-4 flex-wrap">
-              <div className="flex items-center gap-1 flex-1 max-w-sm">
-                <Input placeholder="Buscar por descrição ou valor..." value={searchInput} onChange={e => setSearchInput(e.target.value)} onKeyDown={handleSearchKeyDown} className="bg-background/50 border-border/50" />
-                <Button variant="outline" size="icon" onClick={handleSearch} className="shrink-0 border-border/50 hover:bg-accent/10">
-                  <Search className="w-4 h-4" />
-                </Button>
-              </div>
+            <div className="space-y-4">
+              {/* First row */}
+              <div className="flex flex-col sm:flex-row gap-4 flex-wrap">
+                <div className="flex items-center gap-1 flex-1 max-w-sm">
+                  <Input placeholder="Buscar por descrição ou valor..." value={searchInput} onChange={e => setSearchInput(e.target.value)} onKeyDown={handleSearchKeyDown} className="bg-background/50 border-border/50" />
+                  <Button variant="outline" size="icon" onClick={handleSearch} className="shrink-0 border-border/50 hover:bg-accent/10">
+                    <Search className="w-4 h-4" />
+                  </Button>
+                </div>
 
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-[150px] bg-background/50 border-border/50">
-                  <SelectValue placeholder="Status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="todos">Todos</SelectItem>
-                  <SelectItem value="pendente">Pendente</SelectItem>
-                  <SelectItem value="pago">Pago</SelectItem>
-                  <SelectItem value="vencido">Vencido</SelectItem>
-                </SelectContent>
-              </Select>
-
-              <Select value={conciliacaoFilter} onValueChange={setConciliacaoFilter}>
-                <SelectTrigger className="w-[150px] bg-background/50 border-border/50">
-                  <SelectValue placeholder="Conciliação" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="todos">Todos</SelectItem>
-                  <SelectItem value="conciliado">Conciliado</SelectItem>
-                  <SelectItem value="a_conciliar">A Conciliar</SelectItem>
-                </SelectContent>
-              </Select>
-
-              <Select value={contaFilter} onValueChange={setContaFilter}>
-                <SelectTrigger className="w-[220px] bg-background/50 border-border/50">
-                  <Landmark className="mr-2 h-4 w-4" />
-                  <SelectValue placeholder="Filtrar conta" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="todos">Todas as contas</SelectItem>
-                  {contas.map(c => <SelectItem key={c.id} value={c.id}>
-                      {getContaDisplayName(c)}
-                    </SelectItem>)}
-                </SelectContent>
-              </Select>
-
-              <Select value={formaPagamentoFilter} onValueChange={setFormaPagamentoFilter}>
-                <SelectTrigger className="w-[200px] bg-background/50 border-border/50">
-                  <CreditCard className="mr-2 h-4 w-4" />
-                  <SelectValue placeholder="Forma pagamento" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="todos">Todas as formas</SelectItem>
-                  {formasPagamento.map(fp => <SelectItem key={fp.id} value={fp.id}>
-                      {fp.descricao}
-                    </SelectItem>)}
-                </SelectContent>
-              </Select>
-
-              {cartoesFiltrados.length > 0 && <Select value={cartaoFilter} onValueChange={setCartaoFilter}>
-                  <SelectTrigger className="w-[180px] bg-background/50 border-border/50 border-purple-500/50">
-                    <CreditCard className="mr-2 h-4 w-4 text-purple-400" />
-                    <SelectValue placeholder="Cartão" />
+                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                  <SelectTrigger className="w-[150px] bg-background/50 border-border/50">
+                    <SelectValue placeholder="Status" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="todos">Todos os cartões</SelectItem>
-                    {cartoesFiltrados.map(c => <SelectItem key={c.id} value={c.id}>
-                        {c.descricao} - {c.final}
+                    <SelectItem value="todos">Todos</SelectItem>
+                    <SelectItem value="pendente">Pendente</SelectItem>
+                    <SelectItem value="pago">Pago</SelectItem>
+                    <SelectItem value="vencido">Vencido</SelectItem>
+                  </SelectContent>
+                </Select>
+
+                <Select value={conciliacaoFilter} onValueChange={setConciliacaoFilter}>
+                  <SelectTrigger className="w-[150px] bg-background/50 border-border/50">
+                    <SelectValue placeholder="Conciliação" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="todos">Todos</SelectItem>
+                    <SelectItem value="conciliado">Conciliado</SelectItem>
+                    <SelectItem value="a_conciliar">A Conciliar</SelectItem>
+                  </SelectContent>
+                </Select>
+
+                <Select value={contaFilter} onValueChange={setContaFilter}>
+                  <SelectTrigger className="w-[220px] bg-background/50 border-border/50">
+                    <Landmark className="mr-2 h-4 w-4" />
+                    <SelectValue placeholder="Filtrar conta" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="todos">Todas as contas</SelectItem>
+                    {contas.map(c => <SelectItem key={c.id} value={c.id}>
+                        {getContaDisplayName(c)}
                       </SelectItem>)}
                   </SelectContent>
-                </Select>}
+                </Select>
 
-              <Select value={groupByField} onValueChange={handleGroupByChange}>
-                <SelectTrigger className="w-[180px] bg-background/50 border-border/50">
-                  <SelectValue placeholder="Agrupar por" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="data_compra">Data da Compra</SelectItem>
-                  <SelectItem value="data_vencimento">Data de Vencimento</SelectItem>
-                  <SelectItem value="data_pagamento">Data de Pagamento</SelectItem>
-                </SelectContent>
-              </Select>
+                {cartoesFiltrados.length > 0 && <Select value={cartaoFilter} onValueChange={setCartaoFilter}>
+                    <SelectTrigger className="w-[180px] bg-background/50 border-border/50 border-purple-500/50">
+                      <CreditCard className="mr-2 h-4 w-4 text-purple-400" />
+                      <SelectValue placeholder="Cartão" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="todos">Todos os cartões</SelectItem>
+                      {cartoesFiltrados.map(c => <SelectItem key={c.id} value={c.id}>
+                          {c.descricao} - {c.final}
+                        </SelectItem>)}
+                    </SelectContent>
+                  </Select>}
 
-              <div className="flex items-center gap-2">
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button variant="outline" className={cn("w-[140px] justify-start text-left font-normal bg-background/50 border-border/50", !dateFilterStart && "text-muted-foreground")}>
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {dateFilterStart ? format(dateFilterStart, "dd/MM/yyyy", { locale: ptBR }) : "Data inicial"}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar mode="single" selected={dateFilterStart} onSelect={setDateFilterStart} initialFocus className="pointer-events-auto" />
-                  </PopoverContent>
-                </Popover>
-                <span className="text-muted-foreground">até</span>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button variant="outline" className={cn("w-[140px] justify-start text-left font-normal bg-background/50 border-border/50", !dateFilterEnd && "text-muted-foreground")}>
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {dateFilterEnd ? format(dateFilterEnd, "dd/MM/yyyy", { locale: ptBR }) : "Data final"}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar mode="single" selected={dateFilterEnd} onSelect={setDateFilterEnd} initialFocus className="pointer-events-auto" />
-                  </PopoverContent>
-                </Popover>
+                {hasFiltersActive && <Button variant="ghost" size="icon" onClick={handleClearFilters} className="h-10 w-10" title="Limpar filtros">
+                    <X className="h-4 w-4" />
+                  </Button>}
+
+                {/* Page Size Selector */}
+                <div className="flex items-center gap-2 ml-auto">
+                  <span className="text-sm text-muted-foreground">Registros por página:</span>
+                  <Select value={String(pageSize)} onValueChange={v => setPageSize(Number(v))}>
+                    <SelectTrigger className="w-[80px] bg-background/50 border-border/50">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {PAGE_SIZE_OPTIONS.map(size => <SelectItem key={size} value={String(size)}>
+                          {size}
+                        </SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
 
-              {hasFiltersActive && <Button variant="ghost" size="icon" onClick={handleClearFilters} className="h-10 w-10" title="Limpar filtros">
-                  <X className="h-4 w-4" />
-                </Button>}
+              {/* Second row - Date filters with type selector and payment method */}
+              <div className="flex flex-col sm:flex-row gap-4 flex-wrap items-center">
+                <div className="flex items-center gap-2">
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" className={cn("w-[140px] justify-start text-left font-normal bg-background/50 border-border/50", !dateFilterStart && "text-muted-foreground")}>
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {dateFilterStart ? format(dateFilterStart, "dd/MM/yyyy", { locale: ptBR }) : "Data inicial"}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar mode="single" selected={dateFilterStart} onSelect={setDateFilterStart} initialFocus className="pointer-events-auto" />
+                    </PopoverContent>
+                  </Popover>
+                  <span className="text-muted-foreground">até</span>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" className={cn("w-[140px] justify-start text-left font-normal bg-background/50 border-border/50", !dateFilterEnd && "text-muted-foreground")}>
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {dateFilterEnd ? format(dateFilterEnd, "dd/MM/yyyy", { locale: ptBR }) : "Data final"}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar mode="single" selected={dateFilterEnd} onSelect={setDateFilterEnd} initialFocus className="pointer-events-auto" />
+                    </PopoverContent>
+                  </Popover>
+                </div>
 
-              {/* Page Size Selector */}
-              <div className="flex items-center gap-2 ml-auto">
-                <span className="text-sm text-muted-foreground">Registros por página:</span>
-                <Select value={String(pageSize)} onValueChange={v => setPageSize(Number(v))}>
-                  <SelectTrigger className="w-[80px] bg-background/50 border-border/50">
-                    <SelectValue />
+                <Select value={groupByField} onValueChange={handleGroupByChange}>
+                  <SelectTrigger className="w-[180px] bg-background/50 border-border/50">
+                    <SelectValue placeholder="Agrupar por" />
                   </SelectTrigger>
                   <SelectContent>
-                    {PAGE_SIZE_OPTIONS.map(size => <SelectItem key={size} value={String(size)}>
-                        {size}
+                    <SelectItem value="data_compra">Data da Compra</SelectItem>
+                    <SelectItem value="data_vencimento">Data de Vencimento</SelectItem>
+                    <SelectItem value="data_pagamento">Data de Pagamento</SelectItem>
+                  </SelectContent>
+                </Select>
+
+                <Select value={formaPagamentoFilter} onValueChange={setFormaPagamentoFilter}>
+                  <SelectTrigger className="w-[200px] bg-background/50 border-border/50">
+                    <CreditCard className="mr-2 h-4 w-4" />
+                    <SelectValue placeholder="Forma pagamento" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="todos">Todas as formas</SelectItem>
+                    {formasPagamento.map(fp => <SelectItem key={fp.id} value={fp.id}>
+                        {fp.descricao}
                       </SelectItem>)}
                   </SelectContent>
                 </Select>
