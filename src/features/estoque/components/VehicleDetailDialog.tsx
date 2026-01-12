@@ -98,15 +98,9 @@ function DetailRow({
         <p className="text-xs text-muted-foreground">{label}</p>
         <div className="flex items-center gap-1">
           <p className="text-sm text-foreground break-words">{value}</p>
-          {copyable && onCopy && (
-            <button
-              type="button"
-              className="p-1 hover:bg-accent/20 rounded transition-colors"
-              onClick={() => onCopy(value)}
-            >
+          {copyable && onCopy && <button type="button" className="p-1 hover:bg-accent/20 rounded transition-colors" onClick={() => onCopy(value)}>
               <Copy className="h-3 w-3 text-muted-foreground hover:text-foreground" />
-            </button>
-          )}
+            </button>}
         </div>
       </div>
     </div>;
@@ -144,7 +138,9 @@ export function VehicleDetailDialog({
   const [costToDelete, setCostToDelete] = useState<VehicleCost | null>(null);
   const [deleting, setDeleting] = useState(false);
   const printRef = useRef<HTMLDivElement>(null);
-  const { toast } = useToast();
+  const {
+    toast
+  } = useToast();
   const {
     mainPhoto
   } = useVehicleMainPhoto(vehicleId, vehicle?.foto || null);
@@ -278,15 +274,12 @@ export function VehicleDetailDialog({
       onEdit(vehicleId);
     }
   };
-
   const handleEditCost = async (costId: string) => {
     try {
-      const { data, error } = await supabase
-        .from('vx_fin_movimento')
-        .select('*')
-        .eq('id', costId)
-        .single();
-      
+      const {
+        data,
+        error
+      } = await supabase.from('vx_fin_movimento').select('*').eq('id', costId).single();
       if (error) throw error;
       setSelectedMovimento(data);
       setMovimentoDialogOpen(true);
@@ -294,38 +287,32 @@ export function VehicleDetailDialog({
       toast({
         title: "Erro ao carregar custo",
         description: error.message,
-        variant: "destructive",
+        variant: "destructive"
       });
     }
   };
-
   const handleDeleteCost = async () => {
     if (!costToDelete) return;
-    
     setDeleting(true);
     try {
       // Delete attachments first
       await deleteAnexosDoMovimento(costToDelete.id);
-      
+
       // Then delete the movement
-      const { error } = await supabase
-        .from('vx_fin_movimento')
-        .delete()
-        .eq('id', costToDelete.id);
-      
+      const {
+        error
+      } = await supabase.from('vx_fin_movimento').delete().eq('id', costToDelete.id);
       if (error) throw error;
-      
       toast({
         title: "Custo excluído",
-        description: "O custo foi removido com sucesso.",
+        description: "O custo foi removido com sucesso."
       });
-      
       loadVehicleCosts();
     } catch (error: any) {
       toast({
         title: "Erro ao excluir custo",
         description: error.message,
-        variant: "destructive",
+        variant: "destructive"
       });
     } finally {
       setDeleting(false);
@@ -389,10 +376,10 @@ export function VehicleDetailDialog({
 
               {/* Time in Stock Highlight */}
               <div className="glass rounded-lg p-4 flex items-center gap-3 bg-accent/5 border-accent/20">
-                <Clock className="w-6 h-6 text-accent" />
+                <Clock className="w-6 h-6 text-secondary" />
                 <div>
                   <p className="text-xs text-muted-foreground">Tempo em Estoque</p>
-                  <p className="text-lg font-semibold text-accent">
+                  <p className="text-lg font-semibold text-slate-100">
                     {calculateTimeInStock(vehicle.created_at)}
                   </p>
                 </div>
@@ -402,13 +389,13 @@ export function VehicleDetailDialog({
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                 <div className="glass rounded-lg p-4">
                   <p className="text-xs text-muted-foreground mb-1">Valor de Venda</p>
-                  <p className="text-xl font-bold text-accent">
+                  <p className="text-xl font-bold text-lime-500">
                     {vehicle.valor ? maskCurrency(Number(vehicle.valor)) : 'Não informado'}
                   </p>
                 </div>
                 <div className="glass rounded-lg p-4">
                   <p className="text-xs text-muted-foreground mb-1">Valor de Aquisição</p>
-                  <p className="text-xl font-semibold text-foreground">
+                  <p className="text-xl font-semibold text-yellow-400">
                     {vehicle.valor_aquisicao ? maskCurrency(vehicle.valor_aquisicao) : 'Não informado'}
                   </p>
                 </div>
@@ -438,18 +425,27 @@ export function VehicleDetailDialog({
               <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6">
                 <div>
                   <h3 className="text-sm font-semibold text-foreground mb-2">Identificação</h3>
-                  <DetailRow icon={MapPin} label="Placa" value={vehicle.placa} copyable onCopy={(v) => {
-                    navigator.clipboard.writeText(v);
-                    toast({ title: 'Copiado!', description: 'Placa copiada para a área de transferência.' });
-                  }} />
-                  <DetailRow icon={Hash} label="Renavan" value={vehicle.renavan?.toString()} copyable onCopy={(v) => {
-                    navigator.clipboard.writeText(v);
-                    toast({ title: 'Copiado!', description: 'Renavan copiado para a área de transferência.' });
-                  }} />
-                  <DetailRow icon={FileText} label="Chassi" value={vehicle.chassi} copyable onCopy={(v) => {
-                    navigator.clipboard.writeText(v);
-                    toast({ title: 'Copiado!', description: 'Chassi copiado para a área de transferência.' });
-                  }} />
+                  <DetailRow icon={MapPin} label="Placa" value={vehicle.placa} copyable onCopy={v => {
+                navigator.clipboard.writeText(v);
+                toast({
+                  title: 'Copiado!',
+                  description: 'Placa copiada para a área de transferência.'
+                });
+              }} />
+                  <DetailRow icon={Hash} label="Renavan" value={vehicle.renavan?.toString()} copyable onCopy={v => {
+                navigator.clipboard.writeText(v);
+                toast({
+                  title: 'Copiado!',
+                  description: 'Renavan copiado para a área de transferência.'
+                });
+              }} />
+                  <DetailRow icon={FileText} label="Chassi" value={vehicle.chassi} copyable onCopy={v => {
+                navigator.clipboard.writeText(v);
+                toast({
+                  title: 'Copiado!',
+                  description: 'Chassi copiado para a área de transferência.'
+                });
+              }} />
                   <DetailRow icon={Car} label="Tipo" value={vehicle.tipo_veiculo} />
                   <DetailRow icon={Car} label="Categoria" value={vehicle.categoria} />
                 </div>
@@ -470,20 +466,15 @@ export function VehicleDetailDialog({
               <div>
                 <div className="flex items-center justify-between mb-3">
                   <h3 className="text-sm font-semibold text-foreground">Custos</h3>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      setSelectedMovimento(null);
-                      setMovimentoDialogOpen(true);
-                    }}
-                  >
+                  <Button variant="outline" size="sm" onClick={() => {
+                setSelectedMovimento(null);
+                setMovimentoDialogOpen(true);
+              }}>
                     <Plus className="w-4 h-4 mr-1" />
                     Adicionar Custo
                   </Button>
                 </div>
-                {vehicleCosts.length > 0 ? (
-                  <div className="glass rounded-lg overflow-hidden">
+                {vehicleCosts.length > 0 ? <div className="glass rounded-lg overflow-hidden">
                     <table className="w-full text-sm">
                         <thead>
                           <tr className="border-b border-border/50">
@@ -499,38 +490,26 @@ export function VehicleDetailDialog({
                               <td className="py-2 px-3 text-foreground">{cost.descricao}</td>
                               <td className="py-2 px-3 text-muted-foreground">
                                 {format(new Date(cost.data_vencimento + 'T00:00:00'), 'dd/MM/yyyy', {
-                          locale: ptBR
-                        })}
+                        locale: ptBR
+                      })}
                               </td>
                               <td className="py-2 px-3 text-muted-foreground">
                                 {cost.data_pagamento ? format(new Date(cost.data_pagamento + 'T00:00:00'), 'dd/MM/yyyy', {
-                          locale: ptBR
-                        }) : '-'}
+                        locale: ptBR
+                      }) : '-'}
                               </td>
                               <td className="py-2 px-3 text-right text-red-400">
                                 {maskCurrency(cost.valor_liquido)}
                               </td>
                               <td className="py-2 px-3 text-center">
                                 <div className="flex items-center justify-center gap-1">
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="h-7 w-7"
-                                    onClick={() => handleEditCost(cost.id)}
-                                    title="Editar"
-                                  >
+                                  <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleEditCost(cost.id)} title="Editar">
                                     <Pencil className="h-3.5 w-3.5" />
                                   </Button>
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="h-7 w-7 text-destructive hover:text-destructive"
-                                    onClick={() => {
-                                      setCostToDelete(cost);
-                                      setDeleteDialogOpen(true);
-                                    }}
-                                    title="Excluir"
-                                  >
+                                  <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive" onClick={() => {
+                          setCostToDelete(cost);
+                          setDeleteDialogOpen(true);
+                        }} title="Excluir">
                                     <Trash2 className="h-3.5 w-3.5" />
                                   </Button>
                                 </div>
@@ -546,10 +525,7 @@ export function VehicleDetailDialog({
                           </tr>
                         </tfoot>
                       </table>
-                    </div>
-                  ) : (
-                    <p className="text-sm text-muted-foreground italic">Nenhum custo registrado.</p>
-                  )}
+                    </div> : <p className="text-sm text-muted-foreground italic">Nenhum custo registrado.</p>}
                 </div>
 
               <Separator />
@@ -607,20 +583,13 @@ export function VehicleDetailDialog({
         </div>}
 
       {/* Dialog para adicionar/editar custo */}
-      <MovimentoDialog
-        open={movimentoDialogOpen}
-        onOpenChange={(open) => {
-          setMovimentoDialogOpen(open);
-          if (!open) setSelectedMovimento(null);
-        }}
-        movimento={selectedMovimento}
-        defaultTipo="Pagar"
-        initialVehicleId={selectedMovimento ? undefined : vehicleId}
-        onSuccess={() => {
-          loadVehicleCosts();
-          setSelectedMovimento(null);
-        }}
-      />
+      <MovimentoDialog open={movimentoDialogOpen} onOpenChange={open => {
+      setMovimentoDialogOpen(open);
+      if (!open) setSelectedMovimento(null);
+    }} movimento={selectedMovimento} defaultTipo="Pagar" initialVehicleId={selectedMovimento ? undefined : vehicleId} onSuccess={() => {
+      loadVehicleCosts();
+      setSelectedMovimento(null);
+    }} />
 
       {/* Dialog de confirmação de exclusão */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
@@ -633,11 +602,7 @@ export function VehicleDetailDialog({
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={deleting}>Cancelar</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDeleteCost}
-              disabled={deleting}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
+            <AlertDialogAction onClick={handleDeleteCost} disabled={deleting} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
               {deleting ? "Excluindo..." : "Excluir"}
             </AlertDialogAction>
           </AlertDialogFooter>
