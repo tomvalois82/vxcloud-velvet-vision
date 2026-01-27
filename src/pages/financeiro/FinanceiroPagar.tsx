@@ -19,7 +19,7 @@ import { MovimentoDialog } from "@/features/financeiro/components/MovimentoDialo
 import { RecorrenciaActionDialog } from "@/features/financeiro/components/RecorrenciaActionDialog";
 import { BaixaLoteDialog } from "@/features/financeiro/components/BaixaLoteDialog";
 import { BaixaIndividualDialog } from "@/features/financeiro/components/BaixaIndividualDialog";
-import { MovimentoGroupedList } from "@/features/financeiro/components/MovimentoGroupedList";
+import { MovimentoGroupedList, type AnexoData } from "@/features/financeiro/components/MovimentoGroupedList";
 import { GerarFaturaDialog } from "@/features/financeiro/components/GerarFaturaDialog";
 
 import { deleteAnexosDoMovimento, deleteAnexosDeMovimentos } from "@/features/financeiro/utils/anexosUtils";
@@ -142,6 +142,45 @@ const FinanceiroPagar = () => {
 
   // Gerar fatura dialog state
   const [faturaDialogOpen, setFaturaDialogOpen] = useState(false);
+
+  // Anexos state - mapa de id_movimento -> primeiro anexo
+  const [anexosMap, setAnexosMap] = useState<Record<string, AnexoData>>({});
+
+  const fetchAnexos = async (movimentoIds: string[]) => {
+    if (movimentoIds.length === 0) {
+      setAnexosMap({});
+      return;
+    }
+    try {
+      const { data, error } = await supabase
+        .from("vx_fin_anexo")
+        .select("id, id_movimento, nome_arquivo, tipo_mime, base64, url_arquivo")
+        .in("id_movimento", movimentoIds);
+      
+      if (error) throw error;
+      
+      // Create map with first attachment for each movement
+      const map: Record<string, AnexoData> = {};
+      if (data) {
+        data.forEach((anexo) => {
+          // Only keep the first attachment per movement
+          if (!map[anexo.id_movimento]) {
+            map[anexo.id_movimento] = {
+              id: anexo.id,
+              nome_arquivo: anexo.nome_arquivo,
+              tipo_mime: anexo.tipo_mime,
+              base64: anexo.base64,
+              url_arquivo: anexo.url_arquivo,
+            };
+          }
+        });
+      }
+      setAnexosMap(map);
+    } catch (error) {
+      console.error("Erro ao carregar anexos:", error);
+    }
+  };
+
   const fetchMovimentos = async () => {
     setLoading(true);
     try {
@@ -213,8 +252,13 @@ const FinanceiroPagar = () => {
         count
       } = await query;
       if (error) throw error;
-      setMovimentos(data as unknown as Movimento[] || []);
+      const movimentosData = data as unknown as Movimento[] || [];
+      setMovimentos(movimentosData);
       setTotalCount(count || 0);
+      
+      // Fetch attachments for the loaded movements
+      const movimentoIds = movimentosData.map(m => m.id);
+      await fetchAnexos(movimentoIds);
     } catch (error: any) {
       toast({
         title: "Erro ao carregar lançamentos",
@@ -808,7 +852,7 @@ const FinanceiroPagar = () => {
             </div>
 
             {/* Grouped List */}
-            {movimentos.length === 0 ? <EmptyState icon={ArrowDownCircle} title="Nenhum registro encontrado" description="Não há lançamentos para os filtros selecionados." /> : <MovimentoGroupedList movimentos={movimentos} selectedIds={selectedIds} onSelectAll={handleSelectAll} onSelectOne={handleSelectOne} onEdit={handleEdit} onDelete={handleDeleteClick} onBaixa={handleBaixaIndividual} onEstorno={handleEstornoClick} onConciliar={handleConciliar} tipoMovimento="Pagar" groupBy={groupByField} />}
+            {movimentos.length === 0 ? <EmptyState icon={ArrowDownCircle} title="Nenhum registro encontrado" description="Não há lançamentos para os filtros selecionados." /> : <MovimentoGroupedList movimentos={movimentos} selectedIds={selectedIds} onSelectAll={handleSelectAll} onSelectOne={handleSelectOne} onEdit={handleEdit} onDelete={handleDeleteClick} onBaixa={handleBaixaIndividual} onEstorno={handleEstornoClick} onConciliar={handleConciliar} tipoMovimento="Pagar" groupBy={groupByField} anexosMap={anexosMap} />}
 
             {/* Pagination Controls */}
             {totalPages > 0 && <div className="flex items-center justify-between pt-4 border-t border-border/30">

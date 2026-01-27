@@ -18,6 +18,12 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
   Pencil,
   Trash2,
   CheckCircle2,
@@ -27,9 +33,39 @@ import {
   ChevronRight,
   CheckCheck,
   CreditCard,
+  Paperclip,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { maskCurrency } from "@/features/estoque/utils/masks";
+
+// Anexo type for preview - exported for use in parent components
+export interface AnexoData {
+  id: string;
+  nome_arquivo: string;
+  tipo_mime: string | null;
+  base64: string | null;
+  url_arquivo: string | null;
+}
+
+// Helper to get file source (base64 prioritized, URL as fallback)
+const getFileSource = (anexo: AnexoData): string | null => {
+  if (anexo.base64 && anexo.tipo_mime) {
+    return `data:${anexo.tipo_mime};base64,${anexo.base64}`;
+  }
+  if (anexo.base64) {
+    return `data:application/octet-stream;base64,${anexo.base64}`;
+  }
+  if (anexo.url_arquivo) {
+    return anexo.url_arquivo;
+  }
+  return null;
+};
+
+// Check if file is an image
+const isImageFile = (tipoMime: string | null): boolean => {
+  if (!tipoMime) return false;
+  return tipoMime.startsWith('image/');
+};
 
 type GroupByOption = "data_compra" | "data_vencimento" | "data_pagamento";
 
@@ -82,6 +118,7 @@ interface MovimentoGroupedListProps {
   onConciliar: (movimento: Movimento) => void;
   tipoMovimento: "Pagar" | "Receber";
   groupBy: GroupByOption;
+  anexosMap?: Record<string, AnexoData>;
 }
 
 export const MovimentoGroupedList = ({
@@ -96,8 +133,31 @@ export const MovimentoGroupedList = ({
   onConciliar,
   tipoMovimento,
   groupBy,
+  anexosMap = {},
 }: MovimentoGroupedListProps) => {
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
+  const [previewAnexo, setPreviewAnexo] = useState<AnexoData | null>(null);
+  const [previewDialogOpen, setPreviewDialogOpen] = useState(false);
+
+  // Handle attachment click - preview for images, download for documents
+  const handleAnexoClick = (anexo: AnexoData) => {
+    const source = getFileSource(anexo);
+    if (!source) return;
+
+    if (isImageFile(anexo.tipo_mime)) {
+      // Open preview dialog for images
+      setPreviewAnexo(anexo);
+      setPreviewDialogOpen(true);
+    } else {
+      // Download for documents
+      const link = document.createElement('a');
+      link.href = source;
+      link.download = anexo.nome_arquivo;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+  };
   
   // Group movimentos by selected date field
   const groupedMovimentos = useMemo(() => {
@@ -302,6 +362,19 @@ export const MovimentoGroupedList = ({
                                   {mov.vx_fin_cartao.final}
                                 </span>
                               )}
+                              {anexosMap[mov.id] && (
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleAnexoClick(anexosMap[mov.id]);
+                                  }}
+                                  className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs bg-blue-500/20 text-blue-400 border border-blue-500/30 hover:bg-blue-500/30 transition-colors cursor-pointer"
+                                  title={`Anexo: ${anexosMap[mov.id].nome_arquivo}`}
+                                >
+                                  <Paperclip className="w-3 h-3" />
+                                </button>
+                              )}
                             </div>
                           </TableCell>
                           <TableCell className="text-foreground">
@@ -409,6 +482,24 @@ export const MovimentoGroupedList = ({
           </Collapsible>
         );
       })}
+
+      {/* Preview Dialog for Image Attachments */}
+      <Dialog open={previewDialogOpen} onOpenChange={setPreviewDialogOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-auto">
+          <DialogHeader>
+            <DialogTitle>{previewAnexo?.nome_arquivo || "Visualizar Anexo"}</DialogTitle>
+          </DialogHeader>
+          {previewAnexo && (
+            <div className="flex items-center justify-center p-4">
+              <img
+                src={getFileSource(previewAnexo) || ""}
+                alt={previewAnexo.nome_arquivo}
+                className="max-w-full max-h-[70vh] object-contain rounded-lg"
+              />
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

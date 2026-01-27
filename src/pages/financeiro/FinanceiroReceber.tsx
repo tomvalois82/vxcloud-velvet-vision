@@ -52,7 +52,7 @@ import { MovimentoDialog } from "@/features/financeiro/components/MovimentoDialo
 import { RecorrenciaActionDialog } from "@/features/financeiro/components/RecorrenciaActionDialog";
 import { BaixaLoteDialog } from "@/features/financeiro/components/BaixaLoteDialog";
 import { BaixaIndividualDialog } from "@/features/financeiro/components/BaixaIndividualDialog";
-import { MovimentoGroupedList } from "@/features/financeiro/components/MovimentoGroupedList";
+import { MovimentoGroupedList, type AnexoData } from "@/features/financeiro/components/MovimentoGroupedList";
 
 import { deleteAnexosDoMovimento, deleteAnexosDeMovimentos } from "@/features/financeiro/utils/anexosUtils";
 
@@ -167,6 +167,44 @@ const FinanceiroReceber = () => {
   // Conciliação em lote state
   const [conciliandoLote, setConciliandoLote] = useState(false);
 
+  // Anexos state - mapa de id_movimento -> primeiro anexo
+  const [anexosMap, setAnexosMap] = useState<Record<string, AnexoData>>({});
+
+  const fetchAnexos = async (movimentoIds: string[]) => {
+    if (movimentoIds.length === 0) {
+      setAnexosMap({});
+      return;
+    }
+    try {
+      const { data, error } = await supabase
+        .from("vx_fin_anexo")
+        .select("id, id_movimento, nome_arquivo, tipo_mime, base64, url_arquivo")
+        .in("id_movimento", movimentoIds);
+      
+      if (error) throw error;
+      
+      // Create map with first attachment for each movement
+      const map: Record<string, AnexoData> = {};
+      if (data) {
+        data.forEach((anexo) => {
+          // Only keep the first attachment per movement
+          if (!map[anexo.id_movimento]) {
+            map[anexo.id_movimento] = {
+              id: anexo.id,
+              nome_arquivo: anexo.nome_arquivo,
+              tipo_mime: anexo.tipo_mime,
+              base64: anexo.base64,
+              url_arquivo: anexo.url_arquivo,
+            };
+          }
+        });
+      }
+      setAnexosMap(map);
+    } catch (error) {
+      console.error("Erro ao carregar anexos:", error);
+    }
+  };
+
   const fetchMovimentos = async () => {
     setLoading(true);
     try {
@@ -237,8 +275,13 @@ const FinanceiroReceber = () => {
       const { data, error, count } = await query;
 
       if (error) throw error;
-      setMovimentos((data as unknown as Movimento[]) || []);
+      const movimentosData = (data as unknown as Movimento[]) || [];
+      setMovimentos(movimentosData);
       setTotalCount(count || 0);
+      
+      // Fetch attachments for the loaded movements
+      const movimentoIds = movimentosData.map(m => m.id);
+      await fetchAnexos(movimentoIds);
     } catch (error: any) {
       toast({
         title: "Erro ao carregar lançamentos",
@@ -961,6 +1004,7 @@ const FinanceiroReceber = () => {
                 onConciliar={handleConciliar}
                 tipoMovimento="Receber"
                 groupBy={groupByField}
+                anexosMap={anexosMap}
               />
             )}
 
