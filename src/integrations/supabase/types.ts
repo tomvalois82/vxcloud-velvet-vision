@@ -152,10 +152,13 @@ export type Database = {
           fotoloja: string | null
           grupoReceptor: string | null
           id: number
+          id_phone_wtz_api: string | null
           idusuario: number | null
           krayincrm: boolean | null
+          latitude: string | null
           link_wh_ocr: string | null
           link_wh_ocr_estoque: string | null
+          longitude: string | null
           mensagens_folowup: string[] | null
           pausa: number | null
           promptolx: string | null
@@ -168,6 +171,8 @@ export type Database = {
           telefone: string | null
           tempofolowup: number | null
           temporesposta: number | null
+          versao_waba: string | null
+          waba_id: string | null
           webhook_olx: string | null
         }
         Insert: {
@@ -186,10 +191,13 @@ export type Database = {
           fotoloja?: string | null
           grupoReceptor?: string | null
           id?: number
+          id_phone_wtz_api?: string | null
           idusuario?: number | null
           krayincrm?: boolean | null
+          latitude?: string | null
           link_wh_ocr?: string | null
           link_wh_ocr_estoque?: string | null
+          longitude?: string | null
           mensagens_folowup?: string[] | null
           pausa?: number | null
           promptolx?: string | null
@@ -202,6 +210,8 @@ export type Database = {
           telefone?: string | null
           tempofolowup?: number | null
           temporesposta?: number | null
+          versao_waba?: string | null
+          waba_id?: string | null
           webhook_olx?: string | null
         }
         Update: {
@@ -220,10 +230,13 @@ export type Database = {
           fotoloja?: string | null
           grupoReceptor?: string | null
           id?: number
+          id_phone_wtz_api?: string | null
           idusuario?: number | null
           krayincrm?: boolean | null
+          latitude?: string | null
           link_wh_ocr?: string | null
           link_wh_ocr_estoque?: string | null
+          longitude?: string | null
           mensagens_folowup?: string[] | null
           pausa?: number | null
           promptolx?: string | null
@@ -236,6 +249,8 @@ export type Database = {
           telefone?: string | null
           tempofolowup?: number | null
           temporesposta?: number | null
+          versao_waba?: string | null
+          waba_id?: string | null
           webhook_olx?: string | null
         }
         Relationships: [
@@ -301,7 +316,9 @@ export type Database = {
           foto_url: string | null
           id: string
           id_config: number
+          latitude: string | null
           logradouro: string
+          longitude: string | null
           meta_crescimento: number | null
           municipio: string
           nome_fantasia: string
@@ -322,7 +339,9 @@ export type Database = {
           foto_url?: string | null
           id?: string
           id_config: number
+          latitude?: string | null
           logradouro: string
+          longitude?: string | null
           meta_crescimento?: number | null
           municipio: string
           nome_fantasia: string
@@ -343,7 +362,9 @@ export type Database = {
           foto_url?: string | null
           id?: string
           id_config?: number
+          latitude?: string | null
           logradouro?: string
+          longitude?: string | null
           meta_crescimento?: number | null
           municipio?: string
           nome_fantasia?: string

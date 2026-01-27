@@ -26,16 +26,18 @@ interface Anexo {
   base64: string | null;
 }
 
-// Helper to get file source (URL or base64 data URI)
+// Helper to get file source (base64 prioritized, URL as fallback)
 const getFileSource = (anexo: Anexo): string | null => {
-  if (anexo.url_arquivo) {
-    return anexo.url_arquivo;
-  }
+  // Priorizar base64
   if (anexo.base64 && anexo.tipo_mime) {
     return `data:${anexo.tipo_mime};base64,${anexo.base64}`;
   }
   if (anexo.base64) {
     return `data:application/octet-stream;base64,${anexo.base64}`;
+  }
+  // Fallback para url_arquivo
+  if (anexo.url_arquivo) {
+    return anexo.url_arquivo;
   }
   return null;
 };
