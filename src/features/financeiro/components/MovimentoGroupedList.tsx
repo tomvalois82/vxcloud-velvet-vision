@@ -4,37 +4,10 @@ import { ptBR } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import {
-  Pencil,
-  Trash2,
-  CheckCircle2,
-  RotateCcw,
-  Repeat,
-  ChevronDown,
-  ChevronRight,
-  CheckCheck,
-  CreditCard,
-  Paperclip,
-} from "lucide-react";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Pencil, Trash2, CheckCircle2, RotateCcw, Repeat, ChevronDown, ChevronRight, CheckCheck, CreditCard, Paperclip } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { maskCurrency } from "@/features/estoque/utils/masks";
 
@@ -66,9 +39,7 @@ const isImageFile = (tipoMime: string | null): boolean => {
   if (!tipoMime) return false;
   return tipoMime.startsWith('image/');
 };
-
 type GroupByOption = "data_compra" | "data_vencimento" | "data_pagamento";
-
 interface Movimento {
   id: string;
   tipo_movimento: string;
@@ -94,18 +65,25 @@ interface Movimento {
   acrescimo: number | null;
   motivo_ajuste: string | null;
   conciliado: boolean;
-  vx_fin_conta: { banco: string; descricao: string | null } | null;
-  vx_fin_categoria: { categoria: string } | null;
-  vx_fin_cartao: { descricao: string; final: string; bandeira: string } | null;
+  vx_fin_conta: {
+    banco: string;
+    descricao: string | null;
+  } | null;
+  vx_fin_categoria: {
+    categoria: string;
+  } | null;
+  vx_fin_cartao: {
+    descricao: string;
+    final: string;
+    bandeira: string;
+  } | null;
 }
-
 interface DateGroup {
   dateKey: string;
   displayDate: Date;
   movimentos: Movimento[];
   total: number;
 }
-
 interface MovimentoGroupedListProps {
   movimentos: Movimento[];
   selectedIds: Set<string>;
@@ -120,7 +98,6 @@ interface MovimentoGroupedListProps {
   groupBy: GroupByOption;
   anexosMap?: Record<string, AnexoData>;
 }
-
 export const MovimentoGroupedList = ({
   movimentos,
   selectedIds,
@@ -133,7 +110,7 @@ export const MovimentoGroupedList = ({
   onConciliar,
   tipoMovimento,
   groupBy,
-  anexosMap = {},
+  anexosMap = {}
 }: MovimentoGroupedListProps) => {
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
   const [previewAnexo, setPreviewAnexo] = useState<AnexoData | null>(null);
@@ -143,7 +120,6 @@ export const MovimentoGroupedList = ({
   const handleAnexoClick = (anexo: AnexoData) => {
     const source = getFileSource(anexo);
     if (!source) return;
-
     if (isImageFile(anexo.tipo_mime)) {
       // Open preview dialog for images
       setPreviewAnexo(anexo);
@@ -158,14 +134,12 @@ export const MovimentoGroupedList = ({
       document.body.removeChild(link);
     }
   };
-  
+
   // Group movimentos by selected date field
   const groupedMovimentos = useMemo(() => {
     const groups = new Map<string, DateGroup>();
-
-    movimentos.forEach((mov) => {
+    movimentos.forEach(mov => {
       let effectiveDate: string;
-      
       switch (groupBy) {
         case "data_compra":
           effectiveDate = mov.data_compra || mov.data_vencimento;
@@ -178,29 +152,23 @@ export const MovimentoGroupedList = ({
           effectiveDate = mov.data_vencimento;
           break;
       }
-      
       const dateKey = effectiveDate;
-      
       if (!groups.has(dateKey)) {
         groups.set(dateKey, {
           dateKey,
           displayDate: new Date(effectiveDate + "T00:00:00"),
           movimentos: [],
-          total: 0,
+          total: 0
         });
       }
-      
       const group = groups.get(dateKey)!;
       group.movimentos.push(mov);
       group.total += mov.valor_bruto;
     });
 
     // Sort groups by date
-    return Array.from(groups.values()).sort((a, b) => 
-      a.displayDate.getTime() - b.displayDate.getTime()
-    );
+    return Array.from(groups.values()).sort((a, b) => a.displayDate.getTime() - b.displayDate.getTime());
   }, [movimentos, groupBy]);
-
   const toggleGroup = (dateKey: string) => {
     const newCollapsed = new Set(collapsedGroups);
     if (newCollapsed.has(dateKey)) {
@@ -210,78 +178,58 @@ export const MovimentoGroupedList = ({
     }
     setCollapsedGroups(newCollapsed);
   };
-
   const isRowVencido = (status: string, dataVencimento: string) => {
     const vencimentoDate = new Date(dataVencimento + "T00:00:00");
     return isPast(vencimentoDate) && !isToday(vencimentoDate) && status === "Pendente";
   };
-
   const getStatusBadge = (status: string, dataVencimento: string) => {
     const isVencido = isRowVencido(status, dataVencimento);
-
     if (isVencido) {
       return <Badge variant="destructive">Vencido</Badge>;
     }
-
     switch (status) {
       case "Pago":
-        return (
-          <Badge className="bg-green-500/20 text-green-400 border-green-500/30">
+        return <Badge className="bg-green-500/20 text-green-400 border-green-500/30">
             {tipoMovimento === "Receber" ? "Recebido" : "Pago"}
-          </Badge>
-        );
+          </Badge>;
       case "Cancelado":
         return <Badge variant="secondary">Cancelado</Badge>;
       default:
         return <Badge className="bg-yellow-500/20 text-yellow-400 border-yellow-500/30">Pendente</Badge>;
     }
   };
-
   const getContaDisplayName = (movimento: Movimento) => {
     if (!movimento.vx_fin_conta) return "-";
-    return movimento.vx_fin_conta.descricao
-      ? `${movimento.vx_fin_conta.banco} - ${movimento.vx_fin_conta.descricao}`
-      : movimento.vx_fin_conta.banco;
+    return movimento.vx_fin_conta.descricao ? `${movimento.vx_fin_conta.banco} - ${movimento.vx_fin_conta.descricao}` : movimento.vx_fin_conta.banco;
   };
-
-  const allSelected = movimentos.length > 0 && movimentos.every((mov) => selectedIds.has(mov.id));
-  const someSelected = movimentos.some((mov) => selectedIds.has(mov.id));
-
+  const allSelected = movimentos.length > 0 && movimentos.every(mov => selectedIds.has(mov.id));
+  const someSelected = movimentos.some(mov => selectedIds.has(mov.id));
   if (movimentos.length === 0) {
-    return (
-      <div className="text-center text-muted-foreground py-8">
+    return <div className="text-center text-muted-foreground py-8">
         Nenhum lançamento encontrado
-      </div>
-    );
+      </div>;
   }
-
-  return (
-    <div className="space-y-2">
+  return <div className="space-y-2">
       {/* Header with select all */}
       <div className="flex items-center px-4 py-2 border-b border-border/30">
         <div className="flex items-center gap-4">
-          <Checkbox
-            checked={allSelected}
-            onCheckedChange={onSelectAll}
-            aria-label="Selecionar todos"
-            className={someSelected && !allSelected ? "data-[state=checked]:bg-accent/50" : ""}
-          />
+          <Checkbox checked={allSelected} onCheckedChange={onSelectAll} aria-label="Selecionar todos" className={someSelected && !allSelected ? "data-[state=checked]:bg-accent/50" : ""} />
           <span className="text-sm text-muted-foreground">Selecionar todos</span>
         </div>
       </div>
 
-      {groupedMovimentos.map((group) => {
-        const isCollapsed = collapsedGroups.has(group.dateKey);
-        const day = format(group.displayDate, "d", { locale: ptBR });
-        const month = format(group.displayDate, "MMM", { locale: ptBR });
-        const weekday = format(group.displayDate, "EEEE", { locale: ptBR });
-
-        return (
-          <Collapsible
-            key={group.dateKey}
-            open={!isCollapsed}
-            onOpenChange={() => toggleGroup(group.dateKey)}
-          >
+      {groupedMovimentos.map(group => {
+      const isCollapsed = collapsedGroups.has(group.dateKey);
+      const day = format(group.displayDate, "d", {
+        locale: ptBR
+      });
+      const month = format(group.displayDate, "MMM", {
+        locale: ptBR
+      });
+      const weekday = format(group.displayDate, "EEEE", {
+        locale: ptBR
+      });
+      return <Collapsible key={group.dateKey} open={!isCollapsed} onOpenChange={() => toggleGroup(group.dateKey)}>
             {/* Group Header */}
             <CollapsibleTrigger asChild>
               <div className="flex items-center justify-between bg-muted/30 hover:bg-muted/50 px-4 py-3 rounded-lg cursor-pointer transition-colors border border-border/30">
@@ -291,17 +239,13 @@ export const MovimentoGroupedList = ({
                     <span className="text-xs text-muted-foreground uppercase">{month}</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    {isCollapsed ? (
-                      <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                    ) : (
-                      <ChevronDown className="h-4 w-4 text-muted-foreground" />
-                    )}
+                    {isCollapsed ? <ChevronRight className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
                     <span className="text-sm text-foreground capitalize">{weekday}</span>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="text-sm text-muted-foreground">Total</span>
-                  <span className="text-sm font-semibold text-accent">
+                  <span className="text-sm font-semibold text-secondary">
                     {maskCurrency(group.total)}
                   </span>
                 </div>
@@ -326,72 +270,48 @@ export const MovimentoGroupedList = ({
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {group.movimentos.map((mov) => {
-                      const isPago = mov.status === "Pago";
-                      return (
-                        <TableRow
-                          key={mov.id}
-                          className={cn(
-                            "border-border/30",
-                            isRowVencido(mov.status, mov.data_vencimento) && "bg-destructive/10",
-                            isPago && "opacity-60 bg-green-500/5"
-                          )}
-                        >
+                    {group.movimentos.map(mov => {
+                  const isPago = mov.status === "Pago";
+                  return <TableRow key={mov.id} className={cn("border-border/30", isRowVencido(mov.status, mov.data_vencimento) && "bg-destructive/10", isPago && "opacity-60 bg-green-500/5")}>
                           <TableCell>
-                            <Checkbox
-                              checked={selectedIds.has(mov.id)}
-                              onCheckedChange={(checked) => onSelectOne(mov.id, checked === true)}
-                              aria-label={`Selecionar ${mov.descricao}`}
-                            />
+                            <Checkbox checked={selectedIds.has(mov.id)} onCheckedChange={checked => onSelectOne(mov.id, checked === true)} aria-label={`Selecionar ${mov.descricao}`} />
                           </TableCell>
                           <TableCell className="font-medium text-foreground">
                             <div className="flex items-center gap-2">
                               {isPago && <CheckCircle2 className="w-4 h-4 text-green-500" />}
                               {mov.descricao}
-                              {mov.recorrencia_id && (
-                                <span title="Lançamento recorrente">
+                              {mov.recorrencia_id && <span title="Lançamento recorrente">
                                   <Repeat className="w-3 h-3 text-accent" />
-                                </span>
-                              )}
-                              {mov.vx_fin_cartao && (
-                                <span 
-                                  title={`${mov.vx_fin_cartao.bandeira} - Final ${mov.vx_fin_cartao.final}`}
-                                  className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs bg-purple-500/20 text-purple-400 border border-purple-500/30"
-                                >
+                                </span>}
+                              {mov.vx_fin_cartao && <span title={`${mov.vx_fin_cartao.bandeira} - Final ${mov.vx_fin_cartao.final}`} className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs bg-purple-500/20 text-purple-400 border border-purple-500/30">
                                   <CreditCard className="w-3 h-3" />
                                   {mov.vx_fin_cartao.final}
-                                </span>
-                              )}
-                              {anexosMap[mov.id] && (
-                                <button
-                                  type="button"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleAnexoClick(anexosMap[mov.id]);
-                                  }}
-                                  className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs bg-blue-500/20 text-blue-400 border border-blue-500/30 hover:bg-blue-500/30 transition-colors cursor-pointer"
-                                  title={`Anexo: ${anexosMap[mov.id].nome_arquivo}`}
-                                >
+                                </span>}
+                              {anexosMap[mov.id] && <button type="button" onClick={e => {
+                          e.stopPropagation();
+                          handleAnexoClick(anexosMap[mov.id]);
+                        }} className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs bg-blue-500/20 text-blue-400 border border-blue-500/30 hover:bg-blue-500/30 transition-colors cursor-pointer" title={`Anexo: ${anexosMap[mov.id].nome_arquivo}`}>
                                   <Paperclip className="w-3 h-3" />
-                                </button>
-                              )}
+                                </button>}
                             </div>
                           </TableCell>
                           <TableCell className="text-foreground">
                             {maskCurrency(mov.valor_bruto)}
                           </TableCell>
                           <TableCell className="text-foreground">
-                            {format(new Date(mov.data_vencimento + "T00:00:00"), "dd/MM/yyyy", { locale: ptBR })}
+                            {format(new Date(mov.data_vencimento + "T00:00:00"), "dd/MM/yyyy", {
+                        locale: ptBR
+                      })}
                           </TableCell>
                           <TableCell className="text-muted-foreground">
-                            {mov.data_pagamento 
-                              ? format(new Date(mov.data_pagamento + "T00:00:00"), "dd/MM/yyyy", { locale: ptBR }) 
-                              : "-"}
+                            {mov.data_pagamento ? format(new Date(mov.data_pagamento + "T00:00:00"), "dd/MM/yyyy", {
+                        locale: ptBR
+                      }) : "-"}
                           </TableCell>
                           <TableCell className="text-muted-foreground">
-                            {mov.data_compra 
-                              ? format(new Date(mov.data_compra + "T00:00:00"), "dd/MM/yyyy", { locale: ptBR }) 
-                              : "-"}
+                            {mov.data_compra ? format(new Date(mov.data_compra + "T00:00:00"), "dd/MM/yyyy", {
+                        locale: ptBR
+                      }) : "-"}
                           </TableCell>
                           <TableCell className="text-muted-foreground">
                             {getContaDisplayName(mov)}
@@ -401,87 +321,33 @@ export const MovimentoGroupedList = ({
                           </TableCell>
                           <TableCell>
                             <div className="flex items-center gap-1">
-                              {isPago ? (
-                                <>
+                              {isPago ? <>
                                   {/* Conciliar button - only for paid items */}
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className={cn(
-                                      "h-8 w-8",
-                                      mov.conciliado 
-                                        ? "text-[#0DCAF0] cursor-default" 
-                                        : "hover:bg-[#0DCAF0]/20 text-[#0DCAF0]"
-                                    )}
-                                    onClick={() => !mov.conciliado && onConciliar(mov)}
-                                    disabled={mov.conciliado}
-                                    title={mov.conciliado ? "Conciliado" : "Conciliar"}
-                                  >
+                                  <Button variant="ghost" size="icon" className={cn("h-8 w-8", mov.conciliado ? "text-[#0DCAF0] cursor-default" : "hover:bg-[#0DCAF0]/20 text-[#0DCAF0]")} onClick={() => !mov.conciliado && onConciliar(mov)} disabled={mov.conciliado} title={mov.conciliado ? "Conciliado" : "Conciliar"}>
                                     <CheckCheck className="w-4 h-4" />
                                   </Button>
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="h-8 w-8 hover:bg-orange-500/20 text-orange-500"
-                                    onClick={() => onEstorno(mov)}
-                                    title="Estornar/Reabrir"
-                                  >
+                                  <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-orange-500/20 text-orange-500" onClick={() => onEstorno(mov)} title="Estornar/Reabrir">
                                     <RotateCcw className="w-4 h-4" />
                                   </Button>
-                                </>
-                              ) : (
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-8 w-8 hover:bg-green-500/20 text-green-500"
-                                  onClick={() => onBaixa(mov)}
-                                  title="Baixar"
-                                >
+                                </> : <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-green-500/20 text-green-500" onClick={() => onBaixa(mov)} title="Baixar">
                                   <CheckCircle2 className="w-4 h-4" />
-                                </Button>
-                              )}
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className={cn(
-                                  "h-8 w-8",
-                                  isPago
-                                    ? "opacity-50 cursor-not-allowed"
-                                    : "hover:bg-accent/20"
-                                )}
-                                onClick={() => onEdit(mov)}
-                                disabled={isPago}
-                                title={isPago ? "Estorne para editar" : "Editar"}
-                              >
+                                </Button>}
+                              <Button variant="ghost" size="icon" className={cn("h-8 w-8", isPago ? "opacity-50 cursor-not-allowed" : "hover:bg-accent/20")} onClick={() => onEdit(mov)} disabled={isPago} title={isPago ? "Estorne para editar" : "Editar"}>
                                 <Pencil className="w-4 h-4" />
                               </Button>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className={cn(
-                                  "h-8 w-8",
-                                  isPago
-                                    ? "opacity-50 cursor-not-allowed"
-                                    : "hover:bg-destructive/20 text-destructive"
-                                )}
-                                onClick={() => onDelete(mov)}
-                                disabled={isPago}
-                                title={isPago ? "Estorne para excluir" : "Excluir"}
-                              >
+                              <Button variant="ghost" size="icon" className={cn("h-8 w-8", isPago ? "opacity-50 cursor-not-allowed" : "hover:bg-destructive/20 text-destructive")} onClick={() => onDelete(mov)} disabled={isPago} title={isPago ? "Estorne para excluir" : "Excluir"}>
                                 <Trash2 className="w-4 h-4" />
                               </Button>
                             </div>
                           </TableCell>
-                        </TableRow>
-                      );
-                    })}
+                        </TableRow>;
+                })}
                   </TableBody>
                 </Table>
               </div>
             </CollapsibleContent>
-          </Collapsible>
-        );
-      })}
+          </Collapsible>;
+    })}
 
       {/* Preview Dialog for Image Attachments */}
       <Dialog open={previewDialogOpen} onOpenChange={setPreviewDialogOpen}>
@@ -489,17 +355,10 @@ export const MovimentoGroupedList = ({
           <DialogHeader>
             <DialogTitle>{previewAnexo?.nome_arquivo || "Visualizar Anexo"}</DialogTitle>
           </DialogHeader>
-          {previewAnexo && (
-            <div className="flex items-center justify-center p-4">
-              <img
-                src={getFileSource(previewAnexo) || ""}
-                alt={previewAnexo.nome_arquivo}
-                className="max-w-full max-h-[70vh] object-contain rounded-lg"
-              />
-            </div>
-          )}
+          {previewAnexo && <div className="flex items-center justify-center p-4">
+              <img src={getFileSource(previewAnexo) || ""} alt={previewAnexo.nome_arquivo} className="max-w-full max-h-[70vh] object-contain rounded-lg" />
+            </div>}
         </DialogContent>
       </Dialog>
-    </div>
-  );
+    </div>;
 };
