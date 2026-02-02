@@ -1,12 +1,14 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
+import { useReactToPrint } from "react-to-print";
 import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, Search, ChevronRight, ChevronDown, Pencil, Trash2, FolderPlus, Loader2, FileText } from "lucide-react";
+import { Plus, Search, ChevronRight, ChevronDown, Pencil, Trash2, FolderPlus, Loader2, FileText, Printer } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { EmptyState } from "@/components/EmptyState";
 import { CategoriaDialog } from "@/features/financeiro/components/CategoriaDialog";
+import { CategoriasReportPrint } from "@/features/financeiro/components/CategoriasReportPrint";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -32,6 +34,7 @@ interface Categoria {
 
 export default function FinanceiroCategorias() {
   const [categorias, setCategorias] = useState<Categoria[]>([]);
+  const [allCategoriasForPrint, setAllCategoriasForPrint] = useState<Categoria[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -42,6 +45,12 @@ export default function FinanceiroCategorias() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [categoriaToDelete, setCategoriaToDelete] = useState<Categoria | null>(null);
   const [togglingDre, setTogglingDre] = useState<string | null>(null);
+  const printRef = useRef<HTMLDivElement>(null);
+
+  const handlePrint = useReactToPrint({
+    contentRef: printRef,
+    documentTitle: "Relatório de Categorias",
+  });
 
   const fetchRootCategorias = useCallback(async () => {
     setLoading(true);
@@ -79,9 +88,47 @@ export default function FinanceiroCategorias() {
     }
   }, []);
 
+  // Fetch all categories with hierarchy for printing
+  const fetchAllCategoriasForPrint = useCallback(async () => {
+    try {
+      const { data, error } = await supabase
+        .from("vx_fin_categoria")
+        .select("*")
+        .order("categoria");
+
+      if (error) throw error;
+
+      // Build hierarchy
+      const categoriaMap = new Map<string, Categoria>();
+      const rootCategories: Categoria[] = [];
+
+      (data || []).forEach((cat) => {
+        categoriaMap.set(cat.id, { ...cat, children: [] });
+      });
+
+      (data || []).forEach((cat) => {
+        const categoria = categoriaMap.get(cat.id)!;
+        if (cat.id_categoria_pai) {
+          const parent = categoriaMap.get(cat.id_categoria_pai);
+          if (parent) {
+            parent.children = parent.children || [];
+            parent.children.push(categoria);
+          }
+        } else {
+          rootCategories.push(categoria);
+        }
+      });
+
+      setAllCategoriasForPrint(rootCategories);
+    } catch (error) {
+      console.error("Erro ao buscar categorias para impressão:", error);
+    }
+  }, []);
+
   useEffect(() => {
     fetchRootCategorias();
-  }, [fetchRootCategorias]);
+    fetchAllCategoriasForPrint();
+  }, [fetchRootCategorias, fetchAllCategoriasForPrint]);
 
   const loadChildren = async (parentId: string) => {
     setLoadingChildren((prev) => new Set(prev).add(parentId));
@@ -264,12 +311,17 @@ export default function FinanceiroCategorias() {
     }
   };
 
+  // Separate categories for print
+  const printCategoriasReceber = allCategoriasForPrint.filter((cat) => cat.operacao === "Receber");
+  const printCategoriasPagar = allCategoriasForPrint.filter((cat) => cat.operacao === "Pagar");
+
   const handleDialogClose = (saved: boolean) => {
     setDialogOpen(false);
     setCategoriaToEdit(null);
     setParentCategoria(null);
     if (saved) {
       fetchRootCategorias();
+      fetchAllCategoriasForPrint();
     }
   };
 
@@ -435,10 +487,16 @@ export default function FinanceiroCategorias() {
         title="Plano de Contas / Categorias"
         description="Gerencie as categorias financeiras em estrutura hierárquica"
         action={
-          <Button onClick={handleNew} className="gap-2">
-            <Plus className="h-4 w-4" />
-            Nova Categoria
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={() => handlePrint()} className="gap-2">
+              <Printer className="h-4 w-4" />
+              Imprimir
+            </Button>
+            <Button onClick={handleNew} className="gap-2">
+              <Plus className="h-4 w-4" />
+              Nova Categoria
+            </Button>
+          </div>
         }
       />
 
@@ -450,6 +508,15 @@ export default function FinanceiroCategorias() {
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           className="pl-10"
+        />
+      </div>
+
+      {/* Hidden Print Component */}
+      <div style={{ display: "none" }}>
+        <CategoriasReportPrint
+          ref={printRef}
+          categoriasReceber={printCategoriasReceber}
+          categoriasPagar={printCategoriasPagar}
         />
       </div>
 
