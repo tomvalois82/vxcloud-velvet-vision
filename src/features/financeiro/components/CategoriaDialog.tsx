@@ -40,9 +40,12 @@ const formSchema = z.object({
 type FormData = z.infer<typeof formSchema>;
 
 const CLASSIFICACAO_OPTIONS = [
-  { value: "DESPESA_FIXA", label: "Despesa Fixa" },
-  { value: "CUSTO_DIRETO", label: "Custo Direto" },
   { value: "RECEITA_VENDA", label: "Receita de Venda" },
+  { value: "CUSTO_VEICULO", label: "Custo Veículo" },
+  { value: "CUSTO_PREPARO", label: "Custo Preparo" },
+  { value: "CUSTO_VENDA", label: "Custo Venda" },
+  { value: "DESPESA_OPERACIONAL", label: "Despesa Operacional" },
+  { value: "RESULTADO_FINANCEIRO", label: "Resultado Financeiro" },
   { value: "NAO_OPERACIONAL", label: "Não Operacional" },
 ];
 
