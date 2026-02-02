@@ -372,7 +372,14 @@ export default function FinanceiroCategorias() {
           </button>
 
           {/* Category Name */}
-          <span className="flex-1 text-foreground font-medium">{categoria.categoria}</span>
+          <span className="flex-1 text-foreground font-medium">
+            {categoria.categoria}
+            {categoria.classificacao && (
+              <span className="text-xs text-muted-foreground font-normal ml-1">
+                ({categoria.classificacao.replace(/_/g, ' ')})
+              </span>
+            )}
+          </span>
 
           {/* Operation Badge - only show if requested */}
           {showBadge && (
