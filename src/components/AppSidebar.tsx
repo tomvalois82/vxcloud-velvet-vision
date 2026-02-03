@@ -8,15 +8,24 @@ import { useSuperUser } from "@/hooks/useSuperUser";
 import { Button } from "@/components/ui/button";
 import { Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarMenuSub, SidebarMenuSubItem, SidebarMenuSubButton, useSidebar } from "@/components/ui/sidebar";
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/components/ui/collapsible";
+interface SubSubMenuItem {
+  title: string;
+  url: string;
+  icon: any;
+}
+
+interface SubMenuItem {
+  title: string;
+  url?: string;
+  icon: any;
+  items?: SubSubMenuItem[];
+}
+
 interface MenuItem {
   title: string;
   url?: string;
   icon: any;
-  items?: {
-    title: string;
-    url: string;
-    icon: any;
-  }[];
+  items?: SubMenuItem[];
 }
 const menuItems: MenuItem[] = [{
   title: "Dashboard",
@@ -98,17 +107,21 @@ const menuItems: MenuItem[] = [{
     url: "/financeiro/transferencias",
     icon: ArrowLeftRight
   }, {
-    title: "Margem",
-    url: "/financeiro/margem",
-    icon: BarChart3
-  }, {
-    title: "DRE",
-    url: "/financeiro/dre",
-    icon: FileText
-  }, {
     title: "Relatórios",
-    url: "/financeiro/relatorios",
-    icon: BarChart3
+    icon: BarChart3,
+    items: [{
+      title: "DRE",
+      url: "/financeiro/dre",
+      icon: FileText
+    }, {
+      title: "Margem",
+      url: "/financeiro/margem",
+      icon: BarChart3
+    }, {
+      title: "Financeiro de Estoque",
+      url: "/financeiro/relatorios",
+      icon: Package
+    }]
   }]
 }, {
   title: "Configurações",
@@ -140,7 +153,13 @@ export function AppSidebar() {
       return location.pathname === item.url;
     }
     if (item.items) {
-      return item.items.some(subItem => location.pathname === subItem.url);
+      return item.items.some(subItem => {
+        if (subItem.url && location.pathname === subItem.url) return true;
+        if (subItem.items) {
+          return subItem.items.some(nestedItem => location.pathname === nestedItem.url);
+        }
+        return false;
+      });
     }
     return false;
   };
@@ -166,14 +185,44 @@ export function AppSidebar() {
                       </CollapsibleTrigger>
                       <CollapsibleContent>
                         <SidebarMenuSub>
-                          {item.items.map(subItem => <SidebarMenuSubItem key={subItem.url}>
-                              <SidebarMenuSubButton asChild>
-                                <NavLink to={subItem.url} className="flex items-center gap-3 transition-all hover:text-accent" activeClassName="text-accent font-medium">
-                                  <subItem.icon className="w-4 h-4 text-primary-foreground border-white" />
-                                  <span className="text-[#e3e3e3]">{subItem.title}</span>
-                                </NavLink>
-                              </SidebarMenuSubButton>
-                            </SidebarMenuSubItem>)}
+                          {item.items.map(subItem => 
+                            subItem.items ? (
+                              <SidebarMenuSubItem key={subItem.title}>
+                                <Collapsible className="group/nested">
+                                  <CollapsibleTrigger asChild>
+                                    <SidebarMenuSubButton className="cursor-pointer">
+                                      <subItem.icon className="w-4 h-4 text-primary-foreground border-white" />
+                                      <span className="text-[#e3e3e3]">{subItem.title}</span>
+                                      <ChevronDown className="ml-auto w-3 h-3 transition-transform group-data-[state=open]/nested:rotate-180" />
+                                    </SidebarMenuSubButton>
+                                  </CollapsibleTrigger>
+                                  <CollapsibleContent>
+                                    <SidebarMenuSub className="ml-4">
+                                      {subItem.items.map(nestedItem => (
+                                        <SidebarMenuSubItem key={nestedItem.url}>
+                                          <SidebarMenuSubButton asChild>
+                                            <NavLink to={nestedItem.url} className="flex items-center gap-3 transition-all hover:text-accent" activeClassName="text-accent font-medium">
+                                              <nestedItem.icon className="w-4 h-4 text-primary-foreground border-white" />
+                                              <span className="text-[#e3e3e3]">{nestedItem.title}</span>
+                                            </NavLink>
+                                          </SidebarMenuSubButton>
+                                        </SidebarMenuSubItem>
+                                      ))}
+                                    </SidebarMenuSub>
+                                  </CollapsibleContent>
+                                </Collapsible>
+                              </SidebarMenuSubItem>
+                            ) : (
+                              <SidebarMenuSubItem key={subItem.url}>
+                                <SidebarMenuSubButton asChild>
+                                  <NavLink to={subItem.url!} className="flex items-center gap-3 transition-all hover:text-accent" activeClassName="text-accent font-medium">
+                                    <subItem.icon className="w-4 h-4 text-primary-foreground border-white" />
+                                    <span className="text-[#e3e3e3]">{subItem.title}</span>
+                                  </NavLink>
+                                </SidebarMenuSubButton>
+                              </SidebarMenuSubItem>
+                            )
+                          )}
                         </SidebarMenuSub>
                       </CollapsibleContent>
                     </Collapsible> : <SidebarMenuButton asChild tooltip={item.title}>
