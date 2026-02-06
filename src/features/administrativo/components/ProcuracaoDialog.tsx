@@ -40,9 +40,11 @@ interface Veiculo {
 interface ProcuracaoDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  outorganteIdInicial?: string;
+  veiculoIdInicial?: number;
 }
 
-export function ProcuracaoDialog({ open, onOpenChange }: ProcuracaoDialogProps) {
+export function ProcuracaoDialog({ open, onOpenChange, outorganteIdInicial, veiculoIdInicial }: ProcuracaoDialogProps) {
   const [pessoas, setPessoas] = useState<Pessoa[]>([]);
   const [despachantes, setDespachantes] = useState<Pessoa[]>([]);
   const [veiculosList, setVeiculosList] = useState<Veiculo[]>([]);
@@ -68,7 +70,9 @@ export function ProcuracaoDialog({ open, onOpenChange }: ProcuracaoDialogProps) 
   useEffect(() => {
     if (!open) return;
     loadData();
-  }, [open]);
+    if (outorganteIdInicial) setOutorganteId(outorganteIdInicial);
+    if (veiculoIdInicial) setVeiculosSelecionados([veiculoIdInicial]);
+  }, [open, outorganteIdInicial, veiculoIdInicial]);
 
   async function loadData() {
     const [pessoasRes, despachantesRes, veiculosRes] = await Promise.all([

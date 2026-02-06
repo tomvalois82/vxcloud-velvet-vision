@@ -15,6 +15,7 @@ import {
   X,
   CalendarIcon,
   Printer,
+  FileText,
 } from 'lucide-react';
 import { PageHeader } from '@/components/PageHeader';
 import { EmptyState } from '@/components/EmptyState';
@@ -61,6 +62,7 @@ import { cn } from '@/lib/utils';
 import { useSalesList } from '@/features/vendas/hooks/useSalesList';
 import { useSaleContract } from '@/features/vendas/hooks/useSaleContract';
 import { SaleContract } from '@/features/vendas/components/SaleContract';
+import { ProcuracaoDialog } from '@/features/administrativo/components/ProcuracaoDialog';
 import { maskCurrency } from '@/features/estoque/utils/masks';
 
 const VendasList = () => {
@@ -86,6 +88,10 @@ const VendasList = () => {
   const [selectedSale, setSelectedSale] = useState<{
     id: string;
     vehicleId: number;
+  } | null>(null);
+  const [procuracaoData, setProcuracaoData] = useState<{
+    clienteId: string;
+    veiculoId: number;
   } | null>(null);
 
   const handlePrint = useReactToPrint({
@@ -442,6 +448,24 @@ const VendasList = () => {
                           <TooltipContent>Imprimir Contrato</TooltipContent>
                         </Tooltip>
 
+                        {/* Procuração Button */}
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => setProcuracaoData({
+                                clienteId: sale.id_cliente,
+                                veiculoId: sale.id_veiculo_vendido,
+                              })}
+                              className="gap-1"
+                            >
+                              <FileText className="w-4 h-4" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>Emitir Procuração</TooltipContent>
+                        </Tooltip>
+
                         {sale.fechada ? (
                           <>
                             {/* Reopen Button */}
@@ -599,6 +623,14 @@ const VendasList = () => {
           {contractData && <SaleContract data={contractData} />}
         </div>
       </div>
+
+      {/* Procuração Dialog */}
+      <ProcuracaoDialog
+        open={!!procuracaoData}
+        onOpenChange={(open) => { if (!open) setProcuracaoData(null); }}
+        outorganteIdInicial={procuracaoData?.clienteId}
+        veiculoIdInicial={procuracaoData?.veiculoId}
+      />
     </div>
   );
 };
