@@ -38,6 +38,7 @@ import Usuarios from "./pages/configuracoes/Usuarios";
 import Empresa from "./pages/configuracoes/Empresa";
 import GerenciarEmpresas from "./pages/configuracoes/GerenciarEmpresas";
 import Snapshots from "./pages/configuracoes/Snapshots";
+import ProcuracaoPage from "./pages/administrativo/ProcuracaoPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -94,6 +95,7 @@ const App = () => (
                               <Route path="/configuracoes/usuarios" element={<Usuarios />} />
                               <Route path="/configuracoes/empresas" element={<GerenciarEmpresas />} />
                               <Route path="/configuracoes/snapshots" element={<Snapshots />} />
+                              <Route path="/administrativo/procuracao" element={<ProcuracaoPage />} />
                               <Route path="*" element={<NotFound />} />
                             </Routes>
                           </main>
