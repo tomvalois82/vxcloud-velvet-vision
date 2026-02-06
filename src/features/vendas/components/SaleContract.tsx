@@ -128,7 +128,7 @@ export const SaleContract = forwardRef<HTMLDivElement, SaleContractProps>(
             <div className="col-span-2">
               <span className="font-semibold">Endereço:</span>{' '}
               {data.cliente?.logradouro
-                ? `${data.cliente.logradouro}, ${data.cliente.numero || 'S/N'} - ${data.cliente.bairro || ''}, ${data.cliente.municipio || ''}/${data.cliente.estado || ''}`
+                ? `${data.cliente.logradouro}, ${data.cliente.numero || 'S/N'} - ${data.cliente.bairro || ''}, ${data.cliente.municipio || ''}/${data.cliente.estado || ''} - CEP: ${data.cliente.cep || '-'}`
                 : '-'}
             </div>
             <div>
