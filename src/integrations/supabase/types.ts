@@ -1861,9 +1861,11 @@ export type Database = {
           complemento: string | null
           cpf_cnpj: string | null
           criado_em: string
+          data_nascimento: string | null
           descricao: string | null
           eh_cliente: boolean
           eh_colaborador: boolean
+          eh_despachante: boolean | null
           eh_fornecedor: boolean
           eh_investidor: boolean
           email: string | null
@@ -1876,6 +1878,7 @@ export type Database = {
           numero: string | null
           padrao: boolean
           ponto_referencia: string | null
+          rg: string | null
           telefone: string | null
           tipo_cadastro: string | null
         }
@@ -1886,9 +1889,11 @@ export type Database = {
           complemento?: string | null
           cpf_cnpj?: string | null
           criado_em?: string
+          data_nascimento?: string | null
           descricao?: string | null
           eh_cliente?: boolean
           eh_colaborador?: boolean
+          eh_despachante?: boolean | null
           eh_fornecedor?: boolean
           eh_investidor?: boolean
           email?: string | null
@@ -1901,6 +1906,7 @@ export type Database = {
           numero?: string | null
           padrao?: boolean
           ponto_referencia?: string | null
+          rg?: string | null
           telefone?: string | null
           tipo_cadastro?: string | null
         }
@@ -1911,9 +1917,11 @@ export type Database = {
           complemento?: string | null
           cpf_cnpj?: string | null
           criado_em?: string
+          data_nascimento?: string | null
           descricao?: string | null
           eh_cliente?: boolean
           eh_colaborador?: boolean
+          eh_despachante?: boolean | null
           eh_fornecedor?: boolean
           eh_investidor?: boolean
           email?: string | null
@@ -1926,6 +1934,7 @@ export type Database = {
           numero?: string | null
           padrao?: boolean
           ponto_referencia?: string | null
+          rg?: string | null
           telefone?: string | null
           tipo_cadastro?: string | null
         }

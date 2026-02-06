@@ -30,7 +30,7 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Loader2 } from "lucide-react";
-import { maskCPF, maskCNPJ, maskCEP, maskPhone, unmaskCPFCNPJ } from "../utils/masks";
+import { maskCPF, maskCNPJ, maskCEP, maskPhone, unmaskCPFCNPJ, maskRG, maskDate, unmaskDate, formatDateToBR } from "../utils/masks";
 import { validateCPF, validateCNPJ, validateCPFCNPJDuplicate } from "../utils/validations";
 
 const pessoaSchema = z.object({
@@ -48,10 +48,13 @@ const pessoaSchema = z.object({
   estado: z.string().optional(),
   ponto_referencia: z.string().optional(),
   descricao: z.string().optional(),
+  rg: z.string().optional(),
+  data_nascimento: z.string().optional(),
   eh_cliente: z.boolean(),
   eh_fornecedor: z.boolean(),
   eh_colaborador: z.boolean(),
   eh_investidor: z.boolean(),
+  eh_despachante: z.boolean(),
 });
 
 type PessoaFormData = z.infer<typeof pessoaSchema>;
@@ -93,10 +96,13 @@ export function PessoaDialog({ open, onOpenChange, pessoa, onSuccess }: PessoaDi
       estado: pessoa?.estado || "",
       ponto_referencia: pessoa?.ponto_referencia || "",
       descricao: pessoa?.descricao || "",
+      rg: pessoa?.rg || "",
+      data_nascimento: pessoa?.data_nascimento ? formatDateToBR(pessoa.data_nascimento) : "",
       eh_cliente: pessoa?.eh_cliente || false,
       eh_fornecedor: pessoa?.eh_fornecedor || false,
       eh_colaborador: pessoa?.eh_colaborador || false,
       eh_investidor: pessoa?.eh_investidor || false,
+      eh_despachante: pessoa?.eh_despachante || false,
     },
   });
 
@@ -123,10 +129,13 @@ export function PessoaDialog({ open, onOpenChange, pessoa, onSuccess }: PessoaDi
         estado: pessoa?.estado || "",
         ponto_referencia: pessoa?.ponto_referencia || "",
         descricao: pessoa?.descricao || "",
+        rg: pessoa?.rg || "",
+        data_nascimento: pessoa?.data_nascimento ? formatDateToBR(pessoa.data_nascimento) : "",
         eh_cliente: pessoa?.eh_cliente || false,
         eh_fornecedor: pessoa?.eh_fornecedor || false,
         eh_colaborador: pessoa?.eh_colaborador || false,
         eh_investidor: pessoa?.eh_investidor || false,
+        eh_despachante: pessoa?.eh_despachante || false,
       });
       
       // Resetar estados auxiliares
@@ -240,10 +249,14 @@ export function PessoaDialog({ open, onOpenChange, pessoa, onSuccess }: PessoaDi
       const telefoneDigits = data.telefone ? unmaskCPFCNPJ(data.telefone) : "";
       const cepDigits = data.cep ? unmaskCPFCNPJ(data.cep) : "";
 
+      const dataNascIso = data.data_nascimento ? unmaskDate(data.data_nascimento) : null;
+
       const pessoaData = {
         nome: data.nome,
         tipo_cadastro: data.tipo_cadastro,
         cpf_cnpj: cpfCnpjDigits || "",
+        rg: data.rg?.replace(/\D/g, '') || null,
+        data_nascimento: dataNascIso || null,
         telefone: telefoneDigits || null,
         email: data.email || null,
         cep: cepDigits || null,
@@ -259,6 +272,7 @@ export function PessoaDialog({ open, onOpenChange, pessoa, onSuccess }: PessoaDi
         eh_fornecedor: data.eh_fornecedor,
         eh_colaborador: data.eh_colaborador,
         eh_investidor: data.eh_investidor,
+        eh_despachante: data.eh_despachante,
         id_empresa: empresaId,
       };
 
@@ -345,40 +359,84 @@ export function PessoaDialog({ open, onOpenChange, pessoa, onSuccess }: PessoaDi
                   )}
                 />
 
-                <FormField
-                  control={form.control}
-                  name="cpf_cnpj"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>
-                        {tipoCadastro === "Pessoa Física" ? "CPF" : "CNPJ"}
-                      </FormLabel>
-                      <FormControl>
-                        <Input
-                          placeholder={
-                            tipoCadastro === "Pessoa Física"
-                              ? "000.000.000-00"
-                              : "00.000.000/0000-00"
-                          }
-                          value={field.value || ""}
-                          onChange={(e) => {
-                            const masked = tipoCadastro === "Pessoa Física"
-                              ? maskCPF(e.target.value)
-                              : maskCNPJ(e.target.value);
-                            field.onChange(masked);
-                            setCpfCnpjError("");
-                          }}
-                          onBlur={handleCpfCnpjBlur}
-                        />
-                      </FormControl>
-                      {cpfCnpjError && (
-                        <p className="text-sm text-destructive">{cpfCnpjError}</p>
-                      )}
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                {/* Linha: CPF + RG + Data Nascimento */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:col-span-2">
+                  <FormField
+                    control={form.control}
+                    name="cpf_cnpj"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>
+                          {tipoCadastro === "Pessoa Física" ? "CPF" : "CNPJ"}
+                        </FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder={
+                              tipoCadastro === "Pessoa Física"
+                                ? "000.000.000-00"
+                                : "00.000.000/0000-00"
+                            }
+                            value={field.value || ""}
+                            onChange={(e) => {
+                              const masked = tipoCadastro === "Pessoa Física"
+                                ? maskCPF(e.target.value)
+                                : maskCNPJ(e.target.value);
+                              field.onChange(masked);
+                              setCpfCnpjError("");
+                            }}
+                            onBlur={handleCpfCnpjBlur}
+                          />
+                        </FormControl>
+                        {cpfCnpjError && (
+                          <p className="text-sm text-destructive">{cpfCnpjError}</p>
+                        )}
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
 
+                  <FormField
+                    control={form.control}
+                    name="rg"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>RG</FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder="Somente números"
+                            value={field.value || ""}
+                            onChange={(e) => {
+                              field.onChange(maskRG(e.target.value));
+                            }}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="data_nascimento"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Data de Nascimento</FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder="DD/MM/AAAA"
+                            value={field.value || ""}
+                            onChange={(e) => {
+                              field.onChange(maskDate(e.target.value));
+                            }}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                {/* Linha: Telefone + Email */}
                 <FormField
                   control={form.control}
                   name="telefone"
@@ -404,7 +462,7 @@ export function PessoaDialog({ open, onOpenChange, pessoa, onSuccess }: PessoaDi
                   control={form.control}
                   name="email"
                   render={({ field }) => (
-                    <FormItem className="md:col-span-2">
+                    <FormItem>
                       <FormLabel>Email</FormLabel>
                       <FormControl>
                         <Input
@@ -489,6 +547,24 @@ export function PessoaDialog({ open, onOpenChange, pessoa, onSuccess }: PessoaDi
                         />
                       </FormControl>
                       <FormLabel className="!mt-0">Investidor</FormLabel>
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="eh_despachante"
+                  render={({ field }) => (
+                    <FormItem className="flex items-center gap-2">
+                      <FormControl>
+                        <input
+                          type="checkbox"
+                          checked={field.value}
+                          onChange={field.onChange}
+                          className="h-4 w-4"
+                        />
+                      </FormControl>
+                      <FormLabel className="!mt-0">Despachante</FormLabel>
                     </FormItem>
                   )}
                 />
