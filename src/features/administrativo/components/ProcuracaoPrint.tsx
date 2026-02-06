@@ -45,7 +45,7 @@ function formatEndereco(p: PessoaData): string {
 export const ProcuracaoPrint = forwardRef<HTMLDivElement, ProcuracaoPrintProps>(
   ({ outorgante, outorgado, veiculos, servico }, ref) => {
     return (
-      <div ref={ref} className="p-12 bg-white text-black" style={{ fontFamily: "Times New Roman, serif", fontSize: "12pt", lineHeight: "1.8", maxWidth: "210mm", margin: "0 auto" }}>
+      <div ref={ref} className="p-12 bg-white text-black" style={{ fontFamily: "Arial, Helvetica, sans-serif", fontSize: "12pt", lineHeight: "1.8", maxWidth: "210mm", margin: "0 auto" }}>
         {/* Título */}
         <h1 style={{ textAlign: "center", fontSize: "14pt", fontWeight: "bold", textDecoration: "underline", marginBottom: "40px" }}>
           PROCURAÇÃO PARTICULAR
