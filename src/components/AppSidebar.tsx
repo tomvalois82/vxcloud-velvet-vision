@@ -1,4 +1,4 @@
-import { LayoutDashboard, Car, Users, ShoppingCart, Wallet, Settings, Package, BarChart3, ArrowDownCircle, ArrowUpCircle, ArrowLeftRight, FolderTree, ChevronDown, LogOut, CreditCard, TrendingUp, FileText, Moon, Sun, Building2 } from "lucide-react";
+import { LayoutDashboard, Car, Users, ShoppingCart, Wallet, Settings, Package, BarChart3, ArrowDownCircle, ArrowUpCircle, ArrowLeftRight, FolderTree, ChevronDown, LogOut, CreditCard, TrendingUp, FileText, Moon, Sun, Building2, ClipboardList, Printer } from "lucide-react";
 import { useTheme } from "next-themes";
 import logo from "@/assets/logo-completa-transparente.png";
 import { NavLink } from "@/components/NavLink";
@@ -121,6 +121,18 @@ const menuItems: MenuItem[] = [{
       title: "Financeiro de Estoque",
       url: "/financeiro/relatorios",
       icon: Package
+    }]
+  }]
+}, {
+  title: "Administrativo",
+  icon: ClipboardList,
+  items: [{
+    title: "Impressos",
+    icon: Printer,
+    items: [{
+      title: "Procuração",
+      url: "/administrativo/procuracao",
+      icon: FileText
     }]
   }]
 }, {
