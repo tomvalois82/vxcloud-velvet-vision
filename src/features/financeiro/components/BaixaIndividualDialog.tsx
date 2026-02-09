@@ -43,6 +43,7 @@ interface Movimento {
   id: string;
   descricao: string;
   valor_bruto: number;
+  data_compra: string | null;
   data_vencimento: string;
   id_conta: string;
   id_forma_pagamento: string | null;
@@ -109,7 +110,7 @@ export function BaixaIndividualDialog({
 
   useEffect(() => {
     if (movimento && open) {
-      setDataPagamento(new Date());
+      setDataPagamento(new Date(movimento.data_vencimento + "T00:00:00"));
       setContaId(movimento.id_conta);
       setFormaPagamentoId(movimento.id_forma_pagamento || "");
       setDescontoDisplay("R$ 0,00");
@@ -207,6 +208,37 @@ export function BaixaIndividualDialog({
           {/* Data de Pagamento */}
           <div className="space-y-2">
             <Label className="text-foreground">Data de Pagamento *</Label>
+            <div className="flex gap-1 flex-wrap">
+              {movimento?.data_compra && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-6 text-[10px] px-2"
+                  onClick={() => setDataPagamento(new Date(movimento.data_compra! + "T00:00:00"))}
+                >
+                  Data de Compra
+                </Button>
+              )}
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="h-6 text-[10px] px-2"
+                onClick={() => setDataPagamento(new Date(movimento!.data_vencimento + "T00:00:00"))}
+              >
+                Data de Vencimento
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="h-6 text-[10px] px-2"
+                onClick={() => setDataPagamento(new Date())}
+              >
+                Hoje
+              </Button>
+            </div>
             <Popover>
               <PopoverTrigger asChild>
                 <Button
