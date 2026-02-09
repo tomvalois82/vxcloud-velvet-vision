@@ -18,25 +18,8 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 
-interface Conta {
-  id: string;
-  banco: string;
-  descricao: string | null;
-}
-
-interface FormaPagamento {
-  id: string;
-  descricao: string;
-}
 
 interface MovimentoSelecionado {
   id: string;
@@ -49,39 +32,27 @@ interface BaixaLoteDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   movimentosSelecionados: MovimentoSelecionado[];
-  contas: Conta[];
-  formasPagamento: FormaPagamento[];
-  onConfirm: (dataPagamento: string, contaId: string, formaPagamentoId: string | null) => Promise<void>;
+  onConfirm: (dataPagamento: string) => Promise<void>;
 }
 
 export function BaixaLoteDialog({
   open,
   onOpenChange,
   movimentosSelecionados,
-  contas,
-  formasPagamento,
   onConfirm,
 }: BaixaLoteDialogProps) {
   const [dataPagamento, setDataPagamento] = useState<Date | undefined>(new Date());
   const [usarDataVencimento, setUsarDataVencimento] = useState(false);
-  const [contaId, setContaId] = useState<string>("");
-  const [formaPagamentoId, setFormaPagamentoId] = useState<string>("");
   const [isLoading, setIsLoading] = useState(false);
 
-  const getContaDisplayName = (conta: Conta) => {
-    return conta.descricao ? `${conta.banco} - ${conta.descricao}` : conta.banco;
-  };
-
   const handleConfirm = async () => {
-    if (!contaId) return;
-
     setIsLoading(true);
     try {
       const dataFormatada = usarDataVencimento 
         ? "" // será tratado individualmente no handler
         : format(dataPagamento!, "yyyy-MM-dd");
       
-      await onConfirm(dataFormatada, contaId, formaPagamentoId || null);
+      await onConfirm(dataFormatada);
       onOpenChange(false);
       resetForm();
     } finally {
@@ -92,8 +63,6 @@ export function BaixaLoteDialog({
   const resetForm = () => {
     setDataPagamento(new Date());
     setUsarDataVencimento(false);
-    setContaId("");
-    setFormaPagamentoId("");
   };
 
   const handleOpenChange = (newOpen: boolean) => {
@@ -177,39 +146,9 @@ export function BaixaLoteDialog({
             )}
           </div>
 
-          {/* Conta */}
-          <div className="space-y-2">
-            <Label className="text-foreground">Conta para Baixa *</Label>
-            <Select value={contaId} onValueChange={setContaId}>
-              <SelectTrigger className="bg-background/50">
-                <SelectValue placeholder="Selecione a conta" />
-              </SelectTrigger>
-              <SelectContent>
-                {contas.map((conta) => (
-                  <SelectItem key={conta.id} value={conta.id}>
-                    {getContaDisplayName(conta)}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Forma de Pagamento */}
-          <div className="space-y-2">
-            <Label className="text-foreground">Forma de Pagamento</Label>
-            <Select value={formaPagamentoId} onValueChange={setFormaPagamentoId}>
-              <SelectTrigger className="bg-background/50">
-                <SelectValue placeholder="Selecione a forma de pagamento" />
-              </SelectTrigger>
-              <SelectContent>
-                {formasPagamento.map((fp) => (
-                  <SelectItem key={fp.id} value={fp.id}>
-                    {fp.descricao}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          <p className="text-xs text-muted-foreground italic">
+            A conta e forma de pagamento cadastradas em cada título serão utilizadas.
+          </p>
         </div>
 
         <DialogFooter className="gap-2 sm:gap-0">
@@ -222,7 +161,7 @@ export function BaixaLoteDialog({
           </Button>
           <Button
             onClick={handleConfirm}
-            disabled={isLoading || !contaId || (!usarDataVencimento && !dataPagamento)}
+            disabled={isLoading || (!usarDataVencimento && !dataPagamento)}
             className="bg-primary hover:bg-primary/90"
           >
             {isLoading ? (

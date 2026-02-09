@@ -548,7 +548,7 @@ const FinanceiroReceber = () => {
     }
   };
 
-  const handleBaixaLoteConfirm = async (dataPagamento: string, contaId: string, formaPagamentoId: string | null) => {
+  const handleBaixaLoteConfirm = async (dataPagamento: string) => {
     const selectedMovimentosLote = movimentos.filter(
       (mov) => selectedIds.has(mov.id) && mov.status !== "Pago"
     );
@@ -566,8 +566,6 @@ const FinanceiroReceber = () => {
           .update({
             status: "Pago",
             data_pagamento: dataFinal,
-            id_conta: contaId,
-            id_forma_pagamento: formaPagamentoId,
           })
           .eq("id", mov.id);
 
@@ -1120,8 +1118,6 @@ const FinanceiroReceber = () => {
           valor_bruto: mov.valor_bruto,
           data_vencimento: mov.data_vencimento,
         }))}
-        contas={contas}
-        formasPagamento={formasPagamento}
         onConfirm={handleBaixaLoteConfirm}
       />
 
