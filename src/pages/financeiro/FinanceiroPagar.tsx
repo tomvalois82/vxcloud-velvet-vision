@@ -491,7 +491,7 @@ const FinanceiroPagar = () => {
       throw error;
     }
   };
-  const handleBaixaLoteConfirm = async (dataPagamento: string, contaId: string, formaPagamentoId: string | null) => {
+  const handleBaixaLoteConfirm = async (dataPagamento: string) => {
     const selectedMovimentosLote = movimentos.filter(mov => selectedIds.has(mov.id) && mov.status !== "Pago");
     if (selectedMovimentosLote.length === 0) return;
     try {
@@ -503,8 +503,6 @@ const FinanceiroPagar = () => {
         } = await supabase.from("vx_fin_movimento").update({
           status: "Pago",
           data_pagamento: dataFinal,
-          id_conta: contaId,
-          id_forma_pagamento: formaPagamentoId
         }).eq("id", mov.id);
         if (error) throw error;
 
@@ -913,7 +911,7 @@ const FinanceiroPagar = () => {
       descricao: mov.descricao,
       valor_bruto: mov.valor_bruto,
       data_vencimento: mov.data_vencimento
-    }))} contas={contas} formasPagamento={formasPagamento} onConfirm={handleBaixaLoteConfirm} />
+    }))} onConfirm={handleBaixaLoteConfirm} />
 
       {/* Baixa Individual */}
       <BaixaIndividualDialog open={baixaIndividualDialogOpen} onOpenChange={setBaixaIndividualDialogOpen} movimento={movimentoBaixa} contas={contas} formasPagamento={formasPagamento} onConfirm={handleBaixaIndividualConfirm} />
