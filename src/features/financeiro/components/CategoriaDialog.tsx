@@ -35,6 +35,7 @@ const formSchema = z.object({
   operacao: z.string().min(1, "Tipo de operação é obrigatório"),
   id_categoria_pai: z.string().nullable(),
   classificacao: z.string().nullable(),
+  tipo_conta: z.string().min(1, "Tipo da conta é obrigatório"),
 });
 
 type FormData = z.infer<typeof formSchema>;
@@ -83,6 +84,7 @@ export function CategoriaDialog({
       operacao: "Pagar",
       id_categoria_pai: null,
       classificacao: null,
+      tipo_conta: "Analítica",
     },
   });
 
@@ -97,14 +99,16 @@ export function CategoriaDialog({
           operacao: categoria.operacao,
           id_categoria_pai: categoria.id_categoria_pai,
           classificacao: categoria.classificacao,
+          tipo_conta: (categoria as any).tipo_conta || "Analítica",
         });
       } else if (parentCategoria) {
         // Creating subcategory
         form.reset({
           categoria: "",
-          operacao: parentCategoria.operacao, // Inherit parent's operation type
+          operacao: parentCategoria.operacao,
           id_categoria_pai: parentCategoria.id,
           classificacao: null,
+          tipo_conta: "Analítica",
         });
       } else {
         // Creating new root category
@@ -113,6 +117,7 @@ export function CategoriaDialog({
           operacao: "Pagar",
           id_categoria_pai: null,
           classificacao: null,
+          tipo_conta: "Analítica",
         });
       }
     }
@@ -169,6 +174,7 @@ export function CategoriaDialog({
             operacao: data.operacao,
             id_categoria_pai: data.id_categoria_pai,
             classificacao: data.classificacao,
+            tipo_conta: data.tipo_conta,
           })
           .eq("id", categoria.id);
 
@@ -183,6 +189,7 @@ export function CategoriaDialog({
             operacao: data.operacao,
             id_categoria_pai: data.id_categoria_pai,
             classificacao: data.classificacao,
+            tipo_conta: data.tipo_conta,
             ativo: true,
           });
 
@@ -213,7 +220,8 @@ export function CategoriaDialog({
     return allCategorias.filter((c) => !excludeIds.has(c.id));
   };
 
-  const availableParents = getAvailableParents();
+  const operacaoAtual = form.watch("operacao");
+  const availableParents = getAvailableParents().filter(c => c.operacao === operacaoAtual);
 
   // Build path for display
   const getCategoriaPath = (cat: Categoria): string => {
@@ -303,6 +311,7 @@ export function CategoriaDialog({
                         placeholder="Selecione a categoria pai"
                         includeAllOption
                         allOptionLabel="Nenhuma (Categoria Raiz)"
+                        allowSelectAll
                       />
                     </FormControl>
                     <FormMessage />
@@ -310,6 +319,31 @@ export function CategoriaDialog({
                 )}
               />
             )}
+
+            <FormField
+              control={form.control}
+              name="tipo_conta"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Tipo da Categoria *</FormLabel>
+                  <Select
+                    onValueChange={field.onChange}
+                    value={field.value}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione o tipo" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="Analítica">Analítica</SelectItem>
+                      <SelectItem value="Sintética">Sintética</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
             <FormField
               control={form.control}

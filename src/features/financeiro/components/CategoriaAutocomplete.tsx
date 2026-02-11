@@ -26,6 +26,7 @@ interface CategoriaAutocompleteProps {
   className?: string;
   includeAllOption?: boolean;
   allOptionLabel?: string;
+  allowSelectAll?: boolean;
 }
 
 export function CategoriaAutocomplete({
@@ -37,6 +38,7 @@ export function CategoriaAutocomplete({
   className,
   includeAllOption = false,
   allOptionLabel = "Todas",
+  allowSelectAll = false,
 }: CategoriaAutocompleteProps) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
@@ -116,21 +118,23 @@ export function CategoriaAutocomplete({
               {filteredCategorias.map((cat) => {
                 const isAnalitica = cat.tipo_conta === "Analítica";
                 const isSintetica = !isAnalitica;
+                const isDisabled = allowSelectAll ? false : isSintetica;
                 
                 return (
                   <CommandItem
                     key={cat.id}
                     value={cat.id}
-                    disabled={isSintetica}
+                    disabled={isDisabled}
                     onSelect={() => {
-                      if (isSintetica) return;
+                      if (isDisabled) return;
                       onValueChange(cat.id);
                       setOpen(false);
                       setSearch("");
                     }}
                     className={cn(
-                      isSintetica && "opacity-50 bg-muted/50 cursor-not-allowed",
-                      isAnalitica && "font-medium text-foreground"
+                      !allowSelectAll && isSintetica && "opacity-50 bg-muted/50 cursor-not-allowed",
+                      !allowSelectAll && isAnalitica && "font-medium text-foreground",
+                      allowSelectAll && "font-medium text-foreground"
                     )}
                   >
                     <Check
