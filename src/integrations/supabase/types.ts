@@ -1417,28 +1417,34 @@ export type Database = {
           ativo: boolean
           categoria: string
           classificacao: string | null
+          codigo_estruturado: string | null
           dre: boolean
           id: string
           id_categoria_pai: string | null
           operacao: string
+          tipo_conta: string | null
         }
         Insert: {
           ativo?: boolean
           categoria: string
           classificacao?: string | null
+          codigo_estruturado?: string | null
           dre?: boolean
           id?: string
           id_categoria_pai?: string | null
           operacao: string
+          tipo_conta?: string | null
         }
         Update: {
           ativo?: boolean
           categoria?: string
           classificacao?: string | null
+          codigo_estruturado?: string | null
           dre?: boolean
           id?: string
           id_categoria_pai?: string | null
           operacao?: string
+          tipo_conta?: string | null
         }
         Relationships: [
           {
