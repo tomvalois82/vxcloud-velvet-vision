@@ -36,6 +36,7 @@ const formSchema = z.object({
   id_categoria_pai: z.string().nullable(),
   classificacao: z.string().nullable(),
   tipo_conta: z.string().min(1, "Tipo da conta é obrigatório"),
+  codigo_estruturado: z.string().nullable(),
 });
 
 type FormData = z.infer<typeof formSchema>;
@@ -57,6 +58,7 @@ interface Categoria {
   ativo: boolean;
   operacao: string;
   classificacao: string | null;
+  codigo_estruturado?: string | null;
 }
 
 interface CategoriaDialogProps {
@@ -85,43 +87,84 @@ export function CategoriaDialog({
       id_categoria_pai: null,
       classificacao: null,
       tipo_conta: "Analítica",
+      codigo_estruturado: null,
     },
   });
+
+  const calcularCodigoEstruturado = (parentId: string | null, cats: Categoria[]): string => {
+    if (parentId) {
+      const parent = cats.find(c => c.id === parentId);
+      const parentCodigo = parent?.codigo_estruturado || "";
+      const siblings = cats.filter(c => c.id_categoria_pai === parentId);
+      // Get max last segment among siblings
+      let maxNum = 0;
+      siblings.forEach(s => {
+        if (s.codigo_estruturado) {
+          const parts = s.codigo_estruturado.split(".");
+          const lastNum = parseInt(parts[parts.length - 1], 10);
+          if (!isNaN(lastNum) && lastNum > maxNum) maxNum = lastNum;
+        }
+      });
+      return `${parentCodigo}.${maxNum + 1}`;
+    } else {
+      // Root level
+      const roots = cats.filter(c => !c.id_categoria_pai);
+      let maxNum = 0;
+      roots.forEach(r => {
+        if (r.codigo_estruturado) {
+          const num = parseInt(r.codigo_estruturado, 10);
+          if (!isNaN(num) && num > maxNum) maxNum = num;
+        }
+      });
+      return String(maxNum + 1);
+    }
+  };
 
   useEffect(() => {
     if (open) {
       fetchAllCategorias();
       
       if (categoria) {
-        // Editing existing
         form.reset({
           categoria: categoria.categoria,
           operacao: categoria.operacao,
           id_categoria_pai: categoria.id_categoria_pai,
           classificacao: categoria.classificacao,
           tipo_conta: (categoria as any).tipo_conta || "Analítica",
+          codigo_estruturado: categoria.codigo_estruturado || null,
         });
       } else if (parentCategoria) {
-        // Creating subcategory
         form.reset({
           categoria: "",
           operacao: parentCategoria.operacao,
           id_categoria_pai: parentCategoria.id,
           classificacao: null,
           tipo_conta: "Analítica",
+          codigo_estruturado: null, // will be recalculated
         });
       } else {
-        // Creating new root category
         form.reset({
           categoria: "",
           operacao: "Pagar",
           id_categoria_pai: null,
           classificacao: null,
           tipo_conta: "Analítica",
+          codigo_estruturado: null, // will be recalculated
         });
       }
     }
   }, [open, categoria, parentCategoria, form]);
+
+  // Recalculate codigo_estruturado when parent changes (only for new categories)
+  const idCategoriaPai = form.watch("id_categoria_pai");
+  
+  useEffect(() => {
+    if (!open || !allCategorias.length) return;
+    if (categoria) return; // Don't recalculate for existing categories
+    
+    const codigo = calcularCodigoEstruturado(idCategoriaPai, allCategorias);
+    form.setValue("codigo_estruturado", codigo);
+  }, [idCategoriaPai, allCategorias, open, categoria]);
 
   const fetchAllCategorias = async () => {
     try {
@@ -175,6 +218,7 @@ export function CategoriaDialog({
             id_categoria_pai: data.id_categoria_pai,
             classificacao: data.classificacao,
             tipo_conta: data.tipo_conta,
+            codigo_estruturado: data.codigo_estruturado,
           })
           .eq("id", categoria.id);
 
@@ -190,6 +234,7 @@ export function CategoriaDialog({
             id_categoria_pai: data.id_categoria_pai,
             classificacao: data.classificacao,
             tipo_conta: data.tipo_conta,
+            codigo_estruturado: data.codigo_estruturado,
             ativo: true,
           });
 
@@ -221,6 +266,7 @@ export function CategoriaDialog({
   };
 
   const operacaoAtual = form.watch("operacao");
+  const codigoEstruturado = form.watch("codigo_estruturado");
   const availableParents = getAvailableParents().filter(c => c.operacao === operacaoAtual);
 
   // Build path for display
@@ -247,15 +293,31 @@ export function CategoriaDialog({
         <DialogHeader>
           <DialogTitle>
             {categoria
-              ? "Editar Categoria"
-              : parentCategoria
-              ? `Nova Subcategoria em "${parentCategoria.categoria}"`
-              : "Nova Categoria"}
+              ? `Editar Categoria - ${codigoEstruturado || ""}`
+              : `Nova Categoria${codigoEstruturado ? ` - ${codigoEstruturado}` : ""}`}
           </DialogTitle>
         </DialogHeader>
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <FormField
+              control={form.control}
+              name="codigo_estruturado"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Código Estruturado</FormLabel>
+                  <FormControl>
+                    <Input 
+                      {...field} 
+                      value={field.value || ""} 
+                      disabled 
+                      className="bg-muted"
+                    />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
+
             <FormField
               control={form.control}
               name="categoria"
