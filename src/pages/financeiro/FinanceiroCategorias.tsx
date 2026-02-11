@@ -4,7 +4,7 @@ import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Search, ChevronRight, ChevronDown, Pencil, Trash2, FolderPlus, Loader2, FileText, Printer } from "lucide-react";
+import { Plus, Search, ChevronRight, ChevronDown, Pencil, Trash2, FolderPlus, Loader2, FileText, Printer, ChevronsDownUp, ChevronsUpDown } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { EmptyState } from "@/components/EmptyState";
@@ -244,6 +244,77 @@ export default function FinanceiroCategorias() {
     setExpandedIds(newExpanded);
   };
 
+  const [expandingAll, setExpandingAll] = useState<string | null>(null);
+
+  const loadAllChildrenRecursive = async (cats: Categoria[]): Promise<Categoria[]> => {
+    return await Promise.all(
+      cats.map(async (cat) => {
+        if (!cat.hasChildren) return cat;
+        
+        if (!cat.children || cat.children.length === 0) {
+          const { data } = await supabase
+            .from("vx_fin_categoria")
+            .select("*")
+            .eq("id_categoria_pai", cat.id)
+            .order("categoria");
+
+          const children = await Promise.all(
+            (data || []).map(async (child) => {
+              const { count } = await supabase
+                .from("vx_fin_categoria")
+                .select("*", { count: "exact", head: true })
+                .eq("id_categoria_pai", child.id);
+              return { ...child, hasChildren: (count || 0) > 0, children: [] };
+            })
+          );
+
+          const loadedChildren = await loadAllChildrenRecursive(children);
+          return { ...cat, children: loadedChildren };
+        }
+
+        const loadedChildren = await loadAllChildrenRecursive(cat.children);
+        return { ...cat, children: loadedChildren };
+      })
+    );
+  };
+
+  const collectAllIds = (cats: Categoria[]): string[] => {
+    return cats.flatMap((cat) => [
+      cat.id,
+      ...(cat.children ? collectAllIds(cat.children) : []),
+    ]);
+  };
+
+  const handleToggleExpandAll = async (operacao: string, categories: Categoria[]) => {
+    const allIds = collectAllIds(categories);
+    const allExpanded = allIds.every((id) => expandedIds.has(id));
+
+    if (allExpanded) {
+      // Collapse all for this operacao
+      const newExpanded = new Set(expandedIds);
+      allIds.forEach((id) => newExpanded.delete(id));
+      setExpandedIds(newExpanded);
+    } else {
+      // Expand all
+      setExpandingAll(operacao);
+      try {
+        const fullyLoaded = await loadAllChildrenRecursive(categories);
+        setCategorias((prev) => {
+          const updated = prev.map((cat) => {
+            const loaded = fullyLoaded.find((c) => c.id === cat.id);
+            return loaded || cat;
+          });
+          return updated;
+        });
+        const newExpanded = new Set(expandedIds);
+        collectAllIds(fullyLoaded).forEach((id) => newExpanded.add(id));
+        setExpandedIds(newExpanded);
+      } finally {
+        setExpandingAll(null);
+      }
+    }
+  };
+
   const handleNew = () => {
     setCategoriaToEdit(null);
     setParentCategoria(null);
@@ -465,13 +536,39 @@ export default function FinanceiroCategorias() {
     title: string, 
     categories: Categoria[], 
     colorClass: string,
-    emptyMessage: string
-  ) => (
+    emptyMessage: string,
+    operacao: string
+  ) => {
+    const allIds = collectAllIds(categories);
+    const allExpanded = allIds.length > 0 && allIds.every((id) => expandedIds.has(id));
+    const isExpanding = expandingAll === operacao;
+
+    return (
     <div className="rounded-xl border border-border bg-card/50 backdrop-blur-sm overflow-hidden">
       {/* Panel Header */}
-      <div className={`px-4 py-3 border-b border-border ${colorClass}`}>
-        <h3 className="font-semibold text-foreground">{title}</h3>
-        <p className="text-xs text-muted-foreground mt-0.5">{categories.length} categorias</p>
+      <div className={`px-4 py-3 border-b border-border ${colorClass} flex items-center justify-between`}>
+        <div>
+          <h3 className="font-semibold text-foreground">{title}</h3>
+          <p className="text-xs text-muted-foreground mt-0.5">{categories.length} categorias</p>
+        </div>
+        {categories.length > 0 && (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="gap-1.5 text-xs text-muted-foreground hover:text-foreground"
+            onClick={() => handleToggleExpandAll(operacao, categories)}
+            disabled={isExpanding}
+          >
+            {isExpanding ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : allExpanded ? (
+              <ChevronsDownUp className="h-4 w-4" />
+            ) : (
+              <ChevronsUpDown className="h-4 w-4" />
+            )}
+            {allExpanded ? "Recolher" : "Expandir"}
+          </Button>
+        )}
       </div>
       
       {/* Panel Content */}
@@ -493,7 +590,8 @@ export default function FinanceiroCategorias() {
         )}
       </div>
     </div>
-  );
+    );
+  };
 
   return (
     <div className="space-y-6">
@@ -581,7 +679,8 @@ export default function FinanceiroCategorias() {
           "Receber (Receitas)", 
           categoriasReceber, 
           "bg-emerald-500/10",
-          "Crie categorias de receita"
+          "Crie categorias de receita",
+          "Receber"
         )}
         
         {/* Pagar (Right) */}
@@ -589,7 +688,8 @@ export default function FinanceiroCategorias() {
           "Pagar (Despesas)", 
           categoriasPagar, 
           "bg-red-500/10",
-          "Crie categorias de despesa"
+          "Crie categorias de despesa",
+          "Pagar"
         )}
       </div>
 
