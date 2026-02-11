@@ -3,6 +3,7 @@ import { useReactToPrint } from "react-to-print";
 import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, Search, ChevronRight, ChevronDown, Pencil, Trash2, FolderPlus, Loader2, FileText, Printer } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -37,6 +38,9 @@ export default function FinanceiroCategorias() {
   const [allCategoriasForPrint, setAllCategoriasForPrint] = useState<Categoria[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
+  const [filterAtivo, setFilterAtivo] = useState<string>("todos");
+  const [filterTipoConta, setFilterTipoConta] = useState<string>("todos");
+  const [filterClassificacao, setFilterClassificacao] = useState<string>("todos");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [categoriaToEdit, setCategoriaToEdit] = useState<Categoria | null>(null);
   const [parentCategoria, setParentCategoria] = useState<Categoria | null>(null);
@@ -326,12 +330,15 @@ export default function FinanceiroCategorias() {
   };
 
   const filterCategorias = (cats: Categoria[], term: string): Categoria[] => {
-    if (!term) return cats;
+    if (!term && filterAtivo === "todos" && filterTipoConta === "todos" && filterClassificacao === "todos") return cats;
     
     return cats.filter((cat) => {
-      const matchesSearch = cat.categoria.toLowerCase().includes(term.toLowerCase());
+      const matchesSearch = !term || cat.categoria.toLowerCase().includes(term.toLowerCase());
+      const matchesAtivo = filterAtivo === "todos" || (filterAtivo === "true" ? cat.ativo : !cat.ativo);
+      const matchesTipoConta = filterTipoConta === "todos" || (cat as any).tipo_conta === filterTipoConta;
+      const matchesClassificacao = filterClassificacao === "todos" || cat.classificacao === filterClassificacao;
       const hasMatchingChildren = cat.children && filterCategorias(cat.children, term).length > 0;
-      return matchesSearch || hasMatchingChildren;
+      return (matchesSearch && matchesAtivo && matchesTipoConta && matchesClassificacao) || hasMatchingChildren;
     });
   };
 
@@ -507,15 +514,55 @@ export default function FinanceiroCategorias() {
         }
       />
 
-      {/* Search */}
-      <div className="relative max-w-md">
-        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        <Input
-          placeholder="Buscar categorias..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="pl-10"
-        />
+      {/* Search & Filters */}
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="relative w-full max-w-xs">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Buscar categorias..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-10"
+          />
+        </div>
+
+        <Select value={filterAtivo} onValueChange={setFilterAtivo}>
+          <SelectTrigger className="w-[140px]">
+            <SelectValue placeholder="Status" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="todos">Todos</SelectItem>
+            <SelectItem value="true">Ativo</SelectItem>
+            <SelectItem value="false">Inativo</SelectItem>
+          </SelectContent>
+        </Select>
+
+        <Select value={filterTipoConta} onValueChange={setFilterTipoConta}>
+          <SelectTrigger className="w-[150px]">
+            <SelectValue placeholder="Tipo Conta" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="todos">Todos os Tipos</SelectItem>
+            <SelectItem value="Analítica">Analítica</SelectItem>
+            <SelectItem value="Sintética">Sintética</SelectItem>
+          </SelectContent>
+        </Select>
+
+        <Select value={filterClassificacao} onValueChange={setFilterClassificacao}>
+          <SelectTrigger className="w-[200px]">
+            <SelectValue placeholder="Classificação" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="todos">Todas Classificações</SelectItem>
+            <SelectItem value="RECEITA_VENDA">Receita de Venda</SelectItem>
+            <SelectItem value="CUSTO_VEICULO">Custo Veículo</SelectItem>
+            <SelectItem value="CUSTO_PREPARO">Custo Preparo</SelectItem>
+            <SelectItem value="CUSTO_VENDA">Custo Venda</SelectItem>
+            <SelectItem value="DESPESA_OPERACIONAL">Despesa Operacional</SelectItem>
+            <SelectItem value="RESULTADO_FINANCEIRO">Resultado Financeiro</SelectItem>
+            <SelectItem value="NAO_OPERACIONAL">Não Operacional</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
 
       {/* Hidden Print Component */}
