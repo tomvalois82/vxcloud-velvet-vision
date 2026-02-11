@@ -114,23 +114,23 @@ export function CategoriaAutocomplete({
                 </CommandItem>
               )}
               {filteredCategorias.map((cat) => {
-                const isSintetica = cat.tipo_conta === "Sintética";
-                const isAnalitica = !isSintetica;
+                const isAnalitica = cat.tipo_conta === "Analítica";
+                const isSintetica = !isAnalitica;
                 
                 return (
                   <CommandItem
                     key={cat.id}
                     value={cat.id}
-                    disabled={isAnalitica}
+                    disabled={isSintetica}
                     onSelect={() => {
-                      if (isAnalitica) return;
+                      if (isSintetica) return;
                       onValueChange(cat.id);
                       setOpen(false);
                       setSearch("");
                     }}
                     className={cn(
-                      isAnalitica && "opacity-50 bg-muted/50 cursor-not-allowed",
-                      isSintetica && "font-medium text-foreground"
+                      isSintetica && "opacity-50 bg-muted/50 cursor-not-allowed",
+                      isAnalitica && "font-medium text-foreground"
                     )}
                   >
                     <Check
