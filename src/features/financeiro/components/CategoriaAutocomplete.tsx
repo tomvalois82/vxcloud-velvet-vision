@@ -42,7 +42,8 @@ export function CategoriaAutocomplete({
   const [search, setSearch] = useState("");
 
   const categoriasHierarquicas = useMemo(() => {
-    return organizarCategoriasHierarquicamente(categorias);
+    const ativas = categorias.filter(cat => cat.ativo !== false);
+    return organizarCategoriasHierarquicamente(ativas);
   }, [categorias]);
 
   const filteredCategorias = useMemo(() => {
@@ -112,27 +113,38 @@ export function CategoriaAutocomplete({
                   {allOptionLabel}
                 </CommandItem>
               )}
-              {filteredCategorias.map((cat) => (
-                <CommandItem
-                  key={cat.id}
-                  value={cat.id}
-                  onSelect={() => {
-                    onValueChange(cat.id);
-                    setOpen(false);
-                    setSearch("");
-                  }}
-                >
-                  <Check
+              {filteredCategorias.map((cat) => {
+                const isSintetica = cat.tipo_conta === "Sintética";
+                const isAnalitica = !isSintetica;
+                
+                return (
+                  <CommandItem
+                    key={cat.id}
+                    value={cat.id}
+                    disabled={isAnalitica}
+                    onSelect={() => {
+                      if (isAnalitica) return;
+                      onValueChange(cat.id);
+                      setOpen(false);
+                      setSearch("");
+                    }}
                     className={cn(
-                      "mr-2 h-4 w-4",
-                      value === cat.id ? "opacity-100" : "opacity-0"
+                      isAnalitica && "opacity-50 bg-muted/50 cursor-not-allowed",
+                      isSintetica && "font-medium text-foreground"
                     )}
-                  />
-                  <span style={{ paddingLeft: `${cat.nivel * 16}px` }}>
-                    {cat.categoria}
-                  </span>
-                </CommandItem>
-              ))}
+                  >
+                    <Check
+                      className={cn(
+                        "mr-2 h-4 w-4",
+                        value === cat.id ? "opacity-100" : "opacity-0"
+                      )}
+                    />
+                    <span style={{ paddingLeft: `${cat.nivel * 16}px` }}>
+                      {cat.categoria}
+                    </span>
+                  </CommandItem>
+                );
+              })}
             </CommandGroup>
           </CommandList>
         </Command>

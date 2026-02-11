@@ -6,6 +6,7 @@ export interface CategoriaBase {
   operacao?: string;
   id_categoria_pai?: string | null;
   ativo?: boolean;
+  tipo_conta?: string | null;
 }
 
 export interface CategoriaComNivel extends CategoriaBase {
