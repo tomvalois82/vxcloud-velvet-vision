@@ -29,6 +29,7 @@ interface Categoria {
   operacao: string;
   dre: boolean;
   classificacao: string | null;
+  codigo_estruturado: string | null;
   children?: Categoria[];
   hasChildren?: boolean;
 }
