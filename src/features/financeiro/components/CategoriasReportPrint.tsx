@@ -1,5 +1,6 @@
 import { forwardRef } from "react";
 
+
 interface Categoria {
   id: string;
   categoria: string;
@@ -8,6 +9,7 @@ interface Categoria {
   operacao: string;
   dre: boolean;
   classificacao: string | null;
+  codigo_estruturado: string | null;
   children?: Categoria[];
 }
 
@@ -24,8 +26,10 @@ export const CategoriasReportPrint = forwardRef<HTMLDivElement, CategoriasReport
 
       rows.push(
         <tr key={categoria.id} style={{ backgroundColor: level === 0 ? "#f9fafb" : "white" }}>
-          <td style={{ padding: "8px 12px", paddingLeft: `${paddingLeft + 12}px`, borderBottom: "1px solid #e5e7eb" }}>
-            {level > 0 && <span style={{ color: "#9ca3af", marginRight: "8px" }}>└</span>}
+          <td style={{ padding: "8px 12px", paddingLeft: `${paddingLeft + 12}px`, borderBottom: "1px solid #e5e7eb", minWidth: "150px" }}>
+            <span style={{ fontWeight: level === 0 ? 600 : 400, marginRight: "12px", color: "#6b7280", fontFamily: "monospace" }}>
+              {categoria.codigo_estruturado}
+            </span>
             <span style={{ fontWeight: level === 0 ? 600 : 400 }}>{categoria.categoria}</span>
           </td>
           <td style={{ padding: "8px 12px", borderBottom: "1px solid #e5e7eb", textAlign: "center" }}>
