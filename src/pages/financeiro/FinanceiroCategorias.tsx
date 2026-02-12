@@ -99,7 +99,7 @@ export default function FinanceiroCategorias() {
       const { data, error } = await supabase
         .from("vx_fin_categoria")
         .select("*")
-        .order("categoria");
+        .order("codigo_estruturado", { ascending: true });
 
       if (error) throw error;
 
@@ -124,7 +124,21 @@ export default function FinanceiroCategorias() {
         }
       });
 
-      setAllCategoriasForPrint(rootCategories);
+      // Sort root categories and all children by codigo_estruturado
+      const sortByCodigoEstruturado = (cats: Categoria[]): Categoria[] => {
+        return cats
+          .sort((a, b) => {
+            const codeA = a.codigo_estruturado || "";
+            const codeB = b.codigo_estruturado || "";
+            return codeA.localeCompare(codeB, undefined, { numeric: true });
+          })
+          .map((cat) => ({
+            ...cat,
+            children: cat.children ? sortByCodigoEstruturado(cat.children) : [],
+          }));
+      };
+
+      setAllCategoriasForPrint(sortByCodigoEstruturado(rootCategories));
     } catch (error) {
       console.error("Erro ao buscar categorias para impressão:", error);
     }
