@@ -386,9 +386,29 @@ export default function FinanceiroCategorias() {
     }
   };
 
-  // Separate categories for print
-  const printCategoriasReceber = allCategoriasForPrint.filter((cat) => cat.operacao === "Receber");
-  const printCategoriasPagar = allCategoriasForPrint.filter((cat) => cat.operacao === "Pagar");
+  // Apply filters recursively for print
+  const filterCategoriasRecursive = (cats: Categoria[]): Categoria[] => {
+    if (filterAtivo === "todos" && filterTipoConta === "todos" && filterClassificacao === "todos" && !searchTerm) return cats;
+    
+    return cats.reduce<Categoria[]>((acc, cat) => {
+      const matchesSearch = !searchTerm || cat.categoria.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesAtivo = filterAtivo === "todos" || (filterAtivo === "true" ? cat.ativo : !cat.ativo);
+      const matchesTipoConta = filterTipoConta === "todos" || (cat as any).tipo_conta === filterTipoConta;
+      const matchesClassificacao = filterClassificacao === "todos" || cat.classificacao === filterClassificacao;
+      
+      const filteredChildren = cat.children ? filterCategoriasRecursive(cat.children) : [];
+      const selfMatches = matchesSearch && matchesAtivo && matchesTipoConta && matchesClassificacao;
+      
+      if (selfMatches || filteredChildren.length > 0) {
+        acc.push({ ...cat, children: selfMatches ? (cat.children ? filterCategoriasRecursive(cat.children) : []) : filteredChildren });
+      }
+      return acc;
+    }, []);
+  };
+
+  // Separate categories for print (filtered)
+  const printCategoriasReceber = filterCategoriasRecursive(allCategoriasForPrint.filter((cat) => cat.operacao === "Receber"));
+  const printCategoriasPagar = filterCategoriasRecursive(allCategoriasForPrint.filter((cat) => cat.operacao === "Pagar"));
 
   const handleDialogClose = (saved: boolean) => {
     setDialogOpen(false);
