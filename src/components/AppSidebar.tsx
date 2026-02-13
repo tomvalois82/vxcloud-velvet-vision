@@ -1,4 +1,4 @@
-import { LayoutDashboard, Car, Users, ShoppingCart, Wallet, Settings, Package, BarChart3, ArrowDownCircle, ArrowUpCircle, ArrowLeftRight, FolderTree, ChevronDown, LogOut, CreditCard, TrendingUp, FileText, Moon, Sun, Building2, ClipboardList, Printer } from "lucide-react";
+import { LayoutDashboard, Car, Users, ShoppingCart, Wallet, Settings, Package, BarChart3, ArrowDownCircle, ArrowUpCircle, ArrowLeftRight, FolderTree, ChevronDown, LogOut, CreditCard, TrendingUp, FileText, Moon, Sun, Building2, ClipboardList, Printer, BookOpen, List } from "lucide-react";
 import { useTheme } from "next-themes";
 import logo from "@/assets/logo-completa-transparente.png";
 import { NavLink } from "@/components/NavLink";
@@ -122,6 +122,14 @@ const menuItems: MenuItem[] = [{
       url: "/financeiro/relatorios",
       icon: Package
     }]
+  }]
+}, {
+  title: "Contabilidade",
+  icon: BookOpen,
+  items: [{
+    title: "Plano de Contas",
+    url: "/contabilidade/plano",
+    icon: List
   }]
 }, {
   title: "Administrativo",
