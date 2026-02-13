@@ -39,6 +39,7 @@ import Empresa from "./pages/configuracoes/Empresa";
 import GerenciarEmpresas from "./pages/configuracoes/GerenciarEmpresas";
 import Snapshots from "./pages/configuracoes/Snapshots";
 import ProcuracaoPage from "./pages/administrativo/ProcuracaoPage";
+import PlanoContasPage from "./pages/contabilidade/PlanoContasPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -96,6 +97,7 @@ const App = () => (
                               <Route path="/configuracoes/empresas" element={<GerenciarEmpresas />} />
                               <Route path="/configuracoes/snapshots" element={<Snapshots />} />
                               <Route path="/administrativo/procuracao" element={<ProcuracaoPage />} />
+                              <Route path="/contabilidade/plano" element={<PlanoContasPage />} />
                               <Route path="*" element={<NotFound />} />
                             </Routes>
                           </main>
