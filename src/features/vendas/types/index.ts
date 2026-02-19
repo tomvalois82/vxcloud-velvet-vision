@@ -119,6 +119,7 @@ export interface CategoriaFinanceira {
   operacao: string;
   ativo: boolean;
   id_categoria_pai: string | null;
+  tipo_conta?: string | null;
 }
 
 export const SALE_STEPS = [
