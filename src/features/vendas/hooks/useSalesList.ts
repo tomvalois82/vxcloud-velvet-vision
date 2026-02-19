@@ -278,144 +278,14 @@ export function useSalesList() {
         return;
       }
 
-      // 4. Buscar categorias financeiras
-      const { data: categoriasData } = await supabase
-        .from('vx_fin_categoria')
-        .select('id, categoria, operacao')
-        .eq('ativo', true);
-
-      const categoriaReceber = categoriasData?.find(c => 
-        c.operacao === 'Receber' && c.categoria.toUpperCase().includes('VENDAS')
-      ) || categoriasData?.find(c => 
-        c.operacao === 'Receber' && c.categoria.toUpperCase().includes('OUTRAS RECEITAS')
-      ) || categoriasData?.find(c => c.operacao === 'Receber');
-
-      const categoriaPagar = categoriasData?.find(c => 
-        c.operacao === 'Pagar' && c.categoria.toUpperCase().includes('OUTRAS DESPESAS')
-      ) || categoriasData?.find(c => c.operacao === 'Pagar');
-
-      if (!categoriaReceber || !categoriaPagar) {
-        throw new Error('Categorias financeiras não encontradas');
-      }
-
-      // 5. Criar lançamentos financeiros
-      const movimentosParaInserir: Array<{
-        tipo_movimento: string;
-        id_empresa: string;
-        status: string;
-        id_conta: string;
-        id_categoria: string;
-        descricao: string;
-        valor_bruto: number;
-        valor_liquido: number;
-        data_vencimento: string;
-        data_pagamento: string | null;
-        id_pessoa: string | null;
-        id_estoque: number | null;
-        observacoes: string | null;
-      }> = [];
-
-      // Carregar informações adicionais para descrições
-      const sale = sales.find(s => s.id === saleId);
-      const veiculoDesc = sale?.veiculo 
-        ? `${sale.veiculo.fabricante || ''} ${sale.veiculo.modelo || ''}`.trim() 
-        : 'Veículo';
-
-      // Lançamentos de pagamentos
-      if (pagamentosData && pagamentosData.length > 0) {
-        for (const pagamento of pagamentosData) {
-          const valorNum = Number(pagamento.valor);
-          const isRecebimento = valorNum > 0;
-          const valorAbsoluto = Math.abs(valorNum);
-          const status = pagamento.data_pagamento ? 'Pago' : 'Pendente';
-
-          // Buscar nome da forma de pagamento
-          const { data: formaData } = await supabase
-            .from('vx_forma_pagamento')
-            .select('descricao')
-            .eq('id', pagamento.id_forma_pagamento)
-            .single();
-
-          movimentosParaInserir.push({
-            tipo_movimento: isRecebimento ? 'Receber' : 'Pagar',
-            id_empresa: veiculoData.id_empresa,
-            status,
-            id_conta: pagamento.id_conta,
-            id_categoria: isRecebimento ? categoriaReceber.id : categoriaPagar.id,
-            descricao: `Venda ${veiculoDesc} - ${formaData?.descricao || 'Pagamento'} ${pagamento.numero}`,
-            valor_bruto: valorAbsoluto,
-            valor_liquido: valorAbsoluto,
-            data_vencimento: pagamento.data_lancamento,
-            data_pagamento: pagamento.data_pagamento,
-            id_pessoa: vendaData.id_cliente,
-            id_estoque: vehicleId,
-            observacoes: pagamento.observacao,
-          });
-        }
-      }
-
-      // Lançamento de financiamento
-      if (financiamentoData && financiamentoData.valor > 0) {
-        const { data: financeiraData } = await supabase
-          .from('vx_financeiras')
-          .select('nome')
-          .eq('id', financiamentoData.id_financeira || '')
-          .maybeSingle();
-
-        movimentosParaInserir.push({
-          tipo_movimento: 'Receber',
-          id_empresa: veiculoData.id_empresa,
-          status: 'Pendente',
-          id_conta: financiamentoData.id_conta_destino,
-          id_categoria: categoriaReceber.id,
-          descricao: `Venda ${veiculoDesc} - Financiamento ${financeiraData?.nome || ''}`,
-          valor_bruto: Number(financiamentoData.valor),
-          valor_liquido: Number(financiamentoData.valor),
-          data_vencimento: financiamentoData.data_vencimento_inicial || vendaData.data_venda.split('T')[0],
-          data_pagamento: null,
-          id_pessoa: vendaData.id_cliente,
-          id_estoque: vehicleId,
-          observacoes: financiamentoData.numero_contrato 
-            ? `Contrato: ${financiamentoData.numero_contrato}` 
-            : null,
-        });
-      }
-
-      // 6. Inserir lançamentos financeiros
-      if (movimentosParaInserir.length > 0) {
-        const { error: movimentoError } = await supabase
-          .from('vx_fin_movimento')
-          .insert(movimentosParaInserir);
-
-        if (movimentoError) {
-          console.error('Erro ao criar lançamentos financeiros:', movimentoError);
-          toast({
-            title: 'Erro',
-            description: 'Erro ao fechar a venda. Nenhum lançamento financeiro foi registrado.',
-            variant: 'destructive',
-          });
-          setActionLoading(null);
-          return;
-        }
-      }
-
-      // 7. Update sale status
+      // 4. Fechar a venda - a trigger fn_gerar_financeiro_venda no banco
+      // cria os lançamentos financeiros automaticamente
       const { error: saleError } = await supabase
         .from('vx_vendas')
         .update({ fechada: true })
         .eq('id', saleId);
 
       if (saleError) throw saleError;
-
-      // 8. Update vehicle status
-      const { error: vehicleError } = await supabase
-        .from('estoque')
-        .update({ status: 'Vendido' })
-        .eq('id', vehicleId);
-
-      if (vehicleError) {
-        console.error('Erro ao atualizar status do veículo:', vehicleError);
-      }
 
       toast({
         title: 'Sucesso',
