@@ -281,7 +281,7 @@ export function useEditSaleData(saleId: string | null) {
         // Load categorias (para produtos/serviços)
         const { data: categoriasData } = await supabase
           .from('vx_fin_categoria')
-          .select('id, categoria, operacao, ativo, id_categoria_pai')
+          .select('id, categoria, operacao, ativo, id_categoria_pai, tipo_conta')
           .eq('ativo', true)
           .eq('operacao', 'Receber')
           .order('categoria');

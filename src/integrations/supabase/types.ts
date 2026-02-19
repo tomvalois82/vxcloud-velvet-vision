@@ -135,6 +135,30 @@ export type Database = {
         }
         Relationships: []
       }
+      canva_moldura: {
+        Row: {
+          created_at: string
+          id: number
+          medida: string | null
+          titulo: string | null
+          url_moldura: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: number
+          medida?: string | null
+          titulo?: string | null
+          url_moldura?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: number
+          medida?: string | null
+          titulo?: string | null
+          url_moldura?: string | null
+        }
+        Relationships: []
+      }
       config: {
         Row: {
           access_token_olx: string | null
