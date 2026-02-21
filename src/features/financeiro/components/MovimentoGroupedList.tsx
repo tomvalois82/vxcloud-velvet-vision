@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { format, isPast, isToday } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
@@ -7,7 +7,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Pencil, Trash2, CheckCircle2, RotateCcw, Repeat, ChevronDown, ChevronRight, CheckCheck, CreditCard, Paperclip } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Pencil, Trash2, CheckCircle2, RotateCcw, Repeat, ChevronDown, ChevronRight, CheckCheck, CreditCard, Paperclip, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { maskCurrency } from "@/features/estoque/utils/masks";
 
@@ -40,6 +41,51 @@ const isImageFile = (tipoMime: string | null): boolean => {
   return tipoMime.startsWith('image/');
 };
 type GroupByOption = "data_compra" | "data_vencimento" | "data_pagamento";
+type SortField = "descricao" | "valor" | "vencimento" | "pagamento" | "compra" | "conta";
+type SortDirection = "asc" | "desc";
+interface GroupSort {
+  field: SortField;
+  direction: SortDirection;
+}
+
+const SORT_LABELS: Record<SortField, string> = {
+  descricao: "Descrição",
+  valor: "Valor",
+  vencimento: "Vencimento",
+  pagamento: "Pagamento",
+  compra: "Compra",
+  conta: "Conta",
+};
+
+const sortMovimentos = (movs: Movimento[], sort: GroupSort): Movimento[] => {
+  return [...movs].sort((a, b) => {
+    let cmp = 0;
+    switch (sort.field) {
+      case "descricao":
+        cmp = (a.descricao || "").localeCompare(b.descricao || "");
+        break;
+      case "valor":
+        cmp = a.valor_bruto - b.valor_bruto;
+        break;
+      case "vencimento":
+        cmp = a.data_vencimento.localeCompare(b.data_vencimento);
+        break;
+      case "pagamento":
+        cmp = (a.data_pagamento || "").localeCompare(b.data_pagamento || "");
+        break;
+      case "compra":
+        cmp = (a.data_compra || "").localeCompare(b.data_compra || "");
+        break;
+      case "conta": {
+        const contaA = a.vx_fin_conta ? `${a.vx_fin_conta.banco} ${a.vx_fin_conta.descricao || ""}` : "";
+        const contaB = b.vx_fin_conta ? `${b.vx_fin_conta.banco} ${b.vx_fin_conta.descricao || ""}` : "";
+        cmp = contaA.localeCompare(contaB);
+        break;
+      }
+    }
+    return sort.direction === "asc" ? cmp : -cmp;
+  });
+};
 interface Movimento {
   id: string;
   tipo_movimento: string;
@@ -113,6 +159,7 @@ export const MovimentoGroupedList = ({
   anexosMap = {}
 }: MovimentoGroupedListProps) => {
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
+  const [groupSorts, setGroupSorts] = useState<Record<string, GroupSort>>({});
   const [previewAnexo, setPreviewAnexo] = useState<AnexoData | null>(null);
   const [previewDialogOpen, setPreviewDialogOpen] = useState(false);
 
@@ -178,6 +225,20 @@ export const MovimentoGroupedList = ({
     }
     setCollapsedGroups(newCollapsed);
   };
+  const toggleGroupSort = useCallback((dateKey: string, field: SortField) => {
+    setGroupSorts(prev => {
+      const current = prev[dateKey];
+      if (current?.field === field) {
+        if (current.direction === "asc") {
+          return { ...prev, [dateKey]: { field, direction: "desc" } };
+        }
+        // Remove sort on third click
+        const { [dateKey]: _, ...rest } = prev;
+        return rest;
+      }
+      return { ...prev, [dateKey]: { field, direction: "asc" } };
+    });
+  }, []);
   const isRowVencido = (status: string, dataVencimento: string) => {
     const vencimentoDate = new Date(dataVencimento + "T00:00:00");
     return isPast(vencimentoDate) && !isToday(vencimentoDate) && status === "Pendente";
@@ -220,6 +281,8 @@ export const MovimentoGroupedList = ({
 
       {groupedMovimentos.map(group => {
       const isCollapsed = collapsedGroups.has(group.dateKey);
+      const currentSort = groupSorts[group.dateKey];
+      const sortedMovimentos = currentSort ? sortMovimentos(group.movimentos, currentSort) : group.movimentos;
       const day = format(group.displayDate, "d", {
         locale: ptBR
       });
@@ -231,9 +294,9 @@ export const MovimentoGroupedList = ({
       });
       return <Collapsible key={group.dateKey} open={!isCollapsed} onOpenChange={() => toggleGroup(group.dateKey)}>
             {/* Group Header */}
-            <CollapsibleTrigger asChild>
-              <div className="flex items-center justify-between bg-muted/30 hover:bg-muted/50 px-4 py-3 rounded-lg cursor-pointer transition-colors border border-border/30">
-                <div className="flex items-center gap-4">
+            <div className="flex items-center justify-between bg-muted/30 hover:bg-muted/50 px-4 py-3 rounded-lg transition-colors border border-border/30">
+              <CollapsibleTrigger asChild>
+                <div className="flex items-center gap-4 cursor-pointer flex-1">
                   <div className="flex flex-col items-center min-w-[40px]">
                     <span className="text-2xl font-bold text-foreground">{day}</span>
                     <span className="text-xs text-muted-foreground uppercase">{month}</span>
@@ -243,14 +306,41 @@ export const MovimentoGroupedList = ({
                     <span className="text-sm text-foreground capitalize">{weekday}</span>
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-sm text-muted-foreground">Total</span>
-                  <span className="text-sm font-semibold text-secondary">
-                    {maskCurrency(group.total)}
-                  </span>
-                </div>
+              </CollapsibleTrigger>
+              <div className="flex items-center gap-3">
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="sm" className="h-7 px-2 text-xs gap-1 text-muted-foreground hover:text-foreground" onClick={e => e.stopPropagation()}>
+                      {currentSort ? (
+                        <>
+                          {currentSort.direction === "asc" ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />}
+                          {SORT_LABELS[currentSort.field]}
+                        </>
+                      ) : (
+                        <>
+                          <ArrowUpDown className="h-3 w-3" />
+                          Ordenar
+                        </>
+                      )}
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" onClick={e => e.stopPropagation()}>
+                    {(Object.keys(SORT_LABELS) as SortField[]).map(field => (
+                      <DropdownMenuItem key={field} onClick={() => toggleGroupSort(group.dateKey, field)} className="flex items-center justify-between gap-4">
+                        <span>{SORT_LABELS[field]}</span>
+                        {currentSort?.field === field && (
+                          currentSort.direction === "asc" ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
+                        )}
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+                <span className="text-sm text-muted-foreground">Total</span>
+                <span className="text-sm font-semibold text-secondary">
+                  {maskCurrency(group.total)}
+                </span>
               </div>
-            </CollapsibleTrigger>
+            </div>
 
             {/* Group Content */}
             <CollapsibleContent>
@@ -270,7 +360,7 @@ export const MovimentoGroupedList = ({
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {group.movimentos.map(mov => {
+                    {sortedMovimentos.map(mov => {
                   const isPago = mov.status === "Pago";
                   return <TableRow key={mov.id} className={cn("border-border/30", isRowVencido(mov.status, mov.data_vencimento) && "bg-destructive/10", isPago && "opacity-60 bg-green-500/5")}>
                           <TableCell>
