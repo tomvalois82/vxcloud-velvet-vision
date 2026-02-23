@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { format, isPast, isToday, startOfMonth, endOfMonth } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { PageHeader } from "@/components/PageHeader";
@@ -21,8 +21,10 @@ import { BaixaLoteDialog } from "@/features/financeiro/components/BaixaLoteDialo
 import { BaixaIndividualDialog } from "@/features/financeiro/components/BaixaIndividualDialog";
 import { MovimentoGroupedList, type AnexoData } from "@/features/financeiro/components/MovimentoGroupedList";
 import { GerarFaturaDialog } from "@/features/financeiro/components/GerarFaturaDialog";
+import { MultiSelectFilter, type MultiSelectOption } from "@/components/ui/multi-select-filter";
 
 import { deleteAnexosDoMovimento, deleteAnexosDeMovimentos } from "@/features/financeiro/utils/anexosUtils";
+
 interface Movimento {
   id: string;
   tipo_movimento: string;
@@ -79,10 +81,21 @@ interface Cartao {
 }
 
 const PAGE_SIZE_OPTIONS = [25, 50, 100, 200];
+
+// Helper to load array from localStorage
+function loadArrayFilter(key: string): string[] {
+  try {
+    const saved = localStorage.getItem(key);
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      if (Array.isArray(parsed)) return parsed;
+    }
+  } catch {}
+  return [];
+}
+
 const FinanceiroPagar = () => {
-  const {
-    toast
-  } = useToast();
+  const { toast } = useToast();
   const navigate = useNavigate();
   const [movimentos, setMovimentos] = useState<Movimento[]>([]);
   const [totalCount, setTotalCount] = useState(0);
@@ -92,15 +105,30 @@ const FinanceiroPagar = () => {
   const [loading, setLoading] = useState(true);
   const [searchInput, setSearchInput] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState<string>("todos");
+
+  // Multi-select filters with localStorage persistence
+  const [statusFilter, setStatusFilterRaw] = useState<string[]>(() => loadArrayFilter("fin-pagar-status"));
   const [conciliacaoFilter, setConciliacaoFilter] = useState<string>("todos");
-  const [contaFilter, setContaFilter] = useState<string>("todos");
-  const [formaPagamentoFilter, setFormaPagamentoFilter] = useState<string>("todos");
+  const [contaFilter, setContaFilterRaw] = useState<string[]>(() => loadArrayFilter("fin-pagar-contas"));
+  const [formaPagamentoFilter, setFormaPagamentoFilterRaw] = useState<string[]>(() => loadArrayFilter("fin-pagar-formas"));
   const [cartaoFilter, setCartaoFilter] = useState<string>("todos");
   const [dateFilterStart, setDateFilterStart] = useState<Date | undefined>(startOfMonth(new Date()));
   const [dateFilterEnd, setDateFilterEnd] = useState<Date | undefined>(endOfMonth(new Date()));
 
-  // Group by / Filter date field - controls both grouping and date filter field
+  const setStatusFilter = useCallback((v: string[]) => {
+    setStatusFilterRaw(v);
+    localStorage.setItem("fin-pagar-status", JSON.stringify(v));
+  }, []);
+  const setContaFilter = useCallback((v: string[]) => {
+    setContaFilterRaw(v);
+    localStorage.setItem("fin-pagar-contas", JSON.stringify(v));
+  }, []);
+  const setFormaPagamentoFilter = useCallback((v: string[]) => {
+    setFormaPagamentoFilterRaw(v);
+    localStorage.setItem("fin-pagar-formas", JSON.stringify(v));
+  }, []);
+
+  // Group by / Filter date field
   const storageKey = "financeiro-groupBy-Pagar";
   const [groupByField, setGroupByField] = useState<"data_compra" | "data_vencimento" | "data_pagamento">(() => {
     const saved = localStorage.getItem(storageKey);
@@ -110,6 +138,7 @@ const FinanceiroPagar = () => {
     setGroupByField(value);
     localStorage.setItem(storageKey, value);
   };
+
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedMovimento, setSelectedMovimento] = useState<Movimento | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -143,7 +172,7 @@ const FinanceiroPagar = () => {
   // Gerar fatura dialog state
   const [faturaDialogOpen, setFaturaDialogOpen] = useState(false);
 
-  // Anexos state - mapa de id_movimento -> primeiro anexo
+  // Anexos state
   const [anexosMap, setAnexosMap] = useState<Record<string, AnexoData>>({});
 
   const fetchAnexos = async (movimentoIds: string[]) => {
@@ -156,14 +185,10 @@ const FinanceiroPagar = () => {
         .from("vx_fin_anexo")
         .select("id, id_movimento, nome_arquivo, tipo_mime, base64, url_arquivo")
         .in("id_movimento", movimentoIds);
-      
       if (error) throw error;
-      
-      // Create map with first attachment for each movement
       const map: Record<string, AnexoData> = {};
       if (data) {
         data.forEach((anexo) => {
-          // Only keep the first attachment per movement
           if (!map[anexo.id_movimento]) {
             map[anexo.id_movimento] = {
               id: anexo.id,
@@ -189,116 +214,109 @@ const FinanceiroPagar = () => {
           vx_fin_conta!id_conta (banco, descricao),
           vx_fin_categoria (categoria),
           vx_fin_cartao (descricao, final, bandeira)
-        `, {
-        count: 'exact'
-      }).eq("tipo_movimento", "Pagar");
+        `, { count: 'exact' }).eq("tipo_movimento", "Pagar");
 
-      // Apply filters at database level
+      // Date filters
       if (dateFilterStart && dateFilterEnd) {
         const startStr = format(dateFilterStart, "yyyy-MM-dd");
         const endStr = format(dateFilterEnd, "yyyy-MM-dd");
         query = query.gte(groupByField, startStr).lte(groupByField, endStr);
       }
-      if (contaFilter && contaFilter !== "todos") {
-        query = query.eq("id_conta", contaFilter);
+
+      // Multi-select conta filter
+      if (contaFilter.length > 0) {
+        query = query.in("id_conta", contaFilter);
       }
-      if (formaPagamentoFilter && formaPagamentoFilter !== "todos") {
-        query = query.eq("id_forma_pagamento", formaPagamentoFilter);
+
+      // Multi-select forma pagamento filter
+      if (formaPagamentoFilter.length > 0) {
+        query = query.in("id_forma_pagamento", formaPagamentoFilter);
       }
+
       if (cartaoFilter && cartaoFilter !== "todos") {
         query = query.eq("id_cartao", cartaoFilter);
       }
-      if (statusFilter === "pago") {
-        query = query.eq("status", "Pago");
-      } else if (statusFilter === "pendente") {
-        query = query.eq("status", "Pendente");
-      } else if (statusFilter === "vencido") {
+
+      // Multi-select status filter
+      if (statusFilter.length > 0) {
         const today = format(new Date(), "yyyy-MM-dd");
-        query = query.eq("status", "Pendente").lt("data_vencimento", today);
+        const orParts: string[] = [];
+        if (statusFilter.includes("pago")) {
+          orParts.push("status.eq.Pago");
+        }
+        if (statusFilter.includes("pendente") && statusFilter.includes("vencido")) {
+          // Both pendente and vencido = all Pendente
+          orParts.push("status.eq.Pendente");
+        } else if (statusFilter.includes("pendente")) {
+          orParts.push(`and(status.eq.Pendente,data_vencimento.gte.${today})`);
+        } else if (statusFilter.includes("vencido")) {
+          orParts.push(`and(status.eq.Pendente,data_vencimento.lt.${today})`);
+        }
+        if (orParts.length > 0) {
+          query = query.or(orParts.join(","));
+        }
       }
+
       if (conciliacaoFilter === "conciliado") {
         query = query.eq("conciliado", true);
       } else if (conciliacaoFilter === "a_conciliar") {
         query = query.eq("conciliado", false);
       }
+
       if (searchTerm) {
         const rawSearch = searchTerm.trim();
-        // Convert Brazilian format (1.234,56) to standard format (1234.56)
-        const cleanedValue = rawSearch.replace(/[^\d.,]/g, '') // Keep only digits, dots and commas
-        .replace(/\./g, '') // Remove thousands separator (.)
-        .replace(',', '.'); // Replace decimal separator (,) with (.)
+        const cleanedValue = rawSearch.replace(/[^\d.,]/g, '').replace(/\./g, '').replace(',', '.');
         const numericValue = cleanedValue ? parseFloat(cleanedValue) : NaN;
         if (!isNaN(numericValue)) {
-          // Numeric search: only filter by valor_bruto to avoid commas breaking OR logic
           query = query.eq("valor_bruto", numericValue);
         } else {
-          // Text search: filter by descricao only
           query = query.ilike("descricao", `%${rawSearch}%`);
         }
       }
 
-      // Order by data_vencimento DESC
-      query = query.order("data_vencimento", {
-        ascending: false
-      });
+      query = query.order("data_vencimento", { ascending: false });
 
-      // Apply pagination
       const from = (currentPage - 1) * pageSize;
       const to = from + pageSize - 1;
       query = query.range(from, to);
-      const {
-        data,
-        error,
-        count
-      } = await query;
+
+      const { data, error, count } = await query;
       if (error) throw error;
       const movimentosData = data as unknown as Movimento[] || [];
       setMovimentos(movimentosData);
       setTotalCount(count || 0);
-      
-      // Fetch attachments for the loaded movements
       const movimentoIds = movimentosData.map(m => m.id);
       await fetchAnexos(movimentoIds);
     } catch (error: any) {
-      toast({
-        title: "Erro ao carregar lançamentos",
-        description: error.message,
-        variant: "destructive"
-      });
+      toast({ title: "Erro ao carregar lançamentos", description: error.message, variant: "destructive" });
     } finally {
       setLoading(false);
     }
   };
+
   const fetchContas = async () => {
     try {
-      const {
-        data,
-        error
-      } = await supabase.from("vx_fin_conta").select("id, banco, descricao").order("banco");
+      const { data, error } = await supabase.from("vx_fin_conta").select("id, banco, descricao").order("banco");
       if (error) throw error;
       setContas(data || []);
     } catch (error) {
       console.error("Erro ao carregar contas:", error);
     }
   };
+
   const fetchFormasPagamento = async () => {
     try {
-      const {
-        data,
-        error
-      } = await supabase.from("vx_forma_pagamento").select("id, descricao").eq("ativa", true).order("descricao");
+      const { data, error } = await supabase.from("vx_forma_pagamento").select("id, descricao").eq("ativa", true).order("descricao");
       if (error) throw error;
       setFormasPagamento(data || []);
     } catch (error) {
       console.error("Erro ao carregar formas de pagamento:", error);
     }
   };
+
   const fetchCartoes = async () => {
     try {
-      const {
-        data,
-        error
-      } = await supabase.from("vx_fin_cartao").select("id, descricao, final, id_forma_pagamento").eq("ativo", true).order("descricao");
+      const { data, error } = await supabase.from("vx_fin_cartao").select("id, descricao, final, id_forma_pagamento").eq("ativo", true).order("descricao");
       if (error) throw error;
       setCartoes(data || []);
     } catch (error) {
@@ -307,31 +325,34 @@ const FinanceiroPagar = () => {
   };
 
   // Cartões filtrados pela forma de pagamento selecionada
-  const cartoesFiltrados = formaPagamentoFilter !== "todos" ? cartoes.filter(c => c.id_forma_pagamento === formaPagamentoFilter) : [];
+  const cartoesFiltrados = formaPagamentoFilter.length === 1
+    ? cartoes.filter(c => c.id_forma_pagamento === formaPagamentoFilter[0])
+    : [];
 
   // Reset cartaoFilter when formaPagamentoFilter changes
   useEffect(() => {
     setCartaoFilter("todos");
   }, [formaPagamentoFilter]);
+
   useEffect(() => {
     fetchContas();
     fetchFormasPagamento();
     fetchCartoes();
   }, []);
 
-  // Fetch movimentos when filters or pagination changes
   useEffect(() => {
     fetchMovimentos();
     setSelectedIds(new Set());
   }, [searchTerm, statusFilter, conciliacaoFilter, contaFilter, formaPagamentoFilter, cartaoFilter, dateFilterStart, dateFilterEnd, groupByField, currentPage, pageSize]);
 
-  // Reset to page 1 when filters change
   useEffect(() => {
     setCurrentPage(1);
   }, [searchTerm, statusFilter, conciliacaoFilter, contaFilter, formaPagamentoFilter, cartaoFilter, dateFilterStart, dateFilterEnd, pageSize]);
+
   const getContaDisplayName = (conta: Conta) => {
     return conta.descricao ? `${conta.banco} - ${conta.descricao}` : conta.banco;
   };
+
   const handleEdit = (movimento: Movimento) => {
     if (movimento.status === "Pago") return;
     if (movimento.recorrencia_id) {
@@ -343,6 +364,7 @@ const FinanceiroPagar = () => {
       setDialogOpen(true);
     }
   };
+
   const handleRecorrenciaEditConfirm = (scope: "single" | "future") => {
     setRecorrenciaEditDialogOpen(false);
     if (pendingEditMovimento) {
@@ -352,10 +374,12 @@ const FinanceiroPagar = () => {
       setPendingEditMovimento(null);
     }
   };
+
   const handleNew = () => {
     setSelectedMovimento(null);
     setDialogOpen(true);
   };
+
   const handleDeleteClick = (movimento: Movimento) => {
     if (movimento.status === "Pago") return;
     setMovimentoToDelete(movimento);
@@ -365,76 +389,46 @@ const FinanceiroPagar = () => {
       setDeleteDialogOpen(true);
     }
   };
+
   const handleDeleteConfirm = async () => {
     if (!movimentoToDelete) return;
     setDeleting(true);
     try {
-      // Delete attachments first
       await deleteAnexosDoMovimento(movimentoToDelete.id);
-      const {
-        error
-      } = await supabase.from("vx_fin_movimento").delete().eq("id", movimentoToDelete.id);
+      const { error } = await supabase.from("vx_fin_movimento").delete().eq("id", movimentoToDelete.id);
       if (error) throw error;
-      toast({
-        title: "Lançamento excluído",
-        description: "O lançamento foi excluído com sucesso."
-      });
+      toast({ title: "Lançamento excluído", description: "O lançamento foi excluído com sucesso." });
       fetchMovimentos();
     } catch (error: any) {
-      toast({
-        title: "Erro ao excluir",
-        description: error.message,
-        variant: "destructive"
-      });
+      toast({ title: "Erro ao excluir", description: error.message, variant: "destructive" });
     } finally {
       setDeleting(false);
       setDeleteDialogOpen(false);
       setMovimentoToDelete(null);
     }
   };
+
   const handleRecorrenciaDeleteConfirm = async (scope: "single" | "future") => {
     if (!movimentoToDelete) return;
     setDeleting(true);
     try {
       if (scope === "single") {
-        // Delete attachments first
         await deleteAnexosDoMovimento(movimentoToDelete.id);
-        const {
-          error
-        } = await supabase.from("vx_fin_movimento").delete().eq("id", movimentoToDelete.id);
+        const { error } = await supabase.from("vx_fin_movimento").delete().eq("id", movimentoToDelete.id);
         if (error) throw error;
-        toast({
-          title: "Lançamento excluído",
-          description: "A ocorrência foi excluída com sucesso."
-        });
+        toast({ title: "Lançamento excluído", description: "A ocorrência foi excluída com sucesso." });
       } else {
-        // Get all IDs to delete
-        const {
-          data: idsToDelete
-        } = await supabase.from("vx_fin_movimento").select("id").eq("recorrencia_id", movimentoToDelete.recorrencia_id).gte("ordem_ocorrencia", movimentoToDelete.ordem_ocorrencia || 0);
-
-        // Delete attachments for all movements
+        const { data: idsToDelete } = await supabase.from("vx_fin_movimento").select("id").eq("recorrencia_id", movimentoToDelete.recorrencia_id).gte("ordem_ocorrencia", movimentoToDelete.ordem_ocorrencia || 0);
         if (idsToDelete) {
           await deleteAnexosDeMovimentos(idsToDelete.map(m => m.id));
         }
-
-        // Delete this and all future occurrences
-        const {
-          error
-        } = await supabase.from("vx_fin_movimento").delete().eq("recorrencia_id", movimentoToDelete.recorrencia_id).gte("ordem_ocorrencia", movimentoToDelete.ordem_ocorrencia || 0);
+        const { error } = await supabase.from("vx_fin_movimento").delete().eq("recorrencia_id", movimentoToDelete.recorrencia_id).gte("ordem_ocorrencia", movimentoToDelete.ordem_ocorrencia || 0);
         if (error) throw error;
-        toast({
-          title: "Lançamentos excluídos",
-          description: "Esta e todas as ocorrências futuras foram excluídas."
-        });
+        toast({ title: "Lançamentos excluídos", description: "Esta e todas as ocorrências futuras foram excluídas." });
       }
       fetchMovimentos();
     } catch (error: any) {
-      toast({
-        title: "Erro ao excluir",
-        description: error.message,
-        variant: "destructive"
-      });
+      toast({ title: "Erro ao excluir", description: error.message, variant: "destructive" });
     } finally {
       setDeleting(false);
       setRecorrenciaDeleteDialogOpen(false);
@@ -448,6 +442,7 @@ const FinanceiroPagar = () => {
     setMovimentoBaixa(movimento);
     setBaixaIndividualDialogOpen(true);
   };
+
   const handleBaixaIndividualConfirm = async (data: {
     id: string;
     dataPagamento: string;
@@ -458,82 +453,64 @@ const FinanceiroPagar = () => {
     motivoAjuste: string | null;
   }) => {
     try {
-      // Buscar o movimento para obter o valor original
       const movimento = movimentos.find(m => m.id === data.id);
       if (!movimento) throw new Error("Movimento não encontrado");
-
-      // Atualizar o movimento
-      const {
-        error
-      } = await supabase.from("vx_fin_movimento").update({
+      const { error } = await supabase.from("vx_fin_movimento").update({
         status: "Pago",
         data_pagamento: data.dataPagamento,
         id_conta: data.contaId,
         id_forma_pagamento: data.formaPagamentoId,
         desconto: data.desconto,
         acrescimo: data.acrescimo,
-        motivo_ajuste: data.motivoAjuste
+        motivo_ajuste: data.motivoAjuste,
+        valor_liquido: movimento.valor_bruto - data.desconto + data.acrescimo,
       }).eq("id", data.id);
       if (error) throw error;
-
-      // O saldo da conta é atualizado automaticamente pela trigger do banco de dados
-      toast({
-        title: "Título baixado",
-        description: "O título foi baixado e o saldo da conta atualizado com sucesso."
-      });
+      toast({ title: "Título baixado", description: "O título foi baixado com sucesso." });
+      setBaixaIndividualDialogOpen(false);
+      setMovimentoBaixa(null);
       fetchMovimentos();
     } catch (error: any) {
-      toast({
-        title: "Erro ao baixar título",
-        description: error.message,
-        variant: "destructive"
-      });
-      throw error;
+      toast({ title: "Erro ao baixar título", description: error.message, variant: "destructive" });
     }
   };
+
   const handleBaixaLoteConfirm = async (dataPagamento: string) => {
-    const selectedMovimentosLote = movimentos.filter(mov => selectedIds.has(mov.id) && mov.status !== "Pago");
+    const selectedMovimentosLote = movimentos.filter(
+      (mov) => selectedIds.has(mov.id) && mov.status !== "Pago"
+    );
     if (selectedMovimentosLote.length === 0) return;
     try {
-      let totalAtualizado = 0;
       for (const mov of selectedMovimentosLote) {
         const dataFinal = dataPagamento || mov.data_vencimento;
-        const {
-          error
-        } = await supabase.from("vx_fin_movimento").update({
+        const { error } = await supabase.from("vx_fin_movimento").update({
           status: "Pago",
           data_pagamento: dataFinal,
         }).eq("id", mov.id);
         if (error) throw error;
-
-        // Acumular valor para atualização do saldo
-        totalAtualizado += mov.valor_bruto;
       }
-
-      // O saldo da conta é atualizado automaticamente pela trigger do banco de dados
       toast({
         title: "Títulos baixados",
-        description: `${selectedMovimentosLote.length} título(s) baixado(s) e saldo atualizado com sucesso.`
+        description: `${selectedMovimentosLote.length} título(s) baixado(s) com sucesso.`,
       });
       setSelectedIds(new Set());
       fetchMovimentos();
     } catch (error: any) {
-      toast({
-        title: "Erro ao baixar títulos",
-        description: error.message,
-        variant: "destructive"
-      });
+      toast({ title: "Erro ao baixar títulos", description: error.message, variant: "destructive" });
       throw error;
     }
   };
+
+  // Selection handlers
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
-      const allIds = movimentos.map(mov => mov.id);
+      const allIds = movimentos.map((mov) => mov.id);
       setSelectedIds(new Set(allIds));
     } else {
       setSelectedIds(new Set());
     }
   };
+
   const handleSelectOne = (id: string, checked: boolean) => {
     const newSelected = new Set(selectedIds);
     if (checked) {
@@ -544,177 +521,171 @@ const FinanceiroPagar = () => {
     setSelectedIds(newSelected);
   };
 
-  // Conciliação handler
-  const handleConciliar = async (movimento: Movimento) => {
-    if (movimento.status !== "Pago" || movimento.conciliado) return;
-    try {
-      const {
-        error
-      } = await supabase.from("vx_fin_movimento").update({
-        conciliado: true
-      }).eq("id", movimento.id);
-      if (error) throw error;
-      toast({
-        title: "Título conciliado",
-        description: "O título foi marcado como conciliado com sucesso."
-      });
-      fetchMovimentos();
-    } catch (error: any) {
-      toast({
-        title: "Erro ao conciliar",
-        description: error.message,
-        variant: "destructive"
-      });
-    }
-  };
-
-  // Conciliação em lote handler
-  const handleConciliarLote = async () => {
-    const idsParaConciliar = movimentos.filter(mov => selectedIds.has(mov.id) && mov.status === "Pago" && !mov.conciliado).map(mov => mov.id);
-    if (idsParaConciliar.length === 0) return;
-    setConciliandoLote(true);
-    try {
-      const {
-        error
-      } = await supabase.from("vx_fin_movimento").update({
-        conciliado: true
-      }).in("id", idsParaConciliar);
-      if (error) throw error;
-      toast({
-        title: "Títulos conciliados",
-        description: `${idsParaConciliar.length} título(s) conciliado(s) com sucesso.`
-      });
-      setSelectedIds(new Set());
-      fetchMovimentos();
-    } catch (error: any) {
-      toast({
-        title: "Erro ao conciliar títulos",
-        description: error.message,
-        variant: "destructive"
-      });
-    } finally {
-      setConciliandoLote(false);
-    }
-  };
-
-  // Estorno handlers
+  // Estorno handler
   const handleEstornoClick = (movimento: Movimento) => {
     if (movimento.status !== "Pago") return;
     setMovimentoEstorno(movimento);
     setEstornoDialogOpen(true);
   };
+
   const handleEstornoConfirm = async () => {
     if (!movimentoEstorno) return;
     setEstornando(true);
     try {
-      // O saldo da conta é revertido automaticamente pela trigger do banco de dados
-      const {
-        error
-      } = await supabase.from("vx_fin_movimento").update({
+      const { error } = await supabase.from("vx_fin_movimento").update({
         status: "Pendente",
         data_pagamento: null,
         desconto: 0,
         acrescimo: 0,
-        motivo_ajuste: null
+        motivo_ajuste: null,
+        valor_liquido: movimentoEstorno.valor_bruto,
+        conciliado: false,
       }).eq("id", movimentoEstorno.id);
       if (error) throw error;
-      toast({
-        title: "Título estornado",
-        description: "O título foi reaberto e o saldo da conta revertido com sucesso."
-      });
+      toast({ title: "Título estornado", description: "O título foi reaberto e o saldo da conta revertido com sucesso." });
       fetchMovimentos();
     } catch (error: any) {
-      toast({
-        title: "Erro ao estornar",
-        description: error.message,
-        variant: "destructive"
-      });
+      toast({ title: "Erro ao estornar", description: error.message, variant: "destructive" });
     } finally {
       setEstornando(false);
       setEstornoDialogOpen(false);
       setMovimentoEstorno(null);
     }
   };
+
+  // Conciliar
+  const handleConciliar = async (movimento: Movimento) => {
+    if (movimento.status !== "Pago" || movimento.conciliado) return;
+    try {
+      const { error } = await supabase.from("vx_fin_movimento").update({ conciliado: true }).eq("id", movimento.id);
+      if (error) throw error;
+      toast({ title: "Título conciliado", description: "O título foi marcado como conciliado com sucesso." });
+      fetchMovimentos();
+    } catch (error: any) {
+      toast({ title: "Erro ao conciliar", description: error.message, variant: "destructive" });
+    }
+  };
+
+  const handleConciliarLote = async () => {
+    if (selectedMovimentosForConciliacao.length === 0) return;
+    setConciliandoLote(true);
+    try {
+      for (const mov of selectedMovimentosForConciliacao) {
+        const { error } = await supabase.from("vx_fin_movimento").update({ conciliado: true }).eq("id", mov.id);
+        if (error) throw error;
+      }
+      toast({
+        title: "Conciliação em lote",
+        description: `${selectedMovimentosForConciliacao.length} título(s) conciliado(s) com sucesso.`,
+      });
+      setSelectedIds(new Set());
+      fetchMovimentos();
+    } catch (error: any) {
+      toast({ title: "Erro ao conciliar em lote", description: error.message, variant: "destructive" });
+    } finally {
+      setConciliandoLote(false);
+    }
+  };
+
   const isRowVencido = (status: string, dataVencimento: string) => {
     const vencimentoDate = new Date(dataVencimento + "T00:00:00");
     return isPast(vencimentoDate) && !isToday(vencimentoDate) && status === "Pendente";
   };
 
-  // Get selected movimentos
   const selectedMovimentos = movimentos.filter(mov => selectedIds.has(mov.id));
-
-  // Check if ALL selected are pending (for baixa em lote)
   const allSelectedArePending = selectedMovimentos.length > 0 && selectedMovimentos.every(mov => mov.status !== "Pago");
-
-  // Check if ALL selected are paid (for conciliação em lote)
   const allSelectedArePaid = selectedMovimentos.length > 0 && selectedMovimentos.every(mov => mov.status === "Pago");
-
-  // Movimentos selecionados elegíveis para conciliação (pagos e não conciliados)
   const selectedMovimentosForConciliacao = selectedMovimentos.filter(mov => mov.status === "Pago" && !mov.conciliado);
 
-  // Pagination calculations
   const totalPages = Math.ceil(totalCount / pageSize);
   const defaultStart = startOfMonth(new Date());
   const defaultEnd = endOfMonth(new Date());
-  const hasFiltersActive = (dateFilterStart?.getTime() !== defaultStart.getTime()) || (dateFilterEnd?.getTime() !== defaultEnd.getTime()) || contaFilter !== "todos" || formaPagamentoFilter !== "todos" || cartaoFilter !== "todos" || statusFilter !== "todos" || conciliacaoFilter !== "todos" || searchTerm;
+  const hasFiltersActive = (dateFilterStart?.getTime() !== defaultStart.getTime()) || (dateFilterEnd?.getTime() !== defaultEnd.getTime()) || contaFilter.length > 0 || formaPagamentoFilter.length > 0 || cartaoFilter !== "todos" || statusFilter.length > 0 || conciliacaoFilter !== "todos" || searchTerm;
+
   const handleClearFilters = () => {
     setDateFilterStart(startOfMonth(new Date()));
     setDateFilterEnd(endOfMonth(new Date()));
-    setContaFilter("todos");
-    setFormaPagamentoFilter("todos");
+    setContaFilter([]);
+    setFormaPagamentoFilter([]);
     setCartaoFilter("todos");
-    setStatusFilter("todos");
+    setStatusFilter([]);
     setConciliacaoFilter("todos");
     setSearchInput("");
     setSearchTerm("");
   };
+
   const handleSearch = () => {
     setSearchTerm(searchInput);
   };
+
   const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter") {
       handleSearch();
     }
   };
-  return <div className="animate-fade-in">
-      <PageHeader title="Contas a Pagar" description="Gerencie despesas e pagamentos" action={<div className="flex items-center gap-2">
-            {allSelectedArePaid && selectedMovimentosForConciliacao.length > 0 && <Button onClick={handleConciliarLote} disabled={conciliandoLote} style={{
-        backgroundColor: '#0DCAF0'
-      }} className="hover:opacity-90 text-black">
-                {conciliandoLote ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <CheckCheck className="w-4 h-4 mr-2" />}
-                Conciliar Selecionados ({selectedMovimentosForConciliacao.length})
-              </Button>}
-            {allSelectedArePending && selectedMovimentos.length > 0 && <Button className="bg-green-600 hover:bg-green-700" onClick={() => setBaixaLoteDialogOpen(true)}>
-                <CheckCircle2 className="w-4 h-4 mr-2" />
-                Baixar Selecionados ({selectedMovimentos.length})
-              </Button>}
-            <Button variant="outline" className="border-accent/50 hover:bg-accent/10" onClick={() => setFaturaDialogOpen(true)}>
-              <FileText className="w-4 h-4 mr-2" />
-              Gerar Fatura
+
+  // Build options for multiselects
+  const statusOptions: MultiSelectOption[] = [
+    { value: "pendente", label: "Pendente" },
+    { value: "pago", label: "Pago" },
+    { value: "vencido", label: "Vencido" },
+  ];
+
+  const contaOptions: MultiSelectOption[] = contas.map(c => ({
+    value: c.id,
+    label: getContaDisplayName(c),
+  }));
+
+  const formaPagamentoOptions: MultiSelectOption[] = formasPagamento.map(fp => ({
+    value: fp.id,
+    label: fp.descricao,
+  }));
+
+  return (
+    <div className="animate-fade-in">
+      <PageHeader title="Contas a Pagar" description="Gerencie despesas e pagamentos" action={
+        <div className="flex items-center gap-2">
+          {allSelectedArePaid && selectedMovimentosForConciliacao.length > 0 && (
+            <Button onClick={handleConciliarLote} disabled={conciliandoLote} style={{ backgroundColor: '#0DCAF0' }} className="hover:opacity-90 text-black">
+              {conciliandoLote ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <CheckCheck className="w-4 h-4 mr-2" />}
+              Conciliar Selecionados ({selectedMovimentosForConciliacao.length})
             </Button>
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={() => navigate("/financeiro/fast?tipo=Pagar")}
-              title="Lançamento Rápido"
-              className="rounded-full w-10 h-10 border-amber-500/50 hover:border-amber-500 hover:bg-amber-500/10"
-              style={{
-                boxShadow: '0 0 20px 3px rgba(251, 191, 36, 0.4), 0 0 40px 6px rgba(251, 191, 36, 0.2)',
-              }}
-            >
-              <Zap className="w-5 h-5 text-amber-500" />
+          )}
+          {allSelectedArePending && selectedMovimentos.length > 0 && (
+            <Button className="bg-green-600 hover:bg-green-700" onClick={() => setBaixaLoteDialogOpen(true)}>
+              <CheckCircle2 className="w-4 h-4 mr-2" />
+              Baixar Selecionados ({selectedMovimentos.length})
             </Button>
-            <Button className="bg-accent hover:bg-accent/90" onClick={handleNew}>
-              <Plus className="w-4 h-4 mr-2" />
-              Nova Despesa
-            </Button>
-          </div>} />
+          )}
+          <Button variant="outline" className="border-accent/50 hover:bg-accent/10" onClick={() => setFaturaDialogOpen(true)}>
+            <FileText className="w-4 h-4 mr-2" />
+            Gerar Fatura
+          </Button>
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => navigate("/financeiro/fast?tipo=Pagar")}
+            title="Lançamento Rápido"
+            className="rounded-full w-10 h-10 border-amber-500/50 hover:border-amber-500 hover:bg-amber-500/10"
+            style={{ boxShadow: '0 0 20px 3px rgba(251, 191, 36, 0.4), 0 0 40px 6px rgba(251, 191, 36, 0.2)' }}
+          >
+            <Zap className="w-5 h-5 text-amber-500" />
+          </Button>
+          <Button className="bg-accent hover:bg-accent/90" onClick={handleNew}>
+            <Plus className="w-4 h-4 mr-2" />
+            Nova Despesa
+          </Button>
+        </div>
+      } />
 
       <div className="glass rounded-lg p-6">
-        {loading ? <div className="flex items-center justify-center py-12">
+        {loading ? (
+          <div className="flex items-center justify-center py-12">
             <Loader2 className="w-8 h-8 animate-spin text-accent" />
             <span className="ml-3 text-muted-foreground">Carregando lançamentos...</span>
-          </div> : <div className="space-y-4">
+          </div>
+        ) : (
+          <div className="space-y-4">
             {/* Filters */}
             <div className="space-y-4">
               {/* First row */}
@@ -726,17 +697,13 @@ const FinanceiroPagar = () => {
                   </Button>
                 </div>
 
-                <Select value={statusFilter} onValueChange={setStatusFilter}>
-                  <SelectTrigger className="w-[150px] bg-background/50 border-border/50">
-                    <SelectValue placeholder="Status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="todos">Todos</SelectItem>
-                    <SelectItem value="pendente">Pendente</SelectItem>
-                    <SelectItem value="pago">Pago</SelectItem>
-                    <SelectItem value="vencido">Vencido</SelectItem>
-                  </SelectContent>
-                </Select>
+                <MultiSelectFilter
+                  options={statusOptions}
+                  selected={statusFilter}
+                  onSelectedChange={setStatusFilter}
+                  placeholder="Status"
+                  width="w-[160px]"
+                />
 
                 <Select value={conciliacaoFilter} onValueChange={setConciliacaoFilter}>
                   <SelectTrigger className="w-[150px] bg-background/50 border-border/50">
@@ -749,35 +716,37 @@ const FinanceiroPagar = () => {
                   </SelectContent>
                 </Select>
 
-                <Select value={contaFilter} onValueChange={setContaFilter}>
-                  <SelectTrigger className="w-[220px] bg-background/50 border-border/50">
-                    <Landmark className="mr-2 h-4 w-4" />
-                    <SelectValue placeholder="Filtrar conta" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="todos">Todas as contas</SelectItem>
-                    {contas.map(c => <SelectItem key={c.id} value={c.id}>
-                        {getContaDisplayName(c)}
-                      </SelectItem>)}
-                  </SelectContent>
-                </Select>
+                <MultiSelectFilter
+                  options={contaOptions}
+                  selected={contaFilter}
+                  onSelectedChange={setContaFilter}
+                  placeholder="Todas as contas"
+                  icon={<Landmark className="h-4 w-4" />}
+                  width="w-[220px]"
+                />
 
-                {cartoesFiltrados.length > 0 && <Select value={cartaoFilter} onValueChange={setCartaoFilter}>
+                {cartoesFiltrados.length > 0 && (
+                  <Select value={cartaoFilter} onValueChange={setCartaoFilter}>
                     <SelectTrigger className="w-[180px] bg-background/50 border-border/50 border-purple-500/50">
                       <CreditCard className="mr-2 h-4 w-4 text-purple-400" />
                       <SelectValue placeholder="Cartão" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="todos">Todos os cartões</SelectItem>
-                      {cartoesFiltrados.map(c => <SelectItem key={c.id} value={c.id}>
+                      {cartoesFiltrados.map(c => (
+                        <SelectItem key={c.id} value={c.id}>
                           {c.descricao} - {c.final}
-                        </SelectItem>)}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
-                  </Select>}
+                  </Select>
+                )}
 
-                {hasFiltersActive && <Button variant="ghost" size="icon" onClick={handleClearFilters} className="h-10 w-10" title="Limpar filtros">
+                {hasFiltersActive && (
+                  <Button variant="ghost" size="icon" onClick={handleClearFilters} className="h-10 w-10" title="Limpar filtros">
                     <X className="h-4 w-4" />
-                  </Button>}
+                  </Button>
+                )}
 
                 {/* Page Size Selector */}
                 <div className="flex items-center gap-2 ml-auto">
@@ -787,9 +756,9 @@ const FinanceiroPagar = () => {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {PAGE_SIZE_OPTIONS.map(size => <SelectItem key={size} value={String(size)}>
-                          {size}
-                        </SelectItem>)}
+                      {PAGE_SIZE_OPTIONS.map(size => (
+                        <SelectItem key={size} value={String(size)}>{size}</SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
@@ -834,53 +803,49 @@ const FinanceiroPagar = () => {
                   </SelectContent>
                 </Select>
 
-                <Select value={formaPagamentoFilter} onValueChange={setFormaPagamentoFilter}>
-                  <SelectTrigger className="w-[200px] bg-background/50 border-border/50">
-                    <CreditCard className="mr-2 h-4 w-4" />
-                    <SelectValue placeholder="Forma pagamento" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="todos">Todas as formas</SelectItem>
-                    {formasPagamento.map(fp => <SelectItem key={fp.id} value={fp.id}>
-                        {fp.descricao}
-                      </SelectItem>)}
-                  </SelectContent>
-                </Select>
+                <MultiSelectFilter
+                  options={formaPagamentoOptions}
+                  selected={formaPagamentoFilter}
+                  onSelectedChange={setFormaPagamentoFilter}
+                  placeholder="Todas as formas"
+                  icon={<CreditCard className="h-4 w-4" />}
+                  width="w-[200px]"
+                />
               </div>
             </div>
 
             {/* Grouped List */}
-            {movimentos.length === 0 ? <EmptyState icon={ArrowDownCircle} title="Nenhum registro encontrado" description="Não há lançamentos para os filtros selecionados." /> : <MovimentoGroupedList movimentos={movimentos} selectedIds={selectedIds} onSelectAll={handleSelectAll} onSelectOne={handleSelectOne} onEdit={handleEdit} onDelete={handleDeleteClick} onBaixa={handleBaixaIndividual} onEstorno={handleEstornoClick} onConciliar={handleConciliar} tipoMovimento="Pagar" groupBy={groupByField} anexosMap={anexosMap} />}
+            {movimentos.length === 0 ? (
+              <EmptyState icon={ArrowDownCircle} title="Nenhum registro encontrado" description="Não há lançamentos para os filtros selecionados." />
+            ) : (
+              <MovimentoGroupedList movimentos={movimentos} selectedIds={selectedIds} onSelectAll={handleSelectAll} onSelectOne={handleSelectOne} onEdit={handleEdit} onDelete={handleDeleteClick} onBaixa={handleBaixaIndividual} onEstorno={handleEstornoClick} onConciliar={handleConciliar} tipoMovimento="Pagar" groupBy={groupByField} anexosMap={anexosMap} />
+            )}
 
             {/* Pagination Controls */}
-            {totalPages > 0 && <div className="flex items-center justify-between pt-4 border-t border-border/30">
+            {totalPages > 0 && (
+              <div className="flex items-center justify-between pt-4 border-t border-border/30">
                 <span className="text-sm text-muted-foreground">
                   Mostrando {Math.min((currentPage - 1) * pageSize + 1, totalCount)} a {Math.min(currentPage * pageSize, totalCount)} de {totalCount} registros
                 </span>
                 <div className="flex items-center gap-2">
-                  <Button variant="outline" size="sm" onClick={() => setCurrentPage(1)} disabled={currentPage === 1 || loading} className="bg-background/50">
-                    Primeira
-                  </Button>
+                  <Button variant="outline" size="sm" onClick={() => setCurrentPage(1)} disabled={currentPage === 1 || loading} className="bg-background/50">Primeira</Button>
                   <Button variant="outline" size="icon" onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1 || loading} className="bg-background/50">
                     <ChevronLeft className="h-4 w-4" />
                   </Button>
-                  <span className="text-sm px-3">
-                    Página {currentPage} de {totalPages}
-                  </span>
+                  <span className="text-sm px-3">Página {currentPage} de {totalPages}</span>
                   <Button variant="outline" size="icon" onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages || loading} className="bg-background/50">
                     <ChevronRight className="h-4 w-4" />
                   </Button>
-                  <Button variant="outline" size="sm" onClick={() => setCurrentPage(totalPages)} disabled={currentPage === totalPages || loading} className="bg-background/50">
-                    Última
-                  </Button>
+                  <Button variant="outline" size="sm" onClick={() => setCurrentPage(totalPages)} disabled={currentPage === totalPages || loading} className="bg-background/50">Última</Button>
                 </div>
-              </div>}
-          </div>}
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       <MovimentoDialog open={dialogOpen} onOpenChange={setDialogOpen} movimento={selectedMovimento} defaultTipo="Pagar" onSuccess={fetchMovimentos} editScope={editScope} />
 
-      {/* Simple delete dialog for non-recurring */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent className="glass-strong border-border/50">
           <AlertDialogHeader>
@@ -899,24 +864,18 @@ const FinanceiroPagar = () => {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Recurrence edit dialog */}
       <RecorrenciaActionDialog open={recorrenciaEditDialogOpen} onOpenChange={setRecorrenciaEditDialogOpen} actionType="edit" onConfirm={handleRecorrenciaEditConfirm} />
-
-      {/* Recurrence delete dialog */}
       <RecorrenciaActionDialog open={recorrenciaDeleteDialogOpen} onOpenChange={setRecorrenciaDeleteDialogOpen} actionType="delete" onConfirm={handleRecorrenciaDeleteConfirm} loading={deleting} />
 
-      {/* Baixa em Lote */}
       <BaixaLoteDialog open={baixaLoteDialogOpen} onOpenChange={setBaixaLoteDialogOpen} movimentosSelecionados={selectedMovimentos.filter(mov => mov.status !== "Pago").map(mov => ({
-      id: mov.id,
-      descricao: mov.descricao,
-      valor_bruto: mov.valor_bruto,
-      data_vencimento: mov.data_vencimento
-    }))} onConfirm={handleBaixaLoteConfirm} />
+        id: mov.id,
+        descricao: mov.descricao,
+        valor_bruto: mov.valor_bruto,
+        data_vencimento: mov.data_vencimento
+      }))} onConfirm={handleBaixaLoteConfirm} />
 
-      {/* Baixa Individual */}
       <BaixaIndividualDialog open={baixaIndividualDialogOpen} onOpenChange={setBaixaIndividualDialogOpen} movimento={movimentoBaixa} contas={contas} formasPagamento={formasPagamento} onConfirm={handleBaixaIndividualConfirm} />
 
-      {/* Estorno dialog */}
       <AlertDialog open={estornoDialogOpen} onOpenChange={setEstornoDialogOpen}>
         <AlertDialogContent className="glass-strong border-border/50">
           <AlertDialogHeader>
@@ -939,6 +898,8 @@ const FinanceiroPagar = () => {
       </AlertDialog>
 
       <GerarFaturaDialog open={faturaDialogOpen} onOpenChange={setFaturaDialogOpen} onSuccess={fetchMovimentos} />
-    </div>;
+    </div>
+  );
 };
+
 export default FinanceiroPagar;
