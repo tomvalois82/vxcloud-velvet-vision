@@ -27,6 +27,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
+import { AnexosManager } from "./AnexosManager";
 
 interface Conta {
   id: string;
@@ -376,6 +377,13 @@ export function BaixaIndividualDialog({
               <p className="text-xs text-destructive mt-1">{errors.valorFinal}</p>
             )}
           </div>
+
+          {/* Anexos / Comprovante */}
+          {movimento && (
+            <div className="border border-border/50 rounded-lg p-3 bg-background/30">
+              <AnexosManager movimentoId={movimento.id} />
+            </div>
+          )}
         </div>
 
         <DialogFooter className="gap-2 sm:gap-0">
