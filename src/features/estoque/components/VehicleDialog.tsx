@@ -105,7 +105,8 @@ const vehicleSchema = z.object({
   data_aquisicao: z.string().optional(),
   adquirido_de: z.string().optional(),
   status: z.string().optional(),
-  observacao: z.string().optional(),
+  caracteristicas: z.string().optional(),
+  idanuncioolx: z.string().optional(),
 });
 
 type VehicleFormData = z.infer<typeof vehicleSchema>;
@@ -158,7 +159,8 @@ export function VehicleDialog({ open, onOpenChange, vehicleId, onSuccess }: Vehi
       tipo_aquisicao: 'compra',
       data_aquisicao: new Date().toISOString().split('T')[0],
       adquirido_de: '',
-      observacao: '',
+      caracteristicas: '',
+      idanuncioolx: '',
     },
   });
 
@@ -493,7 +495,8 @@ export function VehicleDialog({ open, onOpenChange, vehicleId, onSuccess }: Vehi
         motor: '',
         cambio: '',
         tipo_aquisicao: 'Próprio',
-        observacao: '',
+      caracteristicas: '',
+      idanuncioolx: '',
       });
       
       // Limpar todos os estados relacionados
@@ -606,7 +609,8 @@ export function VehicleDialog({ open, onOpenChange, vehicleId, onSuccess }: Vehi
         data_aquisicao: data.data_aquisicao || new Date().toISOString().split('T')[0],
         adquirido_de: data.adquirido_de || '',
         status: data.status || 'Em estoque',
-        observacao: data.observacao || '',
+        caracteristicas: data.caracteristicas || '',
+        idanuncioolx: data.idanuncioolx ? data.idanuncioolx.join(', ') : '',
       });
 
       const storageManager = new StorageManager(vehicleId);
@@ -696,7 +700,10 @@ export function VehicleDialog({ open, onOpenChange, vehicleId, onSuccess }: Vehi
         status: data.status || 'Em estoque',
         motor: data.motor,
         cambio: data.cambio,
-        observacao: data.observacao,
+        caracteristicas: data.caracteristicas || null,
+        idanuncioolx: data.idanuncioolx
+          ? data.idanuncioolx.split(',').map((s: string) => s.trim()).filter(Boolean)
+          : null,
         foto: mainPhoto?.url || null,
         fotos: photoUrls.length > 0 ? photoUrls : null,
         valor: String(valorNumerico),
@@ -1305,6 +1312,7 @@ export function VehicleDialog({ open, onOpenChange, vehicleId, onSuccess }: Vehi
                             <SelectItem value="Em preparação">Em preparação</SelectItem>
                             <SelectItem value="Em estoque">Em estoque</SelectItem>
                             <SelectItem value="Reservado">Reservado</SelectItem>
+                            <SelectItem value="Vendido">Vendido</SelectItem>
                             <SelectItem value="Fora de Estoque">Fora de Estoque</SelectItem>
                           </SelectContent>
                         </Select>
@@ -1315,13 +1323,13 @@ export function VehicleDialog({ open, onOpenChange, vehicleId, onSuccess }: Vehi
 
                   <FormField
                     control={form.control}
-                    name="observacao"
+                    name="caracteristicas"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Observações</FormLabel>
+                        <FormLabel>Características</FormLabel>
                         <FormControl>
                           <Textarea
-                            placeholder="Informações adicionais sobre o veículo"
+                            placeholder="Características do veículo"
                             className="min-h-[100px]"
                             {...field}
                           />
@@ -1329,6 +1337,53 @@ export function VehicleDialog({ open, onOpenChange, vehicleId, onSuccess }: Vehi
                         <FormMessage />
                       </FormItem>
                     )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="idanuncioolx"
+                    render={({ field }) => {
+                      const tags = field.value
+                        ? field.value.split(',').map((s: string) => s.trim()).filter(Boolean)
+                        : [];
+                      const lastChar = field.value?.slice(-1);
+                      const hasTrailingComma = lastChar === ',';
+                      
+                      return (
+                        <FormItem>
+                          <FormLabel>Anúncio OLX</FormLabel>
+                          <FormControl>
+                            <Input
+                              placeholder="Digite os IDs separados por vírgula"
+                              {...field}
+                            />
+                          </FormControl>
+                          {tags.length > 0 && (
+                            <div className="flex flex-wrap gap-1 mt-1">
+                              {tags.map((tag: string, index: number) => (
+                                <span
+                                  key={index}
+                                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-accent/20 text-accent-foreground border border-accent/30"
+                                >
+                                  {tag}
+                                  <button
+                                    type="button"
+                                    className="hover:text-destructive"
+                                    onClick={() => {
+                                      const newTags = tags.filter((_: string, i: number) => i !== index);
+                                      field.onChange(newTags.join(', ') + (hasTrailingComma && index !== tags.length - 1 ? ', ' : ''));
+                                    }}
+                                  >
+                                    ×
+                                  </button>
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                          <FormMessage />
+                        </FormItem>
+                      );
+                    }}
                   />
                 </div>
 
