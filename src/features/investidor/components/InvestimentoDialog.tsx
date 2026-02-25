@@ -126,7 +126,7 @@ export function InvestimentoDialog({
     const { data, error } = await supabase
       .from('estoque')
       .select('id, placa, modelo, fabricante, motor, ano, valor_aquisicao')
-      .eq('status', 'Em estoque')
+      .not('status', 'in', '("Vendido","Fora de Estoque")')
       .order('fabricante')
       .order('modelo');
 
