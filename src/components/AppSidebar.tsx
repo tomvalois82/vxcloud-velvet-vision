@@ -5,6 +5,7 @@ import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSuperUser } from "@/hooks/useSuperUser";
+import { useAccessControl } from "@/hooks/useAccessControl";
 import { Button } from "@/components/ui/button";
 import { Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarMenuSub, SidebarMenuSubItem, SidebarMenuSubButton, useSidebar } from "@/components/ui/sidebar";
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/components/ui/collapsible";
@@ -168,6 +169,33 @@ export function AppSidebar() {
   const {
     isSuperUser
   } = useSuperUser();
+  const { hasAccess } = useAccessControl();
+
+  const filterMenuItems = (items: MenuItem[]): MenuItem[] => {
+    return items.reduce<MenuItem[]>((acc, item) => {
+      if (item.url && !hasAccess(item.url)) return acc;
+      if (item.items) {
+        const filteredSubs = item.items.reduce<SubMenuItem[]>((subAcc, sub) => {
+          if (sub.url && !hasAccess(sub.url)) return subAcc;
+          if (sub.items) {
+            const filteredNested = sub.items.filter(n => hasAccess(n.url));
+            if (filteredNested.length === 0) return subAcc;
+            subAcc.push({ ...sub, items: filteredNested });
+          } else {
+            subAcc.push(sub);
+          }
+          return subAcc;
+        }, []);
+        if (filteredSubs.length === 0) return acc;
+        acc.push({ ...item, items: filteredSubs });
+      } else {
+        acc.push(item);
+      }
+      return acc;
+    }, []);
+  };
+
+  const filteredMenuItems = filterMenuItems(menuItems);
   const isItemActive = (item: MenuItem) => {
     if (item.url) {
       return location.pathname === item.url;
@@ -194,7 +222,7 @@ export function AppSidebar() {
 
           <SidebarGroupContent>
             <SidebarMenu>
-              {menuItems.map(item => <SidebarMenuItem key={item.title}>
+              {filteredMenuItems.map(item => <SidebarMenuItem key={item.title}>
                   {item.items ? <Collapsible defaultOpen={isItemActive(item)} className="group/collapsible">
                       <CollapsibleTrigger asChild>
                         <SidebarMenuButton tooltip={item.title}>
