@@ -1,4 +1,4 @@
-import { Navigate, useLocation } from 'react-router-dom';
+import { Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAccessControl } from '@/hooks/useAccessControl';
 
@@ -6,6 +6,7 @@ export function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, loading: authLoading } = useAuth();
   const { hasAccess, loading: accessLoading } = useAccessControl();
   const location = useLocation();
+  const navigate = useNavigate();
 
   if (authLoading || accessLoading) {
     return (
@@ -29,7 +30,7 @@ export function ProtectedRoute({ children }: { children: React.ReactNode }) {
         <div className="text-center space-y-4">
           <h1 className="text-2xl font-bold text-foreground">Acesso Negado</h1>
           <p className="text-muted-foreground">Você não tem permissão para acessar esta página.</p>
-          <a href="/" className="text-accent underline">Voltar ao Dashboard</a>
+          <button onClick={() => navigate(-1)} className="text-accent underline">Voltar à página anterior</button>
         </div>
       </div>
     );
