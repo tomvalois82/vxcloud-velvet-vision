@@ -1,7 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { PageHeader } from "@/components/PageHeader";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Settings, Building2, Users, Bell, CreditCard, ChevronRight, Camera } from "lucide-react";
+import { Settings, Building2, Users, Shield, CreditCard, ChevronRight, Camera } from "lucide-react";
 
 const Configuracoes = () => {
   const navigate = useNavigate();
@@ -26,10 +26,10 @@ const Configuracoes = () => {
       path: "/configuracoes/formas-pagamento",
     },
     {
-      icon: Bell,
-      title: "Notificações",
-      description: "Configurar alertas e notificações",
-      path: null,
+      icon: Shield,
+      title: "Acesso",
+      description: "Controle de acesso por cargo",
+      path: "/configuracoes/acesso",
     },
     {
       icon: Settings,
