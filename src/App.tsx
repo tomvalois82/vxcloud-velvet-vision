@@ -38,6 +38,7 @@ import Usuarios from "./pages/configuracoes/Usuarios";
 import Empresa from "./pages/configuracoes/Empresa";
 import GerenciarEmpresas from "./pages/configuracoes/GerenciarEmpresas";
 import Snapshots from "./pages/configuracoes/Snapshots";
+import Acesso from "./pages/configuracoes/Acesso";
 import ProcuracaoPage from "./pages/administrativo/ProcuracaoPage";
 import PlanoContasPage from "./pages/contabilidade/PlanoContasPage";
 import NotFound from "./pages/NotFound";
@@ -96,6 +97,7 @@ const App = () => (
                               <Route path="/configuracoes/usuarios" element={<Usuarios />} />
                               <Route path="/configuracoes/empresas" element={<GerenciarEmpresas />} />
                               <Route path="/configuracoes/snapshots" element={<Snapshots />} />
+                              <Route path="/configuracoes/acesso" element={<Acesso />} />
                               <Route path="/administrativo/procuracao" element={<ProcuracaoPage />} />
                               <Route path="/contabilidade/plano" element={<PlanoContasPage />} />
                               <Route path="*" element={<NotFound />} />

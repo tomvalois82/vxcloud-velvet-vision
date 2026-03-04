@@ -947,22 +947,31 @@ export type Database = {
       }
       kanban: {
         Row: {
+          cor: string | null
           created_at: string
           descricao: string | null
           id: number
+          padrao: boolean | null
           posicao: number | null
+          visivel: boolean | null
         }
         Insert: {
+          cor?: string | null
           created_at?: string
           descricao?: string | null
           id?: number
+          padrao?: boolean | null
           posicao?: number | null
+          visivel?: boolean | null
         }
         Update: {
+          cor?: string | null
           created_at?: string
           descricao?: string | null
           id?: number
+          padrao?: boolean | null
           posicao?: number | null
+          visivel?: boolean | null
         }
         Relationships: []
       }
@@ -1198,7 +1207,7 @@ export type Database = {
           status: string | null
           titulo: string | null
           ultima_interacao: string | null
-          valor: string | null
+          valor: number | null
         }
         Insert: {
           created_at?: string
@@ -1215,7 +1224,7 @@ export type Database = {
           status?: string | null
           titulo?: string | null
           ultima_interacao?: string | null
-          valor?: string | null
+          valor?: number | null
         }
         Update: {
           created_at?: string
@@ -1232,7 +1241,7 @@ export type Database = {
           status?: string | null
           titulo?: string | null
           ultima_interacao?: string | null
-          valor?: string | null
+          valor?: number | null
         }
         Relationships: [
           {
@@ -1340,6 +1349,30 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      vx_acesso_paginas: {
+        Row: {
+          cargo: string
+          created_at: string | null
+          id: string
+          pagina: string
+          permitido: boolean
+        }
+        Insert: {
+          cargo: string
+          created_at?: string | null
+          id?: string
+          pagina: string
+          permitido?: boolean
+        }
+        Update: {
+          cargo?: string
+          created_at?: string | null
+          id?: string
+          pagina?: string
+          permitido?: boolean
+        }
+        Relationships: []
       }
       vx_fin_anexo: {
         Row: {
@@ -2532,6 +2565,13 @@ export type Database = {
     }
     Functions: {
       get_user_config_id: { Args: never; Returns: number }
+      get_users_by_config: {
+        Args: { p_config: number }
+        Returns: {
+          id: number
+          nome: string
+        }[]
+      }
       is_admin: { Args: never; Returns: boolean }
       is_super_admin: { Args: never; Returns: boolean }
       match_documents: {
