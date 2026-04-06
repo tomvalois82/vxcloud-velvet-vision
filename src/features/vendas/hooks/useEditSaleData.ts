@@ -595,6 +595,14 @@ export function useEditSaleData(saleId: string | null) {
       // A trigger fn_gerar_financeiro_venda no banco já cria os lançamentos
       // financeiros automaticamente ao definir fechada=true
 
+      // Atualizar status do veículo para 'Vendido' ao fechar a venda
+      if (fecharVenda && currentSaleData.veiculo) {
+        await supabase
+          .from('estoque')
+          .update({ status: 'Vendido' })
+          .eq('id', currentSaleData.veiculo.id);
+      }
+
       toast({
         title: 'Sucesso',
         description: fecharVenda ? 'Venda finalizada com sucesso!' : 'Venda atualizada com sucesso!',
