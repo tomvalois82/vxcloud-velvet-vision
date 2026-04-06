@@ -287,6 +287,38 @@ export type Database = {
           },
         ]
       }
+      crm_funil: {
+        Row: {
+          ativo: boolean | null
+          config: number | null
+          created_at: string
+          id: number
+          titulo: string | null
+        }
+        Insert: {
+          ativo?: boolean | null
+          config?: number | null
+          created_at?: string
+          id?: number
+          titulo?: string | null
+        }
+        Update: {
+          ativo?: boolean | null
+          config?: number | null
+          created_at?: string
+          id?: number
+          titulo?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_config_fkey"
+            columns: ["config"]
+            isOneToOne: false
+            referencedRelation: "config"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       dados_cliente: {
         Row: {
           created_at: string | null
@@ -949,6 +981,7 @@ export type Database = {
         Row: {
           cor: string | null
           created_at: string
+          crm_funil: number | null
           descricao: string | null
           id: number
           padrao: boolean | null
@@ -958,6 +991,7 @@ export type Database = {
         Insert: {
           cor?: string | null
           created_at?: string
+          crm_funil?: number | null
           descricao?: string | null
           id?: number
           padrao?: boolean | null
@@ -967,13 +1001,22 @@ export type Database = {
         Update: {
           cor?: string | null
           created_at?: string
+          crm_funil?: number | null
           descricao?: string | null
           id?: number
           padrao?: boolean | null
           posicao?: number | null
           visivel?: boolean | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "kanban_crm_funil_fkey"
+            columns: ["crm_funil"]
+            isOneToOne: false
+            referencedRelation: "crm_funil"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       langchain_chat_histories: {
         Row: {
@@ -1061,6 +1104,24 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      n: {
+        Row: {
+          id: number
+          message: Json
+          session_id: string
+        }
+        Insert: {
+          id?: number
+          message: Json
+          session_id: string
+        }
+        Update: {
+          id?: number
+          message?: Json
+          session_id?: string
+        }
+        Relationships: []
       }
       n8n_chat_histories: {
         Row: {
@@ -1191,6 +1252,41 @@ export type Database = {
         }
         Relationships: []
       }
+      oportunidade_anexo: {
+        Row: {
+          created_at: string
+          id: number
+          id_oportunidade: number | null
+          nome_arquivo: string | null
+          publico: boolean | null
+          url: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: number
+          id_oportunidade?: number | null
+          nome_arquivo?: string | null
+          publico?: boolean | null
+          url?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: number
+          id_oportunidade?: number | null
+          nome_arquivo?: string | null
+          publico?: boolean | null
+          url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "oportunidade_anexo_id_oportunidade_fkey"
+            columns: ["id_oportunidade"]
+            isOneToOne: false
+            referencedRelation: "opotunidade"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       opotunidade: {
         Row: {
           created_at: string
@@ -1201,6 +1297,7 @@ export type Database = {
           id_usuario: number | null
           idEstoque: number | null
           obs: string | null
+          outro_interesse: string[] | null
           resumo: string | null
           session_id_olx: string | null
           session_id_whatsapp: string | null
@@ -1218,6 +1315,7 @@ export type Database = {
           id_usuario?: number | null
           idEstoque?: number | null
           obs?: string | null
+          outro_interesse?: string[] | null
           resumo?: string | null
           session_id_olx?: string | null
           session_id_whatsapp?: string | null
@@ -1235,6 +1333,7 @@ export type Database = {
           id_usuario?: number | null
           idEstoque?: number | null
           obs?: string | null
+          outro_interesse?: string[] | null
           resumo?: string | null
           session_id_olx?: string | null
           session_id_whatsapp?: string | null
@@ -1280,6 +1379,7 @@ export type Database = {
           email: string | null
           evo_instancia: string | null
           evo_key: string | null
+          foto: string | null
           id: number
           idbubble: string | null
           n8nOlx: string | null
@@ -1304,6 +1404,7 @@ export type Database = {
           email?: string | null
           evo_instancia?: string | null
           evo_key?: string | null
+          foto?: string | null
           id?: number
           idbubble?: string | null
           n8nOlx?: string | null
@@ -1328,6 +1429,7 @@ export type Database = {
           email?: string | null
           evo_instancia?: string | null
           evo_key?: string | null
+          foto?: string | null
           id?: number
           idbubble?: string | null
           n8nOlx?: string | null
@@ -2574,6 +2676,7 @@ export type Database = {
       }
       is_admin: { Args: never; Returns: boolean }
       is_super_admin: { Args: never; Returns: boolean }
+      is_superadm: { Args: { _user_id: string }; Returns: boolean }
       match_documents: {
         Args: { filter?: Json; match_count?: number; query_embedding: string }
         Returns: {
