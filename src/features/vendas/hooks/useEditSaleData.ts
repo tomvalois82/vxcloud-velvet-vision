@@ -599,7 +599,7 @@ export function useEditSaleData(saleId: string | null) {
       if (fecharVenda && currentSaleData.veiculo) {
         await supabase
           .from('estoque')
-          .update({ status: 'Vendido' })
+          .update({ status: 'Vendido', valor: String(currentSaleData.valor_venda) })
           .eq('id', currentSaleData.veiculo.id);
       }
 
