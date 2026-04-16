@@ -50,7 +50,7 @@ export function ProcuracaoDialog({ open, onOpenChange, outorganteIdInicial, veic
   const [veiculosList, setVeiculosList] = useState<Veiculo[]>([]);
 
   const [outorganteId, setOutorganteId] = useState<string>("");
-  const [outorgadoId, setOutorgadoId] = useState<string>("");
+  const [outorgadosIds, setOutorgadosIds] = useState<string[]>([]);
   const [veiculosSelecionados, setVeiculosSelecionados] = useState<number[]>([]);
   const [servico, setServico] = useState("TRANSFERÊNCIA DE PROPRIEDADE");
 

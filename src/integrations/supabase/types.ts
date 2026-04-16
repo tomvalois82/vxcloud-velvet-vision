@@ -1291,11 +1291,13 @@ export type Database = {
         Row: {
           created_at: string
           data_criacao: string | null
+          data_finalizado: string | null
           id: number
           id_kanban: number | null
           id_lead: number | null
           id_usuario: number | null
           idEstoque: number | null
+          motivo_perda: string | null
           obs: string | null
           outro_interesse: string[] | null
           resumo: string | null
@@ -1309,11 +1311,13 @@ export type Database = {
         Insert: {
           created_at?: string
           data_criacao?: string | null
+          data_finalizado?: string | null
           id?: number
           id_kanban?: number | null
           id_lead?: number | null
           id_usuario?: number | null
           idEstoque?: number | null
+          motivo_perda?: string | null
           obs?: string | null
           outro_interesse?: string[] | null
           resumo?: string | null
@@ -1327,11 +1331,13 @@ export type Database = {
         Update: {
           created_at?: string
           data_criacao?: string | null
+          data_finalizado?: string | null
           id?: number
           id_kanban?: number | null
           id_lead?: number | null
           id_usuario?: number | null
           idEstoque?: number | null
+          motivo_perda?: string | null
           obs?: string | null
           outro_interesse?: string[] | null
           resumo?: string | null
