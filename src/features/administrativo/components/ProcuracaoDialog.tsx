@@ -50,7 +50,7 @@ export function ProcuracaoDialog({ open, onOpenChange, outorganteIdInicial, veic
   const [veiculosList, setVeiculosList] = useState<Veiculo[]>([]);
 
   const [outorganteId, setOutorganteId] = useState<string>("");
-  const [outorgadoId, setOutorgadoId] = useState<string>("");
+  const [outorgadosIds, setOutorgadosIds] = useState<string[]>([]);
   const [veiculosSelecionados, setVeiculosSelecionados] = useState<number[]>([]);
   const [servico, setServico] = useState("TRANSFERÊNCIA DE PROPRIEDADE");
 
@@ -91,8 +91,12 @@ export function ProcuracaoDialog({ open, onOpenChange, outorganteIdInicial, veic
     );
   }
 
+  function toggleOutorgado(id: string) {
+    setOutorgadosIds(prev => prev.includes(id) ? prev.filter(o => o !== id) : [...prev, id]);
+  }
+
   function handleImprimir() {
-    if (!outorganteId || !outorgadoId || veiculosSelecionados.length === 0 || !servico.trim()) {
+    if (!outorganteId || outorgadosIds.length === 0 || veiculosSelecionados.length === 0 || !servico.trim()) {
       toast.error("Preencha todos os campos antes de imprimir.");
       return;
     }
@@ -101,7 +105,7 @@ export function ProcuracaoDialog({ open, onOpenChange, outorganteIdInicial, veic
   }
 
   const outorgante = pessoas.find(p => p.id === outorganteId);
-  const outorgado = despachantes.find(p => p.id === outorgadoId);
+  const outorgadosSel = despachantes.filter(p => outorgadosIds.includes(p.id));
   const veiculosSel = veiculosList.filter(v => veiculosSelecionados.includes(v.id));
 
   return (
@@ -142,13 +146,13 @@ export function ProcuracaoDialog({ open, onOpenChange, outorganteIdInicial, veic
               </Popover>
             </div>
 
-            {/* Outorgado */}
+            {/* Outorgados */}
             <div className="space-y-2">
-              <Label>Outorgado (Despachante)</Label>
+              <Label>Outorgado(s) (Despachante)</Label>
               <Popover open={outorgadoOpen} onOpenChange={setOutorgadoOpen}>
                 <PopoverTrigger asChild>
-                  <Button variant="outline" role="combobox" className="w-full justify-between">
-                    {outorgado?.nome || "Selecione um despachante..."}
+                  <Button variant="outline" role="combobox" className="w-full justify-between min-h-[40px] h-auto">
+                    <span className="truncate">{outorgadosIds.length > 0 ? `${outorgadosIds.length} despachante(s) selecionado(s)` : "Selecione despachante(s)..."}</span>
                     <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                   </Button>
                 </PopoverTrigger>
@@ -159,8 +163,8 @@ export function ProcuracaoDialog({ open, onOpenChange, outorganteIdInicial, veic
                       <CommandEmpty>Nenhum despachante encontrado.</CommandEmpty>
                       <CommandGroup>
                         {despachantes.map(p => (
-                          <CommandItem key={p.id} value={p.nome} onSelect={() => { setOutorgadoId(p.id); setOutorgadoOpen(false); }}>
-                            <Check className={cn("mr-2 h-4 w-4", outorgadoId === p.id ? "opacity-100" : "opacity-0")} />
+                          <CommandItem key={p.id} value={p.nome} onSelect={() => toggleOutorgado(p.id)}>
+                            <Check className={cn("mr-2 h-4 w-4", outorgadosIds.includes(p.id) ? "opacity-100" : "opacity-0")} />
                             {p.nome}
                           </CommandItem>
                         ))}
@@ -169,6 +173,16 @@ export function ProcuracaoDialog({ open, onOpenChange, outorganteIdInicial, veic
                   </Command>
                 </PopoverContent>
               </Popover>
+              {outorgadosSel.length > 0 && (
+                <div className="flex flex-wrap gap-1 mt-1">
+                  {outorgadosSel.map(p => (
+                    <Badge key={p.id} variant="secondary" className="gap-1">
+                      {p.nome}
+                      <X className="h-3 w-3 cursor-pointer" onClick={() => toggleOutorgado(p.id)} />
+                    </Badge>
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* Veículos */}
@@ -228,12 +242,12 @@ export function ProcuracaoDialog({ open, onOpenChange, outorganteIdInicial, veic
       </Dialog>
 
       {/* Hidden print area */}
-      {showPrint && outorgante && outorgado && (
+      {showPrint && outorgante && outorgadosSel.length > 0 && (
         <div className="fixed top-0 left-0 -z-50 opacity-0 pointer-events-none">
           <ProcuracaoPrint
             ref={printRef}
             outorgante={outorgante}
-            outorgado={outorgado}
+            outorgados={outorgadosSel}
             veiculos={veiculosSel}
             servico={servico}
           />

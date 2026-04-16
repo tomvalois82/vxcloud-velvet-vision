@@ -25,7 +25,7 @@ interface VeiculoData {
 
 interface ProcuracaoPrintProps {
   outorgante: PessoaData;
-  outorgado: PessoaData;
+  outorgados: PessoaData[];
   veiculos: VeiculoData[];
   servico: string;
 }
@@ -43,7 +43,7 @@ function formatEndereco(p: PessoaData): string {
 }
 
 export const ProcuracaoPrint = forwardRef<HTMLDivElement, ProcuracaoPrintProps>(
-  ({ outorgante, outorgado, veiculos, servico }, ref) => {
+  ({ outorgante, outorgados, veiculos, servico }, ref) => {
     return (
       <div ref={ref} className="p-12 bg-white text-black" style={{ fontFamily: "Arial, Helvetica, sans-serif", fontSize: "12pt", lineHeight: "1.8", maxWidth: "210mm", margin: "0 auto" }}>
         {/* Título */}
@@ -62,15 +62,20 @@ export const ProcuracaoPrint = forwardRef<HTMLDivElement, ProcuracaoPrintProps>(
           <p>BAIRRO: {outorgante.bairro?.toUpperCase() || "___________"} &nbsp; CIDADE: {outorgante.municipio?.toUpperCase() || "___________"} &nbsp; UF: {outorgante.estado?.toUpperCase() || "__"} &nbsp; CEP: {outorgante.cep || "___________"}</p>
         </div>
 
-        {/* Outorgado */}
+        {/* Outorgados */}
         <p style={{ fontSize: "12pt", fontWeight: "bold", textDecoration: "underline", marginBottom: "8px" }}>
-          OUTORGADO:
+          {outorgados.length > 1 ? "OUTORGADOS:" : "OUTORGADO:"}
         </p>
         <div style={{ marginBottom: "30px" }}>
-          <p>Nome (Completo): <strong>{outorgado.nome?.toUpperCase()}</strong></p>
-          <p>RG: {outorgado.rg || "___________"} &nbsp;&nbsp; Org. Emissor: SSP/PE &nbsp;&nbsp; CPF/CNPJ: {outorgado.cpf_cnpj || "_______________"}</p>
-          <p>Endereço: {formatEndereco(outorgado) || "___________________________"}</p>
-          <p>BAIRRO: {outorgado.bairro?.toUpperCase() || "___________"} &nbsp; CIDADE: {outorgado.municipio?.toUpperCase() || "___________"} &nbsp; UF: {outorgado.estado?.toUpperCase() || "__"} &nbsp; CEP: {outorgado.cep || "___________"}</p>
+          {outorgados.map((outorgado, idx) => (
+            <div key={idx} style={{ marginBottom: idx < outorgados.length - 1 ? "16px" : "0" }}>
+              <p>Nome (Completo): <strong>{outorgado.nome?.toUpperCase()}</strong></p>
+              <p>RG: {outorgado.rg || "___________"} &nbsp;&nbsp; Org. Emissor: SSP/PE &nbsp;&nbsp; CPF/CNPJ: {outorgado.cpf_cnpj || "_______________"}</p>
+              <p>Endereço: {formatEndereco(outorgado) || "___________________________"}</p>
+              <p>BAIRRO: {outorgado.bairro?.toUpperCase() || "___________"} &nbsp; CIDADE: {outorgado.municipio?.toUpperCase() || "___________"} &nbsp; UF: {outorgado.estado?.toUpperCase() || "__"} &nbsp; CEP: {outorgado.cep || "___________"}</p>
+              {idx < outorgados.length - 1 && <hr style={{ margin: "8px 0", borderColor: "#ccc" }} />}
+            </div>
+          ))}
         </div>
 
         {/* Veículos */}
