@@ -91,8 +91,12 @@ export function ProcuracaoDialog({ open, onOpenChange, outorganteIdInicial, veic
     );
   }
 
+  function toggleOutorgado(id: string) {
+    setOutorgadosIds(prev => prev.includes(id) ? prev.filter(o => o !== id) : [...prev, id]);
+  }
+
   function handleImprimir() {
-    if (!outorganteId || !outorgadoId || veiculosSelecionados.length === 0 || !servico.trim()) {
+    if (!outorganteId || outorgadosIds.length === 0 || veiculosSelecionados.length === 0 || !servico.trim()) {
       toast.error("Preencha todos os campos antes de imprimir.");
       return;
     }
@@ -101,7 +105,7 @@ export function ProcuracaoDialog({ open, onOpenChange, outorganteIdInicial, veic
   }
 
   const outorgante = pessoas.find(p => p.id === outorganteId);
-  const outorgado = despachantes.find(p => p.id === outorgadoId);
+  const outorgadosSel = despachantes.filter(p => outorgadosIds.includes(p.id));
   const veiculosSel = veiculosList.filter(v => veiculosSelecionados.includes(v.id));
 
   return (
