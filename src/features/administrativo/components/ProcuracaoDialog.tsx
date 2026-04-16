@@ -146,13 +146,13 @@ export function ProcuracaoDialog({ open, onOpenChange, outorganteIdInicial, veic
               </Popover>
             </div>
 
-            {/* Outorgado */}
+            {/* Outorgados */}
             <div className="space-y-2">
-              <Label>Outorgado (Despachante)</Label>
+              <Label>Outorgado(s) (Despachante)</Label>
               <Popover open={outorgadoOpen} onOpenChange={setOutorgadoOpen}>
                 <PopoverTrigger asChild>
-                  <Button variant="outline" role="combobox" className="w-full justify-between">
-                    {outorgado?.nome || "Selecione um despachante..."}
+                  <Button variant="outline" role="combobox" className="w-full justify-between min-h-[40px] h-auto">
+                    <span className="truncate">{outorgadosIds.length > 0 ? `${outorgadosIds.length} despachante(s) selecionado(s)` : "Selecione despachante(s)..."}</span>
                     <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                   </Button>
                 </PopoverTrigger>
@@ -163,8 +163,8 @@ export function ProcuracaoDialog({ open, onOpenChange, outorganteIdInicial, veic
                       <CommandEmpty>Nenhum despachante encontrado.</CommandEmpty>
                       <CommandGroup>
                         {despachantes.map(p => (
-                          <CommandItem key={p.id} value={p.nome} onSelect={() => { setOutorgadoId(p.id); setOutorgadoOpen(false); }}>
-                            <Check className={cn("mr-2 h-4 w-4", outorgadoId === p.id ? "opacity-100" : "opacity-0")} />
+                          <CommandItem key={p.id} value={p.nome} onSelect={() => toggleOutorgado(p.id)}>
+                            <Check className={cn("mr-2 h-4 w-4", outorgadosIds.includes(p.id) ? "opacity-100" : "opacity-0")} />
                             {p.nome}
                           </CommandItem>
                         ))}
@@ -173,6 +173,16 @@ export function ProcuracaoDialog({ open, onOpenChange, outorganteIdInicial, veic
                   </Command>
                 </PopoverContent>
               </Popover>
+              {outorgadosSel.length > 0 && (
+                <div className="flex flex-wrap gap-1 mt-1">
+                  {outorgadosSel.map(p => (
+                    <Badge key={p.id} variant="secondary" className="gap-1">
+                      {p.nome}
+                      <X className="h-3 w-3 cursor-pointer" onClick={() => toggleOutorgado(p.id)} />
+                    </Badge>
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* Veículos */}
