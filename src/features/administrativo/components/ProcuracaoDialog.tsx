@@ -242,12 +242,12 @@ export function ProcuracaoDialog({ open, onOpenChange, outorganteIdInicial, veic
       </Dialog>
 
       {/* Hidden print area */}
-      {showPrint && outorgante && outorgado && (
+      {showPrint && outorgante && outorgadosSel.length > 0 && (
         <div className="fixed top-0 left-0 -z-50 opacity-0 pointer-events-none">
           <ProcuracaoPrint
             ref={printRef}
             outorgante={outorgante}
-            outorgado={outorgado}
+            outorgados={outorgadosSel}
             veiculos={veiculosSel}
             servico={servico}
           />
