@@ -25,7 +25,7 @@ interface VeiculoData {
 
 interface ProcuracaoPrintProps {
   outorgante: PessoaData;
-  outorgado: PessoaData;
+  outorgados: PessoaData[];
   veiculos: VeiculoData[];
   servico: string;
 }
