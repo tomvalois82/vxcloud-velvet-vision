@@ -11,6 +11,7 @@ export default defineConfig(({ mode }) => ({
     
     allowedHosts: [
       "quepasa-vx-cloud.ppmwkh.easypanel.host",
+      "vxcloud.vxmotors.com.br",
     ],
     
   },
