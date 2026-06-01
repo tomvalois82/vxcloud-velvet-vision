@@ -21,10 +21,11 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Plus, Wallet, Search, Pencil, Trash2, Loader2, Star } from "lucide-react";
+import { Plus, Wallet, Search, Pencil, Trash2, Loader2, Star, FileUp } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { ContaDialog } from "@/features/financeiro/components/ContaDialog";
+import { OfxImportDialog } from "@/features/financeiro/components/OfxImportDialog";
 import { maskCurrency } from "@/features/estoque/utils/masks";
 
 interface Conta {
