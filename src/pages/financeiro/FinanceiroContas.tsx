@@ -303,6 +303,15 @@ const FinanceiroContas = () => {
         onSuccess={fetchContas}
       />
 
+      <OfxImportDialog
+        open={ofxDialogOpen}
+        onOpenChange={setOfxDialogOpen}
+        conta={contaParaImportar}
+        onSuccess={fetchContas}
+      />
+
+
+
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent className="glass-strong border-border/50">
           <AlertDialogHeader>
