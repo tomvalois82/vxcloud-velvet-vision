@@ -47,6 +47,8 @@ const FinanceiroContas = () => {
   const [contaToDelete, setContaToDelete] = useState<Conta | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [togglingPadrao, setTogglingPadrao] = useState<string | null>(null);
+  const [ofxDialogOpen, setOfxDialogOpen] = useState(false);
+  const [contaParaImportar, setContaParaImportar] = useState<Conta | null>(null);
 
   const fetchContas = async () => {
     setLoading(true);
