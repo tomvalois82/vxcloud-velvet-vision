@@ -248,6 +248,18 @@ const FinanceiroContas = () => {
                               variant="ghost"
                               size="icon"
                               className="h-8 w-8 hover:bg-accent/20"
+                              onClick={() => {
+                                setContaParaImportar(conta);
+                                setOfxDialogOpen(true);
+                              }}
+                              title="Importar extrato OFX"
+                            >
+                              <FileUp className="w-4 h-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 hover:bg-accent/20"
                               onClick={() => handleEdit(conta)}
                             >
                               <Pencil className="w-4 h-4" />
