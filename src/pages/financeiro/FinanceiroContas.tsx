@@ -21,10 +21,11 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Plus, Wallet, Search, Pencil, Trash2, Loader2, Star } from "lucide-react";
+import { Plus, Wallet, Search, Pencil, Trash2, Loader2, Star, FileUp } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { ContaDialog } from "@/features/financeiro/components/ContaDialog";
+import { OfxImportDialog } from "@/features/financeiro/components/OfxImportDialog";
 import { maskCurrency } from "@/features/estoque/utils/masks";
 
 interface Conta {
@@ -46,6 +47,8 @@ const FinanceiroContas = () => {
   const [contaToDelete, setContaToDelete] = useState<Conta | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [togglingPadrao, setTogglingPadrao] = useState<string | null>(null);
+  const [ofxDialogOpen, setOfxDialogOpen] = useState(false);
+  const [contaParaImportar, setContaParaImportar] = useState<Conta | null>(null);
 
   const fetchContas = async () => {
     setLoading(true);
@@ -245,6 +248,18 @@ const FinanceiroContas = () => {
                               variant="ghost"
                               size="icon"
                               className="h-8 w-8 hover:bg-accent/20"
+                              onClick={() => {
+                                setContaParaImportar(conta);
+                                setOfxDialogOpen(true);
+                              }}
+                              title="Importar extrato OFX"
+                            >
+                              <FileUp className="w-4 h-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 hover:bg-accent/20"
                               onClick={() => handleEdit(conta)}
                             >
                               <Pencil className="w-4 h-4" />
@@ -287,6 +302,15 @@ const FinanceiroContas = () => {
         conta={selectedConta}
         onSuccess={fetchContas}
       />
+
+      <OfxImportDialog
+        open={ofxDialogOpen}
+        onOpenChange={setOfxDialogOpen}
+        conta={contaParaImportar}
+        onSuccess={fetchContas}
+      />
+
+
 
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent className="glass-strong border-border/50">
