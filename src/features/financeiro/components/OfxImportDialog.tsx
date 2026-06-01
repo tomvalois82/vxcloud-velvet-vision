@@ -41,6 +41,7 @@ import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { findBestPessoaMatch, parseOfx } from "../utils/ofxParser";
+import { maskCurrency, unmaskCurrency } from "@/features/estoque/utils/masks";
 
 interface Conta {
   id: string;
@@ -446,10 +447,10 @@ function LinhaRow({
       </TableCell>
       <TableCell>
         <Input
-          type="number"
-          step="0.01"
-          value={linha.valor}
-          onChange={(e) => onChange({ valor: parseFloat(e.target.value) || 0 })}
+          type="text"
+          inputMode="decimal"
+          value={maskCurrency(linha.valor)}
+          onChange={(e) => onChange({ valor: unmaskCurrency(e.target.value) })}
           className="h-9 text-right"
         />
       </TableCell>
