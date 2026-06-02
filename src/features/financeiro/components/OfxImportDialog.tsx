@@ -439,10 +439,8 @@ export function OfxImportDialog({
                     veiculos={veiculos}
                     onChange={(patch) => updateLinha(l.uid, patch)}
                     onRemove={() => removeLinha(l.uid)}
-                    onAddPessoa={() => {
-                      setLinhaUidPendente(l.uid);
-                      setAddPessoaOpen(true);
-                    }}
+                    onAddPessoa={() => handleAbrirCriarPessoa(l.uid, l.nome)}
+                    onEditPessoa={() => l.id_pessoa && handleAbrirEditarPessoa(l.id_pessoa)}
                   />
                 ))}
               </TableBody>
