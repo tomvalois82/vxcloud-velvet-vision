@@ -32,6 +32,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Loader2 } from "lucide-react";
 import { maskCPF, maskCNPJ, maskCEP, maskPhone, unmaskCPFCNPJ, maskRG, maskDate, unmaskDate, formatDateToBR } from "../utils/masks";
 import { validateCPF, validateCNPJ, validateCPFCNPJDuplicate } from "../utils/validations";
+import { CategoriaAutocomplete } from "@/features/financeiro/components/CategoriaAutocomplete";
 
 const pessoaSchema = z.object({
   nome: z.string().min(1, "Nome é obrigatório"),
