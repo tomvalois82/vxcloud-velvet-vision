@@ -114,6 +114,20 @@ export function OfxImportDialog({
   const [formasPagamento, setFormasPagamento] = useState<FormaPagamento[]>([]);
   const [veiculos, setVeiculos] = useState<Veiculo[]>([]);
 
+  // Estado para o diálogo de adicionar pessoa a partir de uma linha
+  const [addPessoaOpen, setAddPessoaOpen] = useState(false);
+  const [linhaUidPendente, setLinhaUidPendente] = useState<string | null>(null);
+
+  const fetchPessoas = async (): Promise<Pessoa[]> => {
+    const { data } = await supabase
+      .from("vx_pessoa")
+      .select("id, nome, id_categoria, id_forma_pagamento")
+      .order("nome");
+    const lista = (data || []) as Pessoa[];
+    setPessoas(lista);
+    return lista;
+  };
+
   useEffect(() => {
     if (!open) {
       setFile(null);
@@ -121,8 +135,8 @@ export function OfxImportDialog({
       return;
     }
     (async () => {
-      const [pessoasRes, categoriasRes, formasRes, veiculosRes] = await Promise.all([
-        supabase.from("vx_pessoa").select("id, nome, id_categoria, id_forma_pagamento").order("nome"),
+      const [, categoriasRes, formasRes, veiculosRes] = await Promise.all([
+        fetchPessoas(),
         supabase
           .from("vx_fin_categoria")
           .select("id, categoria, operacao, tipo_conta, ativo")
@@ -138,12 +152,34 @@ export function OfxImportDialog({
           .select("id, fabricante, modelo, placa, ano")
           .order("fabricante"),
       ]);
-      setPessoas((pessoasRes.data || []) as Pessoa[]);
       setCategorias((categoriasRes.data || []) as Categoria[]);
       setFormasPagamento((formasRes.data || []) as FormaPagamento[]);
       setVeiculos((veiculosRes.data || []) as Veiculo[]);
     })();
   }, [open]);
+
+  // Após criar uma nova pessoa, identifica a recém-criada e seleciona-a na linha
+  const handlePessoaCriada = async () => {
+    const idsAntigos = new Set(pessoas.map((p) => p.id));
+    const novaLista = await fetchPessoas();
+    const nova = novaLista.find((p) => !idsAntigos.has(p.id));
+    if (nova && linhaUidPendente) {
+      setLinhas((prev) =>
+        prev.map((l) =>
+          l.uid === linhaUidPendente
+            ? {
+                ...l,
+                id_pessoa: nova.id,
+                id_categoria: nova.id_categoria ?? l.id_categoria,
+                id_forma_pagamento: nova.id_forma_pagamento ?? l.id_forma_pagamento,
+              }
+            : l,
+        ),
+      );
+    }
+    setLinhaUidPendente(null);
+  };
+
 
   const categoriasFiltradas = useMemo(
     () =>
