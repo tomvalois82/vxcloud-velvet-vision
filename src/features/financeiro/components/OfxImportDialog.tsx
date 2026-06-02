@@ -51,6 +51,8 @@ interface Conta {
 interface Pessoa {
   id: string;
   nome: string;
+  id_categoria: string | null;
+  id_forma_pagamento: string | null;
 }
 
 interface Categoria {
@@ -119,7 +121,7 @@ export function OfxImportDialog({
     }
     (async () => {
       const [pessoasRes, categoriasRes, formasRes, veiculosRes] = await Promise.all([
-        supabase.from("vx_pessoa").select("id, nome").order("nome"),
+        supabase.from("vx_pessoa").select("id, nome, id_categoria, id_forma_pagamento").order("nome"),
         supabase
           .from("vx_fin_categoria")
           .select("id, categoria, operacao, tipo_conta, ativo")
@@ -390,6 +392,15 @@ function LinhaRow({
   onChange,
   onRemove,
 }: LinhaRowProps) {
+  const handlePessoaChange = (id: string | null) => {
+    const pessoa = pessoas.find((p) => p.id === id);
+    onChange({
+      id_pessoa: id,
+      id_categoria: pessoa?.id_categoria ?? linha.id_categoria,
+      id_forma_pagamento: pessoa?.id_forma_pagamento ?? linha.id_forma_pagamento,
+    });
+  };
+
   return (
     <TableRow>
       <TableCell>
@@ -427,7 +438,7 @@ function LinhaRow({
             pessoas={pessoas}
             value={linha.id_pessoa}
             fallbackLabel={linha.nome}
-            onChange={(id) => onChange({ id_pessoa: id })}
+            onChange={(id) => handlePessoaChange(id)}
           />
           {!linha.id_pessoa && (
             <Button
