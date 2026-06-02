@@ -42,6 +42,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { findBestPessoaMatch, parseOfx } from "../utils/ofxParser";
 import { maskCurrency, unmaskCurrency } from "@/features/estoque/utils/masks";
+import { PessoaDialog } from "@/features/pessoas/components/PessoaDialog";
 
 interface Conta {
   id: string;
