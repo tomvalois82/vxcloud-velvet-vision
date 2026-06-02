@@ -131,12 +131,20 @@ const PessoasList = () => {
   };
 
   const filteredPessoas = pessoas.filter((pessoa) => {
-    const search = searchTerm.toLowerCase();
-    return (
-      pessoa.nome?.toLowerCase().includes(search) ||
-      pessoa.cpf_cnpj?.includes(searchTerm.replace(/\D/g, "")) ||
-      pessoa.telefone?.includes(searchTerm.replace(/\D/g, ""))
-    );
+    const termo = searchTerm.trim();
+    if (!termo) return true;
+    const termoLower = termo.toLowerCase();
+    const termoDigitos = termo.replace(/\D/g, "");
+
+    const nomeMatch = pessoa.nome?.toLowerCase().includes(termoLower) ?? false;
+    const cpfMatch =
+      termoDigitos.length > 0 &&
+      (pessoa.cpf_cnpj?.replace(/\D/g, "").includes(termoDigitos) ?? false);
+    const telMatch =
+      termoDigitos.length > 0 &&
+      (pessoa.telefone?.replace(/\D/g, "").includes(termoDigitos) ?? false);
+
+    return nomeMatch || cpfMatch || telMatch;
   });
 
   const formatCpfCnpj = (cpfCnpj: string) => {
