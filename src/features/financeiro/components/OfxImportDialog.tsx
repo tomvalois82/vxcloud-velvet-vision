@@ -51,6 +51,8 @@ interface Conta {
 interface Pessoa {
   id: string;
   nome: string;
+  id_categoria: string | null;
+  id_forma_pagamento: string | null;
 }
 
 interface Categoria {
