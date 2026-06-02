@@ -489,6 +489,7 @@ interface LinhaRowProps {
   onChange: (patch: Partial<LinhaImportacao>) => void;
   onRemove: () => void;
   onAddPessoa: () => void;
+  onEditPessoa: () => void;
 }
 
 function LinhaRow({
@@ -500,6 +501,7 @@ function LinhaRow({
   onChange,
   onRemove,
   onAddPessoa,
+  onEditPessoa,
 }: LinhaRowProps) {
   const handlePessoaChange = (id: string | null) => {
     const pessoa = pessoas.find((p) => p.id === id);
