@@ -333,7 +333,7 @@ export function PessoaDialog({ open, onOpenChange, pessoa, onSuccess }: PessoaDi
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
-            {pessoa ? "Editar Pessoa" : "Adicionar Pessoa"}
+            {pessoa?.id ? "Editar Pessoa" : "Adicionar Pessoa"}
           </DialogTitle>
         </DialogHeader>
 
