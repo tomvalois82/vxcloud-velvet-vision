@@ -410,6 +410,15 @@ export function OfxImportDialog({
           </Button>
         </DialogFooter>
       </DialogContent>
+
+      <PessoaDialog
+        open={addPessoaOpen}
+        onOpenChange={(o) => {
+          setAddPessoaOpen(o);
+          if (!o) setLinhaUidPendente(null);
+        }}
+        onSuccess={handlePessoaCriada}
+      />
     </Dialog>
   );
 }
