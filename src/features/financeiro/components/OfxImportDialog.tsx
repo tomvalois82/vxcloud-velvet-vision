@@ -400,6 +400,8 @@ function LinhaRow({
       id_forma_pagamento: pessoa?.id_forma_pagamento ?? linha.id_forma_pagamento,
     });
   };
+
+  return (
     <TableRow>
       <TableCell>
         <Select
