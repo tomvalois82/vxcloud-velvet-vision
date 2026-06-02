@@ -438,7 +438,7 @@ function LinhaRow({
             pessoas={pessoas}
             value={linha.id_pessoa}
             fallbackLabel={linha.nome}
-            onChange={(id) => onChange({ id_pessoa: id })}
+            onChange={(id) => handlePessoaChange(id)}
           />
           {!linha.id_pessoa && (
             <Button
