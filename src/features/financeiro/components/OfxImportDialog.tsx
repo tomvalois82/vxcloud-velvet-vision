@@ -392,7 +392,14 @@ function LinhaRow({
   onChange,
   onRemove,
 }: LinhaRowProps) {
-  return (
+  const handlePessoaChange = (id: string | null) => {
+    const pessoa = pessoas.find((p) => p.id === id);
+    onChange({
+      id_pessoa: id,
+      id_categoria: pessoa?.id_categoria ?? linha.id_categoria,
+      id_forma_pagamento: pessoa?.id_forma_pagamento ?? linha.id_forma_pagamento,
+    });
+  };
     <TableRow>
       <TableCell>
         <Select
