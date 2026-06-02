@@ -56,6 +56,8 @@ const pessoaSchema = z.object({
   eh_colaborador: z.boolean(),
   eh_investidor: z.boolean(),
   eh_despachante: z.boolean(),
+  id_categoria: z.string().optional(),
+  id_forma_pagamento: z.string().optional(),
 });
 
 type PessoaFormData = z.infer<typeof pessoaSchema>;
