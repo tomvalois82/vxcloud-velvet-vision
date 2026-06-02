@@ -32,6 +32,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Loader2 } from "lucide-react";
 import { maskCPF, maskCNPJ, maskCEP, maskPhone, unmaskCPFCNPJ, maskRG, maskDate, unmaskDate, formatDateToBR } from "../utils/masks";
 import { validateCPF, validateCNPJ, validateCPFCNPJDuplicate } from "../utils/validations";
+import { CategoriaAutocomplete } from "@/features/financeiro/components/CategoriaAutocomplete";
 
 const pessoaSchema = z.object({
   nome: z.string().min(1, "Nome é obrigatório"),
@@ -55,6 +56,8 @@ const pessoaSchema = z.object({
   eh_colaborador: z.boolean(),
   eh_investidor: z.boolean(),
   eh_despachante: z.boolean(),
+  id_categoria: z.string().optional(),
+  id_forma_pagamento: z.string().optional(),
 });
 
 type PessoaFormData = z.infer<typeof pessoaSchema>;
@@ -78,6 +81,21 @@ export function PessoaDialog({ open, onOpenChange, pessoa, onSuccess }: PessoaDi
   const [loadingCep, setLoadingCep] = useState(false);
   const [cepError, setCepError] = useState<string>("");
   const [enderecoEditavel, setEnderecoEditavel] = useState(false);
+  const [categorias, setCategorias] = useState<any[]>([]);
+  const [formasPagamento, setFormasPagamento] = useState<any[]>([]);
+
+  useEffect(() => {
+    if (!open) return;
+    (async () => {
+      const [{ data: cats }, { data: formas }] = await Promise.all([
+        supabase.from("vx_fin_categoria").select("id, categoria, id_categoria_pai, ativo, tipo_conta").eq("ativo", true),
+        supabase.from("vx_forma_pagamento").select("id, descricao, ativa").eq("ativa", true).order("descricao"),
+      ]);
+      setCategorias(cats || []);
+      setFormasPagamento(formas || []);
+    })();
+  }, [open]);
+
 
   const form = useForm<PessoaFormData>({
     resolver: zodResolver(pessoaSchema),
@@ -103,6 +121,8 @@ export function PessoaDialog({ open, onOpenChange, pessoa, onSuccess }: PessoaDi
       eh_colaborador: pessoa?.eh_colaborador || false,
       eh_investidor: pessoa?.eh_investidor || false,
       eh_despachante: pessoa?.eh_despachante || false,
+      id_categoria: pessoa?.id_categoria || "",
+      id_forma_pagamento: pessoa?.id_forma_pagamento || "",
     },
   });
 
@@ -136,6 +156,8 @@ export function PessoaDialog({ open, onOpenChange, pessoa, onSuccess }: PessoaDi
         eh_colaborador: pessoa?.eh_colaborador || false,
         eh_investidor: pessoa?.eh_investidor || false,
         eh_despachante: pessoa?.eh_despachante || false,
+        id_categoria: pessoa?.id_categoria || "",
+        id_forma_pagamento: pessoa?.id_forma_pagamento || "",
       });
       
       // Resetar estados auxiliares
@@ -268,6 +290,8 @@ export function PessoaDialog({ open, onOpenChange, pessoa, onSuccess }: PessoaDi
         estado: data.estado || null,
         ponto_referencia: data.ponto_referencia || null,
         descricao: data.descricao || null,
+        id_categoria: data.id_categoria || null,
+        id_forma_pagamento: data.id_forma_pagamento || null,
         eh_cliente: data.eh_cliente,
         eh_fornecedor: data.eh_fornecedor,
         eh_colaborador: data.eh_colaborador,
@@ -767,6 +791,54 @@ export function PessoaDialog({ open, onOpenChange, pessoa, onSuccess }: PessoaDi
                 </FormItem>
               )}
             />
+
+            {/* Categoria e Forma de Pagamento Padrão */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="id_categoria"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Categoria Padrão</FormLabel>
+                    <FormControl>
+                      <CategoriaAutocomplete
+                        categorias={categorias}
+                        value={field.value || ""}
+                        onValueChange={field.onChange}
+                        placeholder="Selecione a categoria"
+                        allowSelectAll
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="id_forma_pagamento"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Forma de Pagamento Padrão</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value || ""}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione a forma de pagamento" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {formasPagamento.map((fp) => (
+                          <SelectItem key={fp.id} value={fp.id}>
+                            {fp.descricao}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
 
             {/* Actions */}
             <div className="flex justify-end gap-2">
