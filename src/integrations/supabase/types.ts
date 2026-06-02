@@ -2118,7 +2118,9 @@ export type Database = {
           email: string | null
           estado: string | null
           id: string
+          id_categoria: string | null
           id_empresa: string
+          id_forma_pagamento: string | null
           logradouro: string | null
           municipio: string | null
           nome: string
@@ -2146,7 +2148,9 @@ export type Database = {
           email?: string | null
           estado?: string | null
           id?: string
+          id_categoria?: string | null
           id_empresa: string
+          id_forma_pagamento?: string | null
           logradouro?: string | null
           municipio?: string | null
           nome: string
@@ -2174,7 +2178,9 @@ export type Database = {
           email?: string | null
           estado?: string | null
           id?: string
+          id_categoria?: string | null
           id_empresa?: string
+          id_forma_pagamento?: string | null
           logradouro?: string | null
           municipio?: string | null
           nome?: string
