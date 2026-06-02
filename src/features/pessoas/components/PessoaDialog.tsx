@@ -290,6 +290,8 @@ export function PessoaDialog({ open, onOpenChange, pessoa, onSuccess }: PessoaDi
         estado: data.estado || null,
         ponto_referencia: data.ponto_referencia || null,
         descricao: data.descricao || null,
+        id_categoria: data.id_categoria || null,
+        id_forma_pagamento: data.id_forma_pagamento || null,
         eh_cliente: data.eh_cliente,
         eh_fornecedor: data.eh_fornecedor,
         eh_colaborador: data.eh_colaborador,
