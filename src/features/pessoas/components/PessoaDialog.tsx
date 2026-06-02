@@ -141,6 +141,8 @@ export function PessoaDialog({ open, onOpenChange, pessoa, onSuccess }: PessoaDi
         eh_colaborador: pessoa?.eh_colaborador || false,
         eh_investidor: pessoa?.eh_investidor || false,
         eh_despachante: pessoa?.eh_despachante || false,
+        id_categoria: pessoa?.id_categoria || "",
+        id_forma_pagamento: pessoa?.id_forma_pagamento || "",
       });
       
       // Resetar estados auxiliares
