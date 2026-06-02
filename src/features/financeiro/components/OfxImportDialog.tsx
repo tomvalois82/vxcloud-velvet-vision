@@ -464,12 +464,17 @@ export function OfxImportDialog({
       </DialogContent>
 
       <PessoaDialog
-        open={addPessoaOpen}
+        open={pessoaDialogOpen}
         onOpenChange={(o) => {
-          setAddPessoaOpen(o);
-          if (!o) setLinhaUidPendente(null);
+          setPessoaDialogOpen(o);
+          if (!o) {
+            setLinhaUidPendente(null);
+            setEditingPessoaId(null);
+            setPessoaDialogData(null);
+          }
         }}
-        onSuccess={handlePessoaCriada}
+        pessoa={pessoaDialogData}
+        onSuccess={handlePessoaSalva}
       />
     </Dialog>
   );
