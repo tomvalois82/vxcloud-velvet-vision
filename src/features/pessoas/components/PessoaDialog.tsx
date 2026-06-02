@@ -81,6 +81,21 @@ export function PessoaDialog({ open, onOpenChange, pessoa, onSuccess }: PessoaDi
   const [loadingCep, setLoadingCep] = useState(false);
   const [cepError, setCepError] = useState<string>("");
   const [enderecoEditavel, setEnderecoEditavel] = useState(false);
+  const [categorias, setCategorias] = useState<any[]>([]);
+  const [formasPagamento, setFormasPagamento] = useState<any[]>([]);
+
+  useEffect(() => {
+    if (!open) return;
+    (async () => {
+      const [{ data: cats }, { data: formas }] = await Promise.all([
+        supabase.from("vx_fin_categoria").select("id, categoria, id_categoria_pai, ativo, tipo_conta").eq("ativo", true),
+        supabase.from("vx_forma_pagamento").select("id, descricao, ativa").eq("ativa", true).order("descricao"),
+      ]);
+      setCategorias(cats || []);
+      setFormasPagamento(formas || []);
+    })();
+  }, [open]);
+
 
   const form = useForm<PessoaFormData>({
     resolver: zodResolver(pessoaSchema),
