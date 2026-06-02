@@ -121,7 +121,7 @@ export function OfxImportDialog({
     }
     (async () => {
       const [pessoasRes, categoriasRes, formasRes, veiculosRes] = await Promise.all([
-        supabase.from("vx_pessoa").select("id, nome").order("nome"),
+        supabase.from("vx_pessoa").select("id, nome, id_categoria, id_forma_pagamento").order("nome"),
         supabase
           .from("vx_fin_categoria")
           .select("id, categoria, operacao, tipo_conta, ativo")
