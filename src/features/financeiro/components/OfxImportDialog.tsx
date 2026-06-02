@@ -551,7 +551,18 @@ function LinhaRow({
             fallbackLabel={linha.nome}
             onChange={(id) => handlePessoaChange(id)}
           />
-          {!linha.id_pessoa && (
+          {linha.id_pessoa ? (
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 shrink-0"
+              title="Editar pessoa"
+              onClick={onEditPessoa}
+            >
+              <Pencil className="w-4 h-4" />
+            </Button>
+          ) : (
             <Button
               type="button"
               variant="ghost"
