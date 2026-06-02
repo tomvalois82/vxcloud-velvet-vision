@@ -178,8 +178,8 @@ export function OfxImportDialog({
           nome: tx.name,
           id_pessoa: match?.id ?? null,
           valor: Math.abs(tx.trnAmt),
-          id_categoria: null,
-          id_forma_pagamento: null,
+          id_categoria: match?.id_categoria ?? null,
+          id_forma_pagamento: match?.id_forma_pagamento ?? null,
           id_estoque: null,
         };
       });
