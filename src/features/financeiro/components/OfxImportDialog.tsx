@@ -498,10 +498,8 @@ function LinhaRow({
               variant="ghost"
               size="icon"
               className="h-8 w-8 shrink-0"
-              title="Adicionar nova pessoa (em breve)"
-              onClick={() => {
-                /* Dialog de add pessoa - implementação futura */
-              }}
+              title="Adicionar nova pessoa"
+              onClick={onAddPessoa}
             >
               <Plus className="w-4 h-4" />
             </Button>
