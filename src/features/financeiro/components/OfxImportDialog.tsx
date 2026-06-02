@@ -42,6 +42,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { findBestPessoaMatch, parseOfx } from "../utils/ofxParser";
 import { maskCurrency, unmaskCurrency } from "@/features/estoque/utils/masks";
+import { PessoaDialog } from "@/features/pessoas/components/PessoaDialog";
 
 interface Conta {
   id: string;
@@ -113,6 +114,20 @@ export function OfxImportDialog({
   const [formasPagamento, setFormasPagamento] = useState<FormaPagamento[]>([]);
   const [veiculos, setVeiculos] = useState<Veiculo[]>([]);
 
+  // Estado para o diálogo de adicionar pessoa a partir de uma linha
+  const [addPessoaOpen, setAddPessoaOpen] = useState(false);
+  const [linhaUidPendente, setLinhaUidPendente] = useState<string | null>(null);
+
+  const fetchPessoas = async (): Promise<Pessoa[]> => {
+    const { data } = await supabase
+      .from("vx_pessoa")
+      .select("id, nome, id_categoria, id_forma_pagamento")
+      .order("nome");
+    const lista = (data || []) as Pessoa[];
+    setPessoas(lista);
+    return lista;
+  };
+
   useEffect(() => {
     if (!open) {
       setFile(null);
@@ -120,8 +135,8 @@ export function OfxImportDialog({
       return;
     }
     (async () => {
-      const [pessoasRes, categoriasRes, formasRes, veiculosRes] = await Promise.all([
-        supabase.from("vx_pessoa").select("id, nome, id_categoria, id_forma_pagamento").order("nome"),
+      const [, categoriasRes, formasRes, veiculosRes] = await Promise.all([
+        fetchPessoas(),
         supabase
           .from("vx_fin_categoria")
           .select("id, categoria, operacao, tipo_conta, ativo")
@@ -137,12 +152,34 @@ export function OfxImportDialog({
           .select("id, fabricante, modelo, placa, ano")
           .order("fabricante"),
       ]);
-      setPessoas((pessoasRes.data || []) as Pessoa[]);
       setCategorias((categoriasRes.data || []) as Categoria[]);
       setFormasPagamento((formasRes.data || []) as FormaPagamento[]);
       setVeiculos((veiculosRes.data || []) as Veiculo[]);
     })();
   }, [open]);
+
+  // Após criar uma nova pessoa, identifica a recém-criada e seleciona-a na linha
+  const handlePessoaCriada = async () => {
+    const idsAntigos = new Set(pessoas.map((p) => p.id));
+    const novaLista = await fetchPessoas();
+    const nova = novaLista.find((p) => !idsAntigos.has(p.id));
+    if (nova && linhaUidPendente) {
+      setLinhas((prev) =>
+        prev.map((l) =>
+          l.uid === linhaUidPendente
+            ? {
+                ...l,
+                id_pessoa: nova.id,
+                id_categoria: nova.id_categoria ?? l.id_categoria,
+                id_forma_pagamento: nova.id_forma_pagamento ?? l.id_forma_pagamento,
+              }
+            : l,
+        ),
+      );
+    }
+    setLinhaUidPendente(null);
+  };
+
 
   const categoriasFiltradas = useMemo(
     () =>
@@ -348,6 +385,10 @@ export function OfxImportDialog({
                     veiculos={veiculos}
                     onChange={(patch) => updateLinha(l.uid, patch)}
                     onRemove={() => removeLinha(l.uid)}
+                    onAddPessoa={() => {
+                      setLinhaUidPendente(l.uid);
+                      setAddPessoaOpen(true);
+                    }}
                   />
                 ))}
               </TableBody>
@@ -369,6 +410,15 @@ export function OfxImportDialog({
           </Button>
         </DialogFooter>
       </DialogContent>
+
+      <PessoaDialog
+        open={addPessoaOpen}
+        onOpenChange={(o) => {
+          setAddPessoaOpen(o);
+          if (!o) setLinhaUidPendente(null);
+        }}
+        onSuccess={handlePessoaCriada}
+      />
     </Dialog>
   );
 }
@@ -381,6 +431,7 @@ interface LinhaRowProps {
   veiculos: Veiculo[];
   onChange: (patch: Partial<LinhaImportacao>) => void;
   onRemove: () => void;
+  onAddPessoa: () => void;
 }
 
 function LinhaRow({
@@ -391,6 +442,7 @@ function LinhaRow({
   veiculos,
   onChange,
   onRemove,
+  onAddPessoa,
 }: LinhaRowProps) {
   const handlePessoaChange = (id: string | null) => {
     const pessoa = pessoas.find((p) => p.id === id);
@@ -446,10 +498,8 @@ function LinhaRow({
               variant="ghost"
               size="icon"
               className="h-8 w-8 shrink-0"
-              title="Adicionar nova pessoa (em breve)"
-              onClick={() => {
-                /* Dialog de add pessoa - implementação futura */
-              }}
+              title="Adicionar nova pessoa"
+              onClick={onAddPessoa}
             >
               <Plus className="w-4 h-4" />
             </Button>
