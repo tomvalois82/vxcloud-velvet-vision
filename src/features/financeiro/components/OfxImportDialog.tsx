@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Check, ChevronsUpDown, Loader2, Plus, Trash2, Upload } from "lucide-react";
+import { Check, ChevronsUpDown, Loader2, Pencil, Plus, Trash2, Upload } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -114,9 +114,12 @@ export function OfxImportDialog({
   const [formasPagamento, setFormasPagamento] = useState<FormaPagamento[]>([]);
   const [veiculos, setVeiculos] = useState<Veiculo[]>([]);
 
-  // Estado para o diálogo de adicionar pessoa a partir de uma linha
-  const [addPessoaOpen, setAddPessoaOpen] = useState(false);
+  // Estado para o diálogo de adicionar/editar pessoa a partir de uma linha
+  const [pessoaDialogOpen, setPessoaDialogOpen] = useState(false);
+  const [pessoaDialogData, setPessoaDialogData] = useState<any>(null);
+  const [pessoaDialogMode, setPessoaDialogMode] = useState<"create" | "edit">("create");
   const [linhaUidPendente, setLinhaUidPendente] = useState<string | null>(null);
+  const [editingPessoaId, setEditingPessoaId] = useState<string | null>(null);
 
   const fetchPessoas = async (): Promise<Pessoa[]> => {
     const { data } = await supabase
@@ -158,26 +161,77 @@ export function OfxImportDialog({
     })();
   }, [open]);
 
-  // Após criar uma nova pessoa, identifica a recém-criada e seleciona-a na linha
-  const handlePessoaCriada = async () => {
-    const idsAntigos = new Set(pessoas.map((p) => p.id));
-    const novaLista = await fetchPessoas();
-    const nova = novaLista.find((p) => !idsAntigos.has(p.id));
-    if (nova && linhaUidPendente) {
-      setLinhas((prev) =>
-        prev.map((l) =>
-          l.uid === linhaUidPendente
-            ? {
-                ...l,
-                id_pessoa: nova.id,
-                id_categoria: nova.id_categoria ?? l.id_categoria,
-                id_forma_pagamento: nova.id_forma_pagamento ?? l.id_forma_pagamento,
-              }
-            : l,
-        ),
-      );
+  // Abre o diálogo em modo "criar", pré-preenchendo o nome com o texto da linha
+  const handleAbrirCriarPessoa = (uidLinha: string, nomeInicial: string) => {
+    setLinhaUidPendente(uidLinha);
+    setEditingPessoaId(null);
+    setPessoaDialogMode("create");
+    setPessoaDialogData({ nome: nomeInicial || "" });
+    setPessoaDialogOpen(true);
+  };
+
+  // Abre o diálogo em modo "editar", carregando os dados completos da pessoa
+  const handleAbrirEditarPessoa = async (idPessoa: string) => {
+    const { data, error } = await supabase
+      .from("vx_pessoa")
+      .select("*")
+      .eq("id", idPessoa)
+      .maybeSingle();
+    if (error || !data) {
+      toast({
+        title: "Erro ao carregar pessoa",
+        description: error?.message ?? "Pessoa não encontrada",
+        variant: "destructive",
+      });
+      return;
     }
     setLinhaUidPendente(null);
+    setEditingPessoaId(idPessoa);
+    setPessoaDialogMode("edit");
+    setPessoaDialogData(data);
+    setPessoaDialogOpen(true);
+  };
+
+  // Após criar/editar, atualiza a lista e propaga mudanças para as linhas
+  const handlePessoaSalva = async () => {
+    const idsAntigos = new Set(pessoas.map((p) => p.id));
+    const novaLista = await fetchPessoas();
+    if (pessoaDialogMode === "create") {
+      const nova = novaLista.find((p) => !idsAntigos.has(p.id));
+      if (nova && linhaUidPendente) {
+        setLinhas((prev) =>
+          prev.map((l) =>
+            l.uid === linhaUidPendente
+              ? {
+                  ...l,
+                  id_pessoa: nova.id,
+                  id_categoria: nova.id_categoria ?? l.id_categoria,
+                  id_forma_pagamento: nova.id_forma_pagamento ?? l.id_forma_pagamento,
+                }
+              : l,
+          ),
+        );
+      }
+    } else if (pessoaDialogMode === "edit" && editingPessoaId) {
+      const atualizada = novaLista.find((p) => p.id === editingPessoaId);
+      if (atualizada) {
+        // Propaga categoria/forma de pagamento padrão para todas as linhas dessa pessoa
+        setLinhas((prev) =>
+          prev.map((l) =>
+            l.id_pessoa === editingPessoaId
+              ? {
+                  ...l,
+                  id_categoria: atualizada.id_categoria ?? l.id_categoria,
+                  id_forma_pagamento:
+                    atualizada.id_forma_pagamento ?? l.id_forma_pagamento,
+                }
+              : l,
+          ),
+        );
+      }
+    }
+    setLinhaUidPendente(null);
+    setEditingPessoaId(null);
   };
 
 
@@ -385,10 +439,8 @@ export function OfxImportDialog({
                     veiculos={veiculos}
                     onChange={(patch) => updateLinha(l.uid, patch)}
                     onRemove={() => removeLinha(l.uid)}
-                    onAddPessoa={() => {
-                      setLinhaUidPendente(l.uid);
-                      setAddPessoaOpen(true);
-                    }}
+                    onAddPessoa={() => handleAbrirCriarPessoa(l.uid, l.nome)}
+                    onEditPessoa={() => l.id_pessoa && handleAbrirEditarPessoa(l.id_pessoa)}
                   />
                 ))}
               </TableBody>
@@ -412,12 +464,17 @@ export function OfxImportDialog({
       </DialogContent>
 
       <PessoaDialog
-        open={addPessoaOpen}
+        open={pessoaDialogOpen}
         onOpenChange={(o) => {
-          setAddPessoaOpen(o);
-          if (!o) setLinhaUidPendente(null);
+          setPessoaDialogOpen(o);
+          if (!o) {
+            setLinhaUidPendente(null);
+            setEditingPessoaId(null);
+            setPessoaDialogData(null);
+          }
         }}
-        onSuccess={handlePessoaCriada}
+        pessoa={pessoaDialogData}
+        onSuccess={handlePessoaSalva}
       />
     </Dialog>
   );
@@ -432,6 +489,7 @@ interface LinhaRowProps {
   onChange: (patch: Partial<LinhaImportacao>) => void;
   onRemove: () => void;
   onAddPessoa: () => void;
+  onEditPessoa: () => void;
 }
 
 function LinhaRow({
@@ -443,6 +501,7 @@ function LinhaRow({
   onChange,
   onRemove,
   onAddPessoa,
+  onEditPessoa,
 }: LinhaRowProps) {
   const handlePessoaChange = (id: string | null) => {
     const pessoa = pessoas.find((p) => p.id === id);
@@ -492,7 +551,18 @@ function LinhaRow({
             fallbackLabel={linha.nome}
             onChange={(id) => handlePessoaChange(id)}
           />
-          {!linha.id_pessoa && (
+          {linha.id_pessoa ? (
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 shrink-0"
+              title="Editar pessoa"
+              onClick={onEditPessoa}
+            >
+              <Pencil className="w-4 h-4" />
+            </Button>
+          ) : (
             <Button
               type="button"
               variant="ghost"
