@@ -114,9 +114,12 @@ export function OfxImportDialog({
   const [formasPagamento, setFormasPagamento] = useState<FormaPagamento[]>([]);
   const [veiculos, setVeiculos] = useState<Veiculo[]>([]);
 
-  // Estado para o diálogo de adicionar pessoa a partir de uma linha
-  const [addPessoaOpen, setAddPessoaOpen] = useState(false);
+  // Estado para o diálogo de adicionar/editar pessoa a partir de uma linha
+  const [pessoaDialogOpen, setPessoaDialogOpen] = useState(false);
+  const [pessoaDialogData, setPessoaDialogData] = useState<any>(null);
+  const [pessoaDialogMode, setPessoaDialogMode] = useState<"create" | "edit">("create");
   const [linhaUidPendente, setLinhaUidPendente] = useState<string | null>(null);
+  const [editingPessoaId, setEditingPessoaId] = useState<string | null>(null);
 
   const fetchPessoas = async (): Promise<Pessoa[]> => {
     const { data } = await supabase
