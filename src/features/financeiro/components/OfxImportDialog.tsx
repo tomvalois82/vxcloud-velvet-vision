@@ -161,26 +161,77 @@ export function OfxImportDialog({
     })();
   }, [open]);
 
-  // Após criar uma nova pessoa, identifica a recém-criada e seleciona-a na linha
-  const handlePessoaCriada = async () => {
-    const idsAntigos = new Set(pessoas.map((p) => p.id));
-    const novaLista = await fetchPessoas();
-    const nova = novaLista.find((p) => !idsAntigos.has(p.id));
-    if (nova && linhaUidPendente) {
-      setLinhas((prev) =>
-        prev.map((l) =>
-          l.uid === linhaUidPendente
-            ? {
-                ...l,
-                id_pessoa: nova.id,
-                id_categoria: nova.id_categoria ?? l.id_categoria,
-                id_forma_pagamento: nova.id_forma_pagamento ?? l.id_forma_pagamento,
-              }
-            : l,
-        ),
-      );
+  // Abre o diálogo em modo "criar", pré-preenchendo o nome com o texto da linha
+  const handleAbrirCriarPessoa = (uidLinha: string, nomeInicial: string) => {
+    setLinhaUidPendente(uidLinha);
+    setEditingPessoaId(null);
+    setPessoaDialogMode("create");
+    setPessoaDialogData({ nome: nomeInicial || "" });
+    setPessoaDialogOpen(true);
+  };
+
+  // Abre o diálogo em modo "editar", carregando os dados completos da pessoa
+  const handleAbrirEditarPessoa = async (idPessoa: string) => {
+    const { data, error } = await supabase
+      .from("vx_pessoa")
+      .select("*")
+      .eq("id", idPessoa)
+      .maybeSingle();
+    if (error || !data) {
+      toast({
+        title: "Erro ao carregar pessoa",
+        description: error?.message ?? "Pessoa não encontrada",
+        variant: "destructive",
+      });
+      return;
     }
     setLinhaUidPendente(null);
+    setEditingPessoaId(idPessoa);
+    setPessoaDialogMode("edit");
+    setPessoaDialogData(data);
+    setPessoaDialogOpen(true);
+  };
+
+  // Após criar/editar, atualiza a lista e propaga mudanças para as linhas
+  const handlePessoaSalva = async () => {
+    const idsAntigos = new Set(pessoas.map((p) => p.id));
+    const novaLista = await fetchPessoas();
+    if (pessoaDialogMode === "create") {
+      const nova = novaLista.find((p) => !idsAntigos.has(p.id));
+      if (nova && linhaUidPendente) {
+        setLinhas((prev) =>
+          prev.map((l) =>
+            l.uid === linhaUidPendente
+              ? {
+                  ...l,
+                  id_pessoa: nova.id,
+                  id_categoria: nova.id_categoria ?? l.id_categoria,
+                  id_forma_pagamento: nova.id_forma_pagamento ?? l.id_forma_pagamento,
+                }
+              : l,
+          ),
+        );
+      }
+    } else if (pessoaDialogMode === "edit" && editingPessoaId) {
+      const atualizada = novaLista.find((p) => p.id === editingPessoaId);
+      if (atualizada) {
+        // Propaga categoria/forma de pagamento padrão para todas as linhas dessa pessoa
+        setLinhas((prev) =>
+          prev.map((l) =>
+            l.id_pessoa === editingPessoaId
+              ? {
+                  ...l,
+                  id_categoria: atualizada.id_categoria ?? l.id_categoria,
+                  id_forma_pagamento:
+                    atualizada.id_forma_pagamento ?? l.id_forma_pagamento,
+                }
+              : l,
+          ),
+        );
+      }
+    }
+    setLinhaUidPendente(null);
+    setEditingPessoaId(null);
   };
 
 
