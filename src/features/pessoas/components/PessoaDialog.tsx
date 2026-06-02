@@ -792,6 +792,54 @@ export function PessoaDialog({ open, onOpenChange, pessoa, onSuccess }: PessoaDi
               )}
             />
 
+            {/* Categoria e Forma de Pagamento Padrão */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="id_categoria"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Categoria Padrão</FormLabel>
+                    <FormControl>
+                      <CategoriaAutocomplete
+                        categorias={categorias}
+                        value={field.value || ""}
+                        onValueChange={field.onChange}
+                        placeholder="Selecione a categoria"
+                        allowSelectAll
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="id_forma_pagamento"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Forma de Pagamento Padrão</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value || ""}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione a forma de pagamento" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {formasPagamento.map((fp) => (
+                          <SelectItem key={fp.id} value={fp.id}>
+                            {fp.descricao}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
             {/* Actions */}
             <div className="flex justify-end gap-2">
               <Button
