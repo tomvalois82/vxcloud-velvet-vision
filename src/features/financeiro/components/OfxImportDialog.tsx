@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Check, ChevronsUpDown, Loader2, Plus, Trash2, Upload } from "lucide-react";
+import { Check, ChevronsUpDown, Loader2, Pencil, Plus, Trash2, Upload } from "lucide-react";
 import {
   Dialog,
   DialogContent,
