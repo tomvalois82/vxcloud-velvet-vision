@@ -452,7 +452,7 @@ export function OfxImportDialog({
                     key={l.uid}
                     linha={l}
                     pessoas={pessoas}
-                    categorias={categoriasFiltradas}
+                    categorias={categorias}
                     formasPagamento={formasPagamento}
                     veiculos={veiculos}
                     onChange={(patch) => updateLinha(l.uid, patch)}
