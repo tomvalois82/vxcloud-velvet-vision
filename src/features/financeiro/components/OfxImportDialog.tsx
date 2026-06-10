@@ -575,7 +575,7 @@ export function OfxImportDialog({
                   <TableHead className="w-[140px]">Data</TableHead>
                   <TableHead className="min-w-[200px]">Descrição</TableHead>
                   <TableHead className="min-w-[130px]">Nome</TableHead>
-                  <TableHead className="w-[210px]">Valor</TableHead>
+                  <TableHead className="min-w-[160px] w-[160px]">Valor</TableHead>
                   <TableHead className="min-w-[180px]">Categoria</TableHead>
                   <TableHead className="min-w-[160px]">Forma Pgto</TableHead>
                   <TableHead className="min-w-[200px]">Veículo</TableHead>
@@ -824,13 +824,13 @@ function LinhaRow({
           )}
         </div>
       </TableCell>
-      <TableCell>
+      <TableCell className="min-w-[160px] w-[160px]">
         <Input
           type="text"
           inputMode="decimal"
           value={maskCurrency(linha.valor)}
           onChange={(e) => onChange({ valor: unmaskCurrency(e.target.value) })}
-          className="h-9 text-right"
+          className="h-9 text-right w-full min-w-[140px]"
         />
       </TableCell>
       <TableCell>
