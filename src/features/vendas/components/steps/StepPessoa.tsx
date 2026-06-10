@@ -19,6 +19,7 @@ interface StepPessoaProps {
   colaboradores: SalePerson[];
   setCliente: (cliente: SalePerson | null) => void;
   setVendedor: (vendedor: SalePerson | null) => void;
+  refreshPessoas?: () => Promise<void>;
 }
 
 export function StepPessoa({
@@ -27,6 +28,7 @@ export function StepPessoa({
   colaboradores,
   setCliente,
   setVendedor,
+  refreshPessoas,
 }: StepPessoaProps) {
   const [searchCliente, setSearchCliente] = useState('');
   const [searchVendedor, setSearchVendedor] = useState('');
@@ -215,9 +217,11 @@ export function StepPessoa({
         open={pessoaDialogOpen}
         onOpenChange={setPessoaDialogOpen}
         pessoa={null}
-        onSuccess={() => {
+        onSuccess={async () => {
           setPessoaDialogOpen(false);
-          // Would need to refresh the list - for now just close
+          if (refreshPessoas) {
+            await refreshPessoas();
+          }
         }}
       />
     </div>
