@@ -117,11 +117,14 @@ export function StepTroca({
   addTradeIn,
   removeTradeIn,
   updateTradeInValue,
+  refreshVeiculosEstoque,
 }: StepTrocaProps) {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedVehicle, setSelectedVehicle] = useState<SaleVehicle | null>(null);
   const [tradeValue, setTradeValue] = useState('');
+  const [vehicleDialogOpen, setVehicleDialogOpen] = useState(false);
+  const [prevVehicleIds, setPrevVehicleIds] = useState<number[]>([]);
 
   const usedVehicleIds = saleData.trocas.map(t => t.vehicle.id);
   const availableVehicles = veiculosEstoque.filter(v => !usedVehicleIds.includes(v.id));
