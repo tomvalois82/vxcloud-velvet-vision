@@ -284,6 +284,22 @@ export function StepTroca({
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* New Vehicle Dialog */}
+      <VehicleDialog
+        open={vehicleDialogOpen}
+        onOpenChange={setVehicleDialogOpen}
+        vehicleId={null}
+        onSuccess={async () => {
+          if (refreshVeiculosEstoque) {
+            const updated = await refreshVeiculosEstoque();
+            const novo = updated.find(v => !prevVehicleIds.includes(v.id));
+            if (novo) {
+              handleSelectVehicle(novo);
+            }
+          }
+        }}
+      />
     </div>
   );
 }
