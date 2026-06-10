@@ -642,15 +642,28 @@ function LinhaRow({
         />
       </TableCell>
       <TableCell>
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon"
-          className="h-8 w-8 text-destructive hover:bg-destructive/20"
-          onClick={onRemove}
-        >
-          <Trash2 className="w-4 h-4" />
-        </Button>
+        <div className="flex items-center gap-1">
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 text-accent hover:bg-accent/20"
+            onClick={onImportSingle}
+            title="Importar apenas este registro"
+          >
+            <Download className="w-4 h-4" />
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 text-destructive hover:bg-destructive/20"
+            onClick={onRemove}
+            title="Remover"
+          >
+            <Trash2 className="w-4 h-4" />
+          </Button>
+        </div>
       </TableCell>
     </TableRow>
   );
