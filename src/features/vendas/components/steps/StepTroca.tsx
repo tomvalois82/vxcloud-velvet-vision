@@ -13,6 +13,7 @@ import {
 } from '@/components/ui/dialog';
 import { useVehicleMainPhoto } from '@/features/estoque/hooks/useVehicleMainPhoto';
 import { maskCurrency, unmaskCurrency } from '@/features/estoque/utils/masks';
+import { VehicleDialog } from '@/features/estoque/components/VehicleDialog';
 import type { SaleData, SaleVehicle, TradeInVehicle } from '../../types';
 
 interface StepTrocaProps {
@@ -21,6 +22,7 @@ interface StepTrocaProps {
   addTradeIn: (vehicle: SaleVehicle, valor: number) => void;
   removeTradeIn: (id: string) => void;
   updateTradeInValue: (id: string, valor: number) => void;
+  refreshVeiculosEstoque?: () => Promise<SaleVehicle[]>;
 }
 
 function VehicleMiniCard({ vehicle }: { vehicle: SaleVehicle }) {
