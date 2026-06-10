@@ -209,14 +209,27 @@ export function StepTroca({
           <div className="space-y-4">
             {!selectedVehicle ? (
               <>
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Buscar veículo..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10"
-                  />
+                <div className="flex gap-2">
+                  <div className="relative flex-1">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Buscar veículo..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="pl-10"
+                    />
+                  </div>
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setPrevVehicleIds(veiculosEstoque.map(v => v.id));
+                      setVehicleDialogOpen(true);
+                    }}
+                    className="whitespace-nowrap"
+                  >
+                    <Plus className="w-4 h-4 mr-2" />
+                    Cadastrar Novo Veículo
+                  </Button>
                 </div>
 
                 <ScrollArea className="h-[400px] pr-4">
