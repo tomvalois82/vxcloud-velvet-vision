@@ -63,7 +63,9 @@ interface Categoria {
   operacao: string;
   tipo_conta: string | null;
   ativo: boolean;
+  id_categoria_pai: string | null;
 }
+
 
 interface FormaPagamento {
   id: string;
