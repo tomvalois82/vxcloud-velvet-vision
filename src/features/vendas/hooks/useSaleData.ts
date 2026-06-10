@@ -499,6 +499,7 @@ export function useSaleData(vehicleId: number | null) {
     updateServicoProduto,
     saveSale,
     refreshPessoas,
+    refreshVeiculosEstoque,
     totals: {
       valorVeiculo: saleData.valor_venda,
       totalTrocas,
