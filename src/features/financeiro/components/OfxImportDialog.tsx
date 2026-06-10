@@ -145,7 +145,7 @@ export function OfxImportDialog({
         fetchPessoas(),
         supabase
           .from("vx_fin_categoria")
-          .select("id, categoria, operacao, tipo_conta, ativo")
+          .select("id, categoria, operacao, tipo_conta, ativo, id_categoria_pai")
           .eq("ativo", true)
           .order("categoria"),
         supabase
