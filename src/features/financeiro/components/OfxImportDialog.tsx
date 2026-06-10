@@ -438,8 +438,8 @@ export function OfxImportDialog({
                   <TableHead className="w-[110px]">Tipo</TableHead>
                   <TableHead className="w-[140px]">Data</TableHead>
                   <TableHead className="min-w-[200px]">Descrição</TableHead>
-                  <TableHead className="min-w-[160px]">Nome</TableHead>
-                  <TableHead className="w-[170px]">Valor</TableHead>
+                  <TableHead className="min-w-[130px]">Nome</TableHead>
+                  <TableHead className="w-[210px]">Valor</TableHead>
                   <TableHead className="min-w-[180px]">Categoria</TableHead>
                   <TableHead className="min-w-[160px]">Forma Pgto</TableHead>
                   <TableHead className="min-w-[200px]">Veículo</TableHead>
