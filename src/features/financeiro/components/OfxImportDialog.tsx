@@ -824,13 +824,13 @@ function LinhaRow({
           )}
         </div>
       </TableCell>
-      <TableCell>
+      <TableCell className="min-w-[160px] w-[160px]">
         <Input
           type="text"
           inputMode="decimal"
           value={maskCurrency(linha.valor)}
           onChange={(e) => onChange({ valor: unmaskCurrency(e.target.value) })}
-          className="h-9 text-right"
+          className="h-9 text-right w-full min-w-[140px]"
         />
       </TableCell>
       <TableCell>
