@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import { Check, ChevronsUpDown, Loader2, Pencil, Plus, Trash2, Upload } from "lucide-react";
+import { Check, ChevronsUpDown, Download, Loader2, Pencil, Plus, Trash2, Upload } from "lucide-react";
+import { CategoriaAutocomplete } from "./CategoriaAutocomplete";
 import {
   Dialog,
   DialogContent,
@@ -62,7 +63,9 @@ interface Categoria {
   operacao: string;
   tipo_conta: string | null;
   ativo: boolean;
+  id_categoria_pai: string | null;
 }
+
 
 interface FormaPagamento {
   id: string;
@@ -142,7 +145,7 @@ export function OfxImportDialog({
         fetchPessoas(),
         supabase
           .from("vx_fin_categoria")
-          .select("id, categoria, operacao, tipo_conta, ativo")
+          .select("id, categoria, operacao, tipo_conta, ativo, id_categoria_pai")
           .eq("ativo", true)
           .order("categoria"),
         supabase
@@ -296,27 +299,26 @@ export function OfxImportDialog({
     setLinhas((prev) => prev.filter((l) => l.uid !== uid));
   };
 
-  const handleImport = async () => {
-    if (!conta) return;
-    if (linhas.length === 0) {
+  const importarLinhas = async (linhasParaImportar: LinhaImportacao[]): Promise<boolean> => {
+    if (!conta) return false;
+    if (linhasParaImportar.length === 0) {
       toast({
         title: "Nada para importar",
         description: "Carregue um arquivo OFX primeiro.",
         variant: "destructive",
       });
-      return;
+      return false;
     }
-    const semCategoria = linhas.some((l) => !l.id_categoria);
+    const semCategoria = linhasParaImportar.some((l) => !l.id_categoria);
     if (semCategoria) {
       toast({
         title: "Categoria obrigatória",
         description: "Selecione uma categoria para todas as movimentações.",
         variant: "destructive",
       });
-      return;
+      return false;
     }
 
-    setImporting(true);
     try {
       const { data: userData } = await supabase.auth.getUser();
       if (!userData.user) throw new Error("Usuário não autenticado");
@@ -338,7 +340,7 @@ export function OfxImportDialog({
       if (empresaError) throw empresaError;
       if (!empresaData) throw new Error("Empresa não encontrada");
 
-      const payload = linhas.map((l) => ({
+      const payload = linhasParaImportar.map((l) => ({
         id_empresa: empresaData.id,
         id_conta: conta.id,
         tipo_movimento: l.tipo,
@@ -362,17 +364,33 @@ export function OfxImportDialog({
         description: `${payload.length} movimentação(ões) importada(s) com sucesso.`,
       });
       onSuccess?.();
-      onOpenChange(false);
+      return true;
     } catch (error) {
       toast({
         title: "Erro ao importar",
         description: error instanceof Error ? error.message : String(error),
         variant: "destructive",
       });
-    } finally {
-      setImporting(false);
+      return false;
     }
   };
+
+  const handleImport = async () => {
+    setImporting(true);
+    const ok = await importarLinhas(linhas);
+    setImporting(false);
+    if (ok) onOpenChange(false);
+  };
+
+  const handleImportSingle = async (uid: string) => {
+    const linha = linhas.find((l) => l.uid === uid);
+    if (!linha) return;
+    const ok = await importarLinhas([linha]);
+    if (ok) {
+      setLinhas((prev) => prev.filter((l) => l.uid !== uid));
+    }
+  };
+
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -420,12 +438,12 @@ export function OfxImportDialog({
                   <TableHead className="w-[110px]">Tipo</TableHead>
                   <TableHead className="w-[140px]">Data</TableHead>
                   <TableHead className="min-w-[200px]">Descrição</TableHead>
-                  <TableHead className="min-w-[200px]">Nome</TableHead>
-                  <TableHead className="w-[130px]">Valor</TableHead>
+                  <TableHead className="min-w-[160px]">Nome</TableHead>
+                  <TableHead className="w-[170px]">Valor</TableHead>
                   <TableHead className="min-w-[180px]">Categoria</TableHead>
                   <TableHead className="min-w-[160px]">Forma Pgto</TableHead>
                   <TableHead className="min-w-[200px]">Veículo</TableHead>
-                  <TableHead className="w-[60px]">Ações</TableHead>
+                  <TableHead className="w-[100px]">Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -434,16 +452,18 @@ export function OfxImportDialog({
                     key={l.uid}
                     linha={l}
                     pessoas={pessoas}
-                    categorias={categoriasFiltradas}
+                    categorias={categorias}
                     formasPagamento={formasPagamento}
                     veiculos={veiculos}
                     onChange={(patch) => updateLinha(l.uid, patch)}
                     onRemove={() => removeLinha(l.uid)}
                     onAddPessoa={() => handleAbrirCriarPessoa(l.uid, l.nome)}
                     onEditPessoa={() => l.id_pessoa && handleAbrirEditarPessoa(l.id_pessoa)}
+                    onImportSingle={() => handleImportSingle(l.uid)}
                   />
                 ))}
               </TableBody>
+
             </Table>
           )}
         </div>
@@ -490,6 +510,7 @@ interface LinhaRowProps {
   onRemove: () => void;
   onAddPessoa: () => void;
   onEditPessoa: () => void;
+  onImportSingle: () => void;
 }
 
 function LinhaRow({
@@ -502,7 +523,9 @@ function LinhaRow({
   onRemove,
   onAddPessoa,
   onEditPessoa,
+  onImportSingle,
 }: LinhaRowProps) {
+
   const handlePessoaChange = (id: string | null) => {
     const pessoa = pessoas.find((p) => p.id === id);
     onChange({
@@ -586,21 +609,13 @@ function LinhaRow({
         />
       </TableCell>
       <TableCell>
-        <Select
+        <CategoriaAutocomplete
+          categorias={categorias}
           value={linha.id_categoria ?? ""}
           onValueChange={(v) => onChange({ id_categoria: v })}
-        >
-          <SelectTrigger className="h-9">
-            <SelectValue placeholder="Selecione" />
-          </SelectTrigger>
-          <SelectContent>
-            {categorias.map((c) => (
-              <SelectItem key={c.id} value={c.id}>
-                {c.categoria}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+          placeholder="Selecione"
+          className="h-9"
+        />
       </TableCell>
       <TableCell>
         <Select
@@ -627,15 +642,28 @@ function LinhaRow({
         />
       </TableCell>
       <TableCell>
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon"
-          className="h-8 w-8 text-destructive hover:bg-destructive/20"
-          onClick={onRemove}
-        >
-          <Trash2 className="w-4 h-4" />
-        </Button>
+        <div className="flex items-center gap-1">
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 text-accent hover:bg-accent/20"
+            onClick={onImportSingle}
+            title="Importar apenas este registro"
+          >
+            <Download className="w-4 h-4" />
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 text-destructive hover:bg-destructive/20"
+            onClick={onRemove}
+            title="Remover"
+          >
+            <Trash2 className="w-4 h-4" />
+          </Button>
+        </div>
       </TableCell>
     </TableRow>
   );
