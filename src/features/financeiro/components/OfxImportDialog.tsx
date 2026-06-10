@@ -568,7 +568,7 @@ export function OfxImportDialog({
               Envie um arquivo .ofx para visualizar as transações.
             </div>
           ) : (
-            <Table>
+            <Table className="min-w-max">
               <TableHeader>
                 <TableRow>
                   <TableHead className="w-[110px]">Tipo</TableHead>
