@@ -44,6 +44,22 @@ export function useSaleData(vehicleId: number | null) {
   const [financeiras, setFinanceiras] = useState<Financeira[]>([]);
   const [categorias, setCategorias] = useState<CategoriaFinanceira[]>([]);
 
+  const refreshPessoas = useCallback(async () => {
+    const { data: clientesData } = await supabase
+      .from('vx_pessoa')
+      .select('id, nome, cpf_cnpj, telefone, email')
+      .eq('eh_cliente', true)
+      .order('nome');
+    setClientes(clientesData || []);
+
+    const { data: colaboradoresData } = await supabase
+      .from('vx_pessoa')
+      .select('id, nome, cpf_cnpj, telefone, email')
+      .eq('eh_colaborador', true)
+      .order('nome');
+    setColaboradores(colaboradoresData || []);
+  }, []);
+
   // Load initial data
   useEffect(() => {
     const loadData = async () => {
