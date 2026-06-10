@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import { Check, ChevronsUpDown, Loader2, Pencil, Plus, Trash2, Upload } from "lucide-react";
+import { Check, ChevronsUpDown, Download, Loader2, Pencil, Plus, Trash2, Upload } from "lucide-react";
+import { CategoriaAutocomplete } from "./CategoriaAutocomplete";
 import {
   Dialog,
   DialogContent,
