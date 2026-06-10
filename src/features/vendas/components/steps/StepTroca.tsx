@@ -289,7 +289,7 @@ export function StepTroca({
       <VehicleDialog
         open={vehicleDialogOpen}
         onOpenChange={setVehicleDialogOpen}
-        vehicleId={null}
+        vehicleId={undefined}
         onSuccess={async () => {
           if (refreshVeiculosEstoque) {
             const updated = await refreshVeiculosEstoque();
