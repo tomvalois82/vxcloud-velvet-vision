@@ -67,23 +67,7 @@ export function useSaleData(vehicleId: number | null) {
           }));
         }
 
-        // Load clientes
-        const { data: clientesData } = await supabase
-          .from('vx_pessoa')
-          .select('id, nome, cpf_cnpj, telefone, email')
-          .eq('eh_cliente', true)
-          .order('nome');
-        
-        setClientes(clientesData || []);
-
-        // Load colaboradores
-        const { data: colaboradoresData } = await supabase
-          .from('vx_pessoa')
-          .select('id, nome, cpf_cnpj, telefone, email')
-          .eq('eh_colaborador', true)
-          .order('nome');
-        
-        setColaboradores(colaboradoresData || []);
+        await refreshPessoas();
 
         // Load estoque for trade-ins
         const { data: estoqueData } = await supabase
@@ -144,6 +128,26 @@ export function useSaleData(vehicleId: number | null) {
 
     loadData();
   }, [vehicleId]);
+
+  const refreshPessoas = useCallback(async () => {
+    // Load clientes
+    const { data: clientesData } = await supabase
+      .from('vx_pessoa')
+      .select('id, nome, cpf_cnpj, telefone, email')
+      .eq('eh_cliente', true)
+      .order('nome');
+    
+    setClientes(clientesData || []);
+
+    // Load colaboradores
+    const { data: colaboradoresData } = await supabase
+      .from('vx_pessoa')
+      .select('id, nome, cpf_cnpj, telefone, email')
+      .eq('eh_colaborador', true)
+      .order('nome');
+    
+    setColaboradores(colaboradoresData || []);
+  }, []);
 
   const updateSaleData = useCallback((updates: Partial<SaleData>) => {
     setSaleData(prev => ({ ...prev, ...updates }));
@@ -484,6 +488,7 @@ export function useSaleData(vehicleId: number | null) {
     removeServicoProduto,
     updateServicoProduto,
     saveSale,
+    refreshPessoas,
     totals: {
       valorVeiculo: saleData.valor_venda,
       totalTrocas,
