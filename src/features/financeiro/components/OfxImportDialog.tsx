@@ -38,12 +38,36 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
+import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { findBestPessoaMatch, parseOfx } from "../utils/ofxParser";
 import { maskCurrency, unmaskCurrency } from "@/features/estoque/utils/masks";
 import { PessoaDialog } from "@/features/pessoas/components/PessoaDialog";
+
+interface MovimentoExistente {
+  id: string;
+  data_pagamento: string | null;
+  data_vencimento: string;
+  valor_liquido: number;
+  descricao: string;
+  id_pessoa: string | null;
+}
+
+interface DuplicatePair {
+  linha: LinhaImportacao;
+  existentes: MovimentoExistente[];
+  selecionado: boolean;
+}
+
+const formatDateBR = (d: string | null | undefined) => {
+  if (!d) return "";
+  const only = d.slice(0, 10);
+  const [y, m, day] = only.split("-");
+  if (!y || !m || !day) return only;
+  return `${day}/${m}/${y}`;
+};
 
 interface Conta {
   id: string;
@@ -299,16 +323,46 @@ export function OfxImportDialog({
     setLinhas((prev) => prev.filter((l) => l.uid !== uid));
   };
 
-  const importarLinhas = async (linhasParaImportar: LinhaImportacao[]): Promise<boolean> => {
-    if (!conta) return false;
-    if (linhasParaImportar.length === 0) {
-      toast({
-        title: "Nada para importar",
-        description: "Carregue um arquivo OFX primeiro.",
-        variant: "destructive",
-      });
-      return false;
+  // Estado para diálogo de duplicidade e sucesso
+  const [duplicatesOpen, setDuplicatesOpen] = useState(false);
+  const [duplicatePairs, setDuplicatePairs] = useState<DuplicatePair[]>([]);
+  const [duplicateBaseImported, setDuplicateBaseImported] = useState(0);
+  const [closeAfterDuplicates, setCloseAfterDuplicates] = useState(false);
+  const [successOpen, setSuccessOpen] = useState(false);
+  const [successCount, setSuccessCount] = useState(0);
+  const [shouldCloseOnSuccess, setShouldCloseOnSuccess] = useState(false);
+
+  const buscarDuplicados = async (
+    linhasParaImportar: LinhaImportacao[],
+  ): Promise<Map<string, MovimentoExistente[]>> => {
+    const result = new Map<string, MovimentoExistente[]>();
+    if (!conta || linhasParaImportar.length === 0) return result;
+    const datas = [...new Set(linhasParaImportar.map((l) => l.data))];
+    const valores = [...new Set(linhasParaImportar.map((l) => Number(l.valor)))];
+    const { data, error } = await supabase
+      .from("vx_fin_movimento")
+      .select("id, data_pagamento, data_vencimento, valor_liquido, descricao, id_pessoa")
+      .eq("id_conta", conta.id)
+      .in("data_pagamento", datas)
+      .in("valor_liquido", valores);
+    if (error) return result;
+    const existentes = (data || []) as MovimentoExistente[];
+    for (const l of linhasParaImportar) {
+      const matches = existentes.filter(
+        (e) =>
+          e.data_pagamento === l.data &&
+          Number(e.valor_liquido) === Number(l.valor),
+      );
+      if (matches.length > 0) result.set(l.uid, matches);
     }
+    return result;
+  };
+
+  const insertLinhas = async (
+    linhasParaImportar: LinhaImportacao[],
+  ): Promise<boolean> => {
+    if (!conta) return false;
+    if (linhasParaImportar.length === 0) return true;
     const semCategoria = linhasParaImportar.some((l) => !l.id_categoria);
     if (semCategoria) {
       toast({
@@ -329,8 +383,7 @@ export function OfxImportDialog({
         .eq("uid", userData.user.id)
         .maybeSingle();
       if (usuarioError) throw usuarioError;
-      if (!usuarioData?.config)
-        throw new Error("Configuração não encontrada");
+      if (!usuarioData?.config) throw new Error("Configuração não encontrada");
 
       const { data: empresaData, error: empresaError } = await supabase
         .from("empresa")
@@ -358,11 +411,6 @@ export function OfxImportDialog({
 
       const { error } = await supabase.from("vx_fin_movimento").insert(payload);
       if (error) throw error;
-
-      toast({
-        title: "Importação concluída",
-        description: `${payload.length} movimentação(ões) importada(s) com sucesso.`,
-      });
       onSuccess?.();
       return true;
     } catch (error) {
@@ -375,21 +423,107 @@ export function OfxImportDialog({
     }
   };
 
+  const processarImportacao = async (
+    linhasParaImportar: LinhaImportacao[],
+    fecharAposFinal: boolean,
+  ) => {
+    if (!conta) return;
+    if (linhasParaImportar.length === 0) {
+      toast({
+        title: "Nada para importar",
+        description: "Carregue um arquivo OFX primeiro.",
+        variant: "destructive",
+      });
+      return;
+    }
+    const semCategoria = linhasParaImportar.some((l) => !l.id_categoria);
+    if (semCategoria) {
+      toast({
+        title: "Categoria obrigatória",
+        description: "Selecione uma categoria para todas as movimentações.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const dupMap = await buscarDuplicados(linhasParaImportar);
+    const naoDuplicados = linhasParaImportar.filter((l) => !dupMap.has(l.uid));
+    const duplicados = linhasParaImportar.filter((l) => dupMap.has(l.uid));
+
+    let importadosOk = 0;
+    if (naoDuplicados.length > 0) {
+      const ok = await insertLinhas(naoDuplicados);
+      if (!ok) return;
+      importadosOk = naoDuplicados.length;
+      const uidsImportados = new Set(naoDuplicados.map((l) => l.uid));
+      setLinhas((prev) => prev.filter((l) => !uidsImportados.has(l.uid)));
+    }
+
+    if (duplicados.length === 0) {
+      setSuccessCount(importadosOk);
+      setShouldCloseOnSuccess(fecharAposFinal);
+      setSuccessOpen(true);
+      return;
+    }
+
+    setDuplicatePairs(
+      duplicados.map((linha) => ({
+        linha,
+        existentes: dupMap.get(linha.uid) || [],
+        selecionado: false,
+      })),
+    );
+    setDuplicateBaseImported(importadosOk);
+    setCloseAfterDuplicates(fecharAposFinal);
+    setDuplicatesOpen(true);
+  };
+
   const handleImport = async () => {
     setImporting(true);
-    const ok = await importarLinhas(linhas);
+    await processarImportacao(linhas, true);
     setImporting(false);
-    if (ok) onOpenChange(false);
   };
 
   const handleImportSingle = async (uid: string) => {
     const linha = linhas.find((l) => l.uid === uid);
     if (!linha) return;
-    const ok = await importarLinhas([linha]);
-    if (ok) {
-      setLinhas((prev) => prev.filter((l) => l.uid !== uid));
-    }
+    await processarImportacao([linha], false);
   };
+
+  const handleConfirmarDuplicados = async () => {
+    const selecionadas = duplicatePairs
+      .filter((p) => p.selecionado)
+      .map((p) => p.linha);
+    let totalImportado = duplicateBaseImported;
+    if (selecionadas.length > 0) {
+      const ok = await insertLinhas(selecionadas);
+      if (!ok) return;
+      totalImportado += selecionadas.length;
+      const uids = new Set(selecionadas.map((l) => l.uid));
+      setLinhas((prev) => prev.filter((l) => !uids.has(l.uid)));
+    }
+    setDuplicatesOpen(false);
+    setDuplicatePairs([]);
+    setSuccessCount(totalImportado);
+    setShouldCloseOnSuccess(closeAfterDuplicates);
+    setSuccessOpen(true);
+  };
+
+  const toggleDuplicado = (uid: string, value: boolean) => {
+    setDuplicatePairs((prev) =>
+      prev.map((p) => (p.linha.uid === uid ? { ...p, selecionado: value } : p)),
+    );
+  };
+
+  const toggleTodosDuplicados = (value: boolean) => {
+    setDuplicatePairs((prev) => prev.map((p) => ({ ...p, selecionado: value })));
+  };
+
+  const handleSuccessClose = () => {
+    setSuccessOpen(false);
+    if (shouldCloseOnSuccess) onOpenChange(false);
+  };
+
 
 
   return (
@@ -496,6 +630,95 @@ export function OfxImportDialog({
         pessoa={pessoaDialogData}
         onSuccess={handlePessoaSalva}
       />
+
+      <Dialog open={successOpen} onOpenChange={(o) => (o ? setSuccessOpen(true) : handleSuccessClose())}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Importação concluída</DialogTitle>
+          </DialogHeader>
+          <p className="py-2 text-sm">
+            {successCount} {successCount === 1 ? "Registro importado." : "Registros importados."}
+          </p>
+          <DialogFooter>
+            <Button onClick={handleSuccessClose} className="bg-accent hover:bg-accent/90">
+              OK
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={duplicatesOpen} onOpenChange={setDuplicatesOpen}>
+        <DialogContent className="max-w-[90vw] w-[90vw] max-h-[85vh] overflow-hidden flex flex-col">
+          <DialogHeader>
+            <DialogTitle>Registros semelhantes encontrados</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            Existem alguns registros semelhantes no banco de dados, confira e selecione os itens que deseja importar mesmo assim.
+          </p>
+          <div className="flex-1 overflow-auto border border-border/50 rounded-md">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-[50px]">
+                    <Checkbox
+                      checked={
+                        duplicatePairs.length > 0 &&
+                        duplicatePairs.every((p) => p.selecionado)
+                      }
+                      onCheckedChange={(v) => toggleTodosDuplicados(!!v)}
+                    />
+                  </TableHead>
+                  <TableHead>A ser importado</TableHead>
+                  <TableHead>Existente</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {duplicatePairs.map((p) => {
+                  const pessoaLinha =
+                    pessoas.find((x) => x.id === p.linha.id_pessoa)?.nome ??
+                    p.linha.nome ??
+                    "";
+                  return (
+                    <TableRow key={p.linha.uid}>
+                      <TableCell>
+                        <Checkbox
+                          checked={p.selecionado}
+                          onCheckedChange={(v) => toggleDuplicado(p.linha.uid, !!v)}
+                        />
+                      </TableCell>
+                      <TableCell className="align-top">
+                        <div className="text-sm">
+                          {formatDateBR(p.linha.data)} - {p.linha.descricao || p.linha.nome || "-"} ({pessoaLinha || "-"}) - {maskCurrency(p.linha.valor)}
+                        </div>
+                      </TableCell>
+                      <TableCell className="align-top">
+                        <div className="space-y-1">
+                          {p.existentes.map((e) => {
+                            const pessoaExist = pessoas.find((x) => x.id === e.id_pessoa)?.nome ?? "-";
+                            return (
+                              <div key={e.id} className="text-sm">
+                                {formatDateBR(e.data_pagamento ?? e.data_vencimento)} - {e.descricao || "-"} ({pessoaExist}) - {maskCurrency(Number(e.valor_liquido))}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDuplicatesOpen(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={handleConfirmarDuplicados} className="bg-accent hover:bg-accent/90">
+              Importar selecionados
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Dialog>
   );
 }
