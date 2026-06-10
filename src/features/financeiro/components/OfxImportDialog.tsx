@@ -508,6 +508,7 @@ interface LinhaRowProps {
   onRemove: () => void;
   onAddPessoa: () => void;
   onEditPessoa: () => void;
+  onImportSingle: () => void;
 }
 
 function LinhaRow({
@@ -520,7 +521,9 @@ function LinhaRow({
   onRemove,
   onAddPessoa,
   onEditPessoa,
+  onImportSingle,
 }: LinhaRowProps) {
+
   const handlePessoaChange = (id: string | null) => {
     const pessoa = pessoas.find((p) => p.id === id);
     onChange({
