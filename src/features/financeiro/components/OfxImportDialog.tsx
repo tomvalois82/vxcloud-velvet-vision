@@ -630,6 +630,95 @@ export function OfxImportDialog({
         pessoa={pessoaDialogData}
         onSuccess={handlePessoaSalva}
       />
+
+      <Dialog open={successOpen} onOpenChange={(o) => (o ? setSuccessOpen(true) : handleSuccessClose())}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Importação concluída</DialogTitle>
+          </DialogHeader>
+          <p className="py-2 text-sm">
+            {successCount} {successCount === 1 ? "Registro importado." : "Registros importados."}
+          </p>
+          <DialogFooter>
+            <Button onClick={handleSuccessClose} className="bg-accent hover:bg-accent/90">
+              OK
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={duplicatesOpen} onOpenChange={setDuplicatesOpen}>
+        <DialogContent className="max-w-[90vw] w-[90vw] max-h-[85vh] overflow-hidden flex flex-col">
+          <DialogHeader>
+            <DialogTitle>Registros semelhantes encontrados</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            Existem alguns registros semelhantes no banco de dados, confira e selecione os itens que deseja importar mesmo assim.
+          </p>
+          <div className="flex-1 overflow-auto border border-border/50 rounded-md">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-[50px]">
+                    <Checkbox
+                      checked={
+                        duplicatePairs.length > 0 &&
+                        duplicatePairs.every((p) => p.selecionado)
+                      }
+                      onCheckedChange={(v) => toggleTodosDuplicados(!!v)}
+                    />
+                  </TableHead>
+                  <TableHead>A ser importado</TableHead>
+                  <TableHead>Existente</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {duplicatePairs.map((p) => {
+                  const pessoaLinha =
+                    pessoas.find((x) => x.id === p.linha.id_pessoa)?.nome ??
+                    p.linha.nome ??
+                    "";
+                  return (
+                    <TableRow key={p.linha.uid}>
+                      <TableCell>
+                        <Checkbox
+                          checked={p.selecionado}
+                          onCheckedChange={(v) => toggleDuplicado(p.linha.uid, !!v)}
+                        />
+                      </TableCell>
+                      <TableCell className="align-top">
+                        <div className="text-sm">
+                          {formatDateBR(p.linha.data)} - {p.linha.descricao || p.linha.nome || "-"} ({pessoaLinha || "-"}) - {maskCurrency(p.linha.valor)}
+                        </div>
+                      </TableCell>
+                      <TableCell className="align-top">
+                        <div className="space-y-1">
+                          {p.existentes.map((e) => {
+                            const pessoaExist = pessoas.find((x) => x.id === e.id_pessoa)?.nome ?? "-";
+                            return (
+                              <div key={e.id} className="text-sm">
+                                {formatDateBR(e.data_pagamento ?? e.data_vencimento)} - {e.descricao || "-"} ({pessoaExist}) - {maskCurrency(Number(e.valor_liquido))}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDuplicatesOpen(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={handleConfirmarDuplicados} className="bg-accent hover:bg-accent/90">
+              Importar selecionados
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Dialog>
   );
 }
