@@ -436,12 +436,12 @@ export function OfxImportDialog({
                   <TableHead className="w-[110px]">Tipo</TableHead>
                   <TableHead className="w-[140px]">Data</TableHead>
                   <TableHead className="min-w-[200px]">Descrição</TableHead>
-                  <TableHead className="min-w-[200px]">Nome</TableHead>
-                  <TableHead className="w-[130px]">Valor</TableHead>
+                  <TableHead className="min-w-[160px]">Nome</TableHead>
+                  <TableHead className="w-[170px]">Valor</TableHead>
                   <TableHead className="min-w-[180px]">Categoria</TableHead>
                   <TableHead className="min-w-[160px]">Forma Pgto</TableHead>
                   <TableHead className="min-w-[200px]">Veículo</TableHead>
-                  <TableHead className="w-[60px]">Ações</TableHead>
+                  <TableHead className="w-[100px]">Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -457,9 +457,11 @@ export function OfxImportDialog({
                     onRemove={() => removeLinha(l.uid)}
                     onAddPessoa={() => handleAbrirCriarPessoa(l.uid, l.nome)}
                     onEditPessoa={() => l.id_pessoa && handleAbrirEditarPessoa(l.id_pessoa)}
+                    onImportSingle={() => handleImportSingle(l.uid)}
                   />
                 ))}
               </TableBody>
+
             </Table>
           )}
         </div>
