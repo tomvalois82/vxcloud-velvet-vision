@@ -609,21 +609,13 @@ function LinhaRow({
         />
       </TableCell>
       <TableCell>
-        <Select
+        <CategoriaAutocomplete
+          categorias={categorias}
           value={linha.id_categoria ?? ""}
           onValueChange={(v) => onChange({ id_categoria: v })}
-        >
-          <SelectTrigger className="h-9">
-            <SelectValue placeholder="Selecione" />
-          </SelectTrigger>
-          <SelectContent>
-            {categorias.map((c) => (
-              <SelectItem key={c.id} value={c.id}>
-                {c.categoria}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+          placeholder="Selecione"
+          className="h-9"
+        />
       </TableCell>
       <TableCell>
         <Select
