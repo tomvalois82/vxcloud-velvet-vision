@@ -323,16 +323,46 @@ export function OfxImportDialog({
     setLinhas((prev) => prev.filter((l) => l.uid !== uid));
   };
 
-  const importarLinhas = async (linhasParaImportar: LinhaImportacao[]): Promise<boolean> => {
-    if (!conta) return false;
-    if (linhasParaImportar.length === 0) {
-      toast({
-        title: "Nada para importar",
-        description: "Carregue um arquivo OFX primeiro.",
-        variant: "destructive",
-      });
-      return false;
+  // Estado para diálogo de duplicidade e sucesso
+  const [duplicatesOpen, setDuplicatesOpen] = useState(false);
+  const [duplicatePairs, setDuplicatePairs] = useState<DuplicatePair[]>([]);
+  const [duplicateBaseImported, setDuplicateBaseImported] = useState(0);
+  const [closeAfterDuplicates, setCloseAfterDuplicates] = useState(false);
+  const [successOpen, setSuccessOpen] = useState(false);
+  const [successCount, setSuccessCount] = useState(0);
+  const [shouldCloseOnSuccess, setShouldCloseOnSuccess] = useState(false);
+
+  const buscarDuplicados = async (
+    linhasParaImportar: LinhaImportacao[],
+  ): Promise<Map<string, MovimentoExistente[]>> => {
+    const result = new Map<string, MovimentoExistente[]>();
+    if (!conta || linhasParaImportar.length === 0) return result;
+    const datas = [...new Set(linhasParaImportar.map((l) => l.data))];
+    const valores = [...new Set(linhasParaImportar.map((l) => Number(l.valor)))];
+    const { data, error } = await supabase
+      .from("vx_fin_movimento")
+      .select("id, data_pagamento, data_vencimento, valor_liquido, descricao, id_pessoa")
+      .eq("id_conta", conta.id)
+      .in("data_pagamento", datas)
+      .in("valor_liquido", valores);
+    if (error) return result;
+    const existentes = (data || []) as MovimentoExistente[];
+    for (const l of linhasParaImportar) {
+      const matches = existentes.filter(
+        (e) =>
+          e.data_pagamento === l.data &&
+          Number(e.valor_liquido) === Number(l.valor),
+      );
+      if (matches.length > 0) result.set(l.uid, matches);
     }
+    return result;
+  };
+
+  const insertLinhas = async (
+    linhasParaImportar: LinhaImportacao[],
+  ): Promise<boolean> => {
+    if (!conta) return false;
+    if (linhasParaImportar.length === 0) return true;
     const semCategoria = linhasParaImportar.some((l) => !l.id_categoria);
     if (semCategoria) {
       toast({
@@ -353,8 +383,7 @@ export function OfxImportDialog({
         .eq("uid", userData.user.id)
         .maybeSingle();
       if (usuarioError) throw usuarioError;
-      if (!usuarioData?.config)
-        throw new Error("Configuração não encontrada");
+      if (!usuarioData?.config) throw new Error("Configuração não encontrada");
 
       const { data: empresaData, error: empresaError } = await supabase
         .from("empresa")
@@ -382,11 +411,6 @@ export function OfxImportDialog({
 
       const { error } = await supabase.from("vx_fin_movimento").insert(payload);
       if (error) throw error;
-
-      toast({
-        title: "Importação concluída",
-        description: `${payload.length} movimentação(ões) importada(s) com sucesso.`,
-      });
       onSuccess?.();
       return true;
     } catch (error) {
@@ -399,21 +423,107 @@ export function OfxImportDialog({
     }
   };
 
+  const processarImportacao = async (
+    linhasParaImportar: LinhaImportacao[],
+    fecharAposFinal: boolean,
+  ) => {
+    if (!conta) return;
+    if (linhasParaImportar.length === 0) {
+      toast({
+        title: "Nada para importar",
+        description: "Carregue um arquivo OFX primeiro.",
+        variant: "destructive",
+      });
+      return;
+    }
+    const semCategoria = linhasParaImportar.some((l) => !l.id_categoria);
+    if (semCategoria) {
+      toast({
+        title: "Categoria obrigatória",
+        description: "Selecione uma categoria para todas as movimentações.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const dupMap = await buscarDuplicados(linhasParaImportar);
+    const naoDuplicados = linhasParaImportar.filter((l) => !dupMap.has(l.uid));
+    const duplicados = linhasParaImportar.filter((l) => dupMap.has(l.uid));
+
+    let importadosOk = 0;
+    if (naoDuplicados.length > 0) {
+      const ok = await insertLinhas(naoDuplicados);
+      if (!ok) return;
+      importadosOk = naoDuplicados.length;
+      const uidsImportados = new Set(naoDuplicados.map((l) => l.uid));
+      setLinhas((prev) => prev.filter((l) => !uidsImportados.has(l.uid)));
+    }
+
+    if (duplicados.length === 0) {
+      setSuccessCount(importadosOk);
+      setShouldCloseOnSuccess(fecharAposFinal);
+      setSuccessOpen(true);
+      return;
+    }
+
+    setDuplicatePairs(
+      duplicados.map((linha) => ({
+        linha,
+        existentes: dupMap.get(linha.uid) || [],
+        selecionado: false,
+      })),
+    );
+    setDuplicateBaseImported(importadosOk);
+    setCloseAfterDuplicates(fecharAposFinal);
+    setDuplicatesOpen(true);
+  };
+
   const handleImport = async () => {
     setImporting(true);
-    const ok = await importarLinhas(linhas);
+    await processarImportacao(linhas, true);
     setImporting(false);
-    if (ok) onOpenChange(false);
   };
 
   const handleImportSingle = async (uid: string) => {
     const linha = linhas.find((l) => l.uid === uid);
     if (!linha) return;
-    const ok = await importarLinhas([linha]);
-    if (ok) {
-      setLinhas((prev) => prev.filter((l) => l.uid !== uid));
-    }
+    await processarImportacao([linha], false);
   };
+
+  const handleConfirmarDuplicados = async () => {
+    const selecionadas = duplicatePairs
+      .filter((p) => p.selecionado)
+      .map((p) => p.linha);
+    let totalImportado = duplicateBaseImported;
+    if (selecionadas.length > 0) {
+      const ok = await insertLinhas(selecionadas);
+      if (!ok) return;
+      totalImportado += selecionadas.length;
+      const uids = new Set(selecionadas.map((l) => l.uid));
+      setLinhas((prev) => prev.filter((l) => !uids.has(l.uid)));
+    }
+    setDuplicatesOpen(false);
+    setDuplicatePairs([]);
+    setSuccessCount(totalImportado);
+    setShouldCloseOnSuccess(closeAfterDuplicates);
+    setSuccessOpen(true);
+  };
+
+  const toggleDuplicado = (uid: string, value: boolean) => {
+    setDuplicatePairs((prev) =>
+      prev.map((p) => (p.linha.uid === uid ? { ...p, selecionado: value } : p)),
+    );
+  };
+
+  const toggleTodosDuplicados = (value: boolean) => {
+    setDuplicatePairs((prev) => prev.map((p) => ({ ...p, selecionado: value })));
+  };
+
+  const handleSuccessClose = () => {
+    setSuccessOpen(false);
+    if (shouldCloseOnSuccess) onOpenChange(false);
+  };
+
 
 
   return (
