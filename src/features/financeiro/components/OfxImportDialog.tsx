@@ -297,27 +297,26 @@ export function OfxImportDialog({
     setLinhas((prev) => prev.filter((l) => l.uid !== uid));
   };
 
-  const handleImport = async () => {
-    if (!conta) return;
-    if (linhas.length === 0) {
+  const importarLinhas = async (linhasParaImportar: LinhaImportacao[]): Promise<boolean> => {
+    if (!conta) return false;
+    if (linhasParaImportar.length === 0) {
       toast({
         title: "Nada para importar",
         description: "Carregue um arquivo OFX primeiro.",
         variant: "destructive",
       });
-      return;
+      return false;
     }
-    const semCategoria = linhas.some((l) => !l.id_categoria);
+    const semCategoria = linhasParaImportar.some((l) => !l.id_categoria);
     if (semCategoria) {
       toast({
         title: "Categoria obrigatória",
         description: "Selecione uma categoria para todas as movimentações.",
         variant: "destructive",
       });
-      return;
+      return false;
     }
 
-    setImporting(true);
     try {
       const { data: userData } = await supabase.auth.getUser();
       if (!userData.user) throw new Error("Usuário não autenticado");
@@ -339,7 +338,7 @@ export function OfxImportDialog({
       if (empresaError) throw empresaError;
       if (!empresaData) throw new Error("Empresa não encontrada");
 
-      const payload = linhas.map((l) => ({
+      const payload = linhasParaImportar.map((l) => ({
         id_empresa: empresaData.id,
         id_conta: conta.id,
         tipo_movimento: l.tipo,
@@ -363,17 +362,33 @@ export function OfxImportDialog({
         description: `${payload.length} movimentação(ões) importada(s) com sucesso.`,
       });
       onSuccess?.();
-      onOpenChange(false);
+      return true;
     } catch (error) {
       toast({
         title: "Erro ao importar",
         description: error instanceof Error ? error.message : String(error),
         variant: "destructive",
       });
-    } finally {
-      setImporting(false);
+      return false;
     }
   };
+
+  const handleImport = async () => {
+    setImporting(true);
+    const ok = await importarLinhas(linhas);
+    setImporting(false);
+    if (ok) onOpenChange(false);
+  };
+
+  const handleImportSingle = async (uid: string) => {
+    const linha = linhas.find((l) => l.uid === uid);
+    if (!linha) return;
+    const ok = await importarLinhas([linha]);
+    if (ok) {
+      setLinhas((prev) => prev.filter((l) => l.uid !== uid));
+    }
+  };
+
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
