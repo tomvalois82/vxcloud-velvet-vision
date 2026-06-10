@@ -13,6 +13,7 @@ import {
 } from '@/components/ui/dialog';
 import { useVehicleMainPhoto } from '@/features/estoque/hooks/useVehicleMainPhoto';
 import { maskCurrency, unmaskCurrency } from '@/features/estoque/utils/masks';
+import { VehicleDialog } from '@/features/estoque/components/VehicleDialog';
 import type { SaleData, SaleVehicle, TradeInVehicle } from '../../types';
 
 interface StepTrocaProps {
@@ -21,6 +22,7 @@ interface StepTrocaProps {
   addTradeIn: (vehicle: SaleVehicle, valor: number) => void;
   removeTradeIn: (id: string) => void;
   updateTradeInValue: (id: string, valor: number) => void;
+  refreshVeiculosEstoque?: () => Promise<SaleVehicle[]>;
 }
 
 function VehicleMiniCard({ vehicle }: { vehicle: SaleVehicle }) {
@@ -115,11 +117,14 @@ export function StepTroca({
   addTradeIn,
   removeTradeIn,
   updateTradeInValue,
+  refreshVeiculosEstoque,
 }: StepTrocaProps) {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedVehicle, setSelectedVehicle] = useState<SaleVehicle | null>(null);
   const [tradeValue, setTradeValue] = useState('');
+  const [vehicleDialogOpen, setVehicleDialogOpen] = useState(false);
+  const [prevVehicleIds, setPrevVehicleIds] = useState<number[]>([]);
 
   const usedVehicleIds = saleData.trocas.map(t => t.vehicle.id);
   const availableVehicles = veiculosEstoque.filter(v => !usedVehicleIds.includes(v.id));
@@ -204,14 +209,27 @@ export function StepTroca({
           <div className="space-y-4">
             {!selectedVehicle ? (
               <>
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Buscar veículo..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10"
-                  />
+                <div className="flex gap-2">
+                  <div className="relative flex-1">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Buscar veículo..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="pl-10"
+                    />
+                  </div>
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setPrevVehicleIds(veiculosEstoque.map(v => v.id));
+                      setVehicleDialogOpen(true);
+                    }}
+                    className="whitespace-nowrap"
+                  >
+                    <Plus className="w-4 h-4 mr-2" />
+                    Cadastrar Novo Veículo
+                  </Button>
                 </div>
 
                 <ScrollArea className="h-[400px] pr-4">
@@ -266,6 +284,22 @@ export function StepTroca({
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* New Vehicle Dialog */}
+      <VehicleDialog
+        open={vehicleDialogOpen}
+        onOpenChange={setVehicleDialogOpen}
+        vehicleId={undefined}
+        onSuccess={async () => {
+          if (refreshVeiculosEstoque) {
+            const updated = await refreshVeiculosEstoque();
+            const novo = updated.find(v => !prevVehicleIds.includes(v.id));
+            if (novo) {
+              handleSelectVehicle(novo);
+            }
+          }
+        }}
+      />
     </div>
   );
 }

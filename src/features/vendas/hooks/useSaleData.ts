@@ -60,6 +60,17 @@ export function useSaleData(vehicleId: number | null) {
     setColaboradores(colaboradoresData || []);
   }, []);
 
+  const refreshVeiculosEstoque = useCallback(async (): Promise<SaleVehicle[]> => {
+    const { data: estoqueData } = await supabase
+      .from('estoque')
+      .select('id, modelo, fabricante, ano, valor, km, cor, foto, placa')
+      .neq('id', vehicleId || 0)
+      .order('created_at', { ascending: false });
+    const list = (estoqueData || []) as SaleVehicle[];
+    setVeiculosEstoque(list);
+    return list;
+  }, [vehicleId]);
+
   // Load initial data
   useEffect(() => {
     const loadData = async () => {
@@ -488,6 +499,7 @@ export function useSaleData(vehicleId: number | null) {
     updateServicoProduto,
     saveSale,
     refreshPessoas,
+    refreshVeiculosEstoque,
     totals: {
       valorVeiculo: saleData.valor_venda,
       totalTrocas,
