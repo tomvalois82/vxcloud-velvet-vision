@@ -38,12 +38,36 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
+import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { findBestPessoaMatch, parseOfx } from "../utils/ofxParser";
 import { maskCurrency, unmaskCurrency } from "@/features/estoque/utils/masks";
 import { PessoaDialog } from "@/features/pessoas/components/PessoaDialog";
+
+interface MovimentoExistente {
+  id: string;
+  data_pagamento: string | null;
+  data_vencimento: string;
+  valor_liquido: number;
+  descricao: string;
+  id_pessoa: string | null;
+}
+
+interface DuplicatePair {
+  linha: LinhaImportacao;
+  existentes: MovimentoExistente[];
+  selecionado: boolean;
+}
+
+const formatDateBR = (d: string | null | undefined) => {
+  if (!d) return "";
+  const only = d.slice(0, 10);
+  const [y, m, day] = only.split("-");
+  if (!y || !m || !day) return only;
+  return `${day}/${m}/${y}`;
+};
 
 interface Conta {
   id: string;
