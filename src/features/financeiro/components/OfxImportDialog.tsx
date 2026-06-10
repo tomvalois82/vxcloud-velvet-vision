@@ -53,6 +53,7 @@ interface MovimentoExistente {
   valor_liquido: number;
   descricao: string;
   id_pessoa: string | null;
+  id_conta: string;
 }
 
 interface DuplicatePair {
@@ -341,7 +342,7 @@ export function OfxImportDialog({
     const valores = [...new Set(linhasParaImportar.map((l) => Number(l.valor)))];
     const { data, error } = await supabase
       .from("vx_fin_movimento")
-      .select("id, data_pagamento, data_vencimento, valor_liquido, descricao, id_pessoa")
+      .select("id, data_pagamento, data_vencimento, valor_liquido, descricao, id_pessoa, id_conta")
       .eq("id_conta", conta.id)
       .in("data_pagamento", datas)
       .in("valor_liquido", valores);
@@ -350,6 +351,7 @@ export function OfxImportDialog({
     for (const l of linhasParaImportar) {
       const matches = existentes.filter(
         (e) =>
+          e.id_conta === conta!.id &&
           e.data_pagamento === l.data &&
           Number(e.valor_liquido) === Number(l.valor),
       );
