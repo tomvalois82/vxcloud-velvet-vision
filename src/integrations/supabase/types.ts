@@ -1670,6 +1670,39 @@ export type Database = {
           },
         ]
       }
+      vx_debug_log: {
+        Row: {
+          created_at: string | null
+          etapa: string | null
+          funcao: string | null
+          id: number
+          mensagem: string | null
+          valor_numero: number | null
+          valor_texto: string | null
+          valor_uuid: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          etapa?: string | null
+          funcao?: string | null
+          id?: number
+          mensagem?: string | null
+          valor_numero?: number | null
+          valor_texto?: string | null
+          valor_uuid?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          etapa?: string | null
+          funcao?: string | null
+          id?: number
+          mensagem?: string | null
+          valor_numero?: number | null
+          valor_texto?: string | null
+          valor_uuid?: string | null
+        }
+        Relationships: []
+      }
       vx_fin_anexo: {
         Row: {
           base64: string | null
