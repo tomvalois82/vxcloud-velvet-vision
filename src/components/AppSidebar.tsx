@@ -1,4 +1,4 @@
-import { LayoutDashboard, Car, Users, ShoppingCart, Wallet, Settings, Package, BarChart3, ArrowDownCircle, ArrowUpCircle, ArrowLeftRight, FolderTree, ChevronDown, LogOut, CreditCard, TrendingUp, FileText, Moon, Sun, Building2, ClipboardList, Printer, BookOpen, List } from "lucide-react";
+import { LayoutDashboard, Car, Users, ShoppingCart, ShoppingBag, Wallet, Settings, Package, BarChart3, ArrowDownCircle, ArrowUpCircle, ArrowLeftRight, FolderTree, ChevronDown, LogOut, CreditCard, TrendingUp, FileText, Moon, Sun, Building2, ClipboardList, Printer, BookOpen, List } from "lucide-react";
 import { useTheme } from "next-themes";
 import logo from "@/assets/logo-completa-transparente.png";
 import { NavLink } from "@/components/NavLink";
@@ -76,6 +76,10 @@ const menuItems: MenuItem[] = [{
     url: "/vendas/relatorios",
     icon: BarChart3
   }]
+}, {
+  title: "Compras",
+  url: "/compras",
+  icon: ShoppingBag
 }, {
   title: "Financeiro",
   icon: Wallet,

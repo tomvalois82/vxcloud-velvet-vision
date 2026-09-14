@@ -20,6 +20,7 @@ const PAGINAS_SISTEMA = [
   { path: "/investidores/carteiras", label: "Investidores - Carteiras" },
   { path: "/vendas", label: "Vendas - Listagem" },
   { path: "/vendas/relatorios", label: "Vendas - Relatórios" },
+  { path: "/compras", label: "Compras - Listagem" },
   { path: "/financeiro", label: "Financeiro - Painel" },
   { path: "/financeiro/contas", label: "Financeiro - Contas" },
   { path: "/financeiro/cartoes", label: "Financeiro - Cartões" },
