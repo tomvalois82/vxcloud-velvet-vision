@@ -292,7 +292,7 @@ export function usePurchaseData(purchaseId?: string | null) {
                   id_forma_pagamento: acerto.id_forma_pagamento,
                   id_pessoa: id_fornecedor,
                   id_estoque: veiculo.id,
-                  tipo_movimento: 'Despesa',
+                  tipo_movimento: 'Pagar',
                   valor_bruto: Number(acerto.valor),
                   valor_liquido: Number(acerto.valor),
                   data_vencimento: acerto.data_lancamento,
