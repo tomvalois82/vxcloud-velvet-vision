@@ -141,12 +141,39 @@ export function usePurchasesList() {
     async (purchaseId: string) => {
       setActionLoading(purchaseId);
       try {
+        // Verifica títulos gerados pela compra antes de reabrir
+        const { data: movimentos, error: erroMov } = await supabase
+          .from('vx_fin_movimento')
+          .select('id, status')
+          .eq('id_compra', purchaseId);
+        if (erroMov) throw erroMov;
+
+        const temPago = (movimentos || []).some(m => m.status === 'Pago');
+        const temPendente = (movimentos || []).some(m => m.status === 'Pendente');
+
+        if (temPago) {
+          toast({
+            title: 'Não foi possível reabrir a compra',
+            description: 'Já existe(m) título(s) lançado(s) e pago(s) para esta compra.',
+            variant: 'destructive',
+          });
+          return;
+        }
+
         const { error } = await supabase
           .from('vx_compras')
           .update({ fechada: false })
           .eq('id', purchaseId);
         if (error) throw error;
-        toast({ title: 'Sucesso', description: 'Compra reaberta para edição' });
+
+        if (temPendente) {
+          toast({
+            title: 'Compra reaberta com aviso',
+            description: 'Existe(m) título(s) já lançado(s), porém ainda pendente(s).',
+          });
+        } else {
+          toast({ title: 'Sucesso', description: 'Compra reaberta para edição' });
+        }
         await fetchPurchases();
       } catch (error) {
         console.error('Erro ao reabrir compra:', error);
