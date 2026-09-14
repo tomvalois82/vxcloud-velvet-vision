@@ -163,6 +163,7 @@ export type Database = {
         Row: {
           access_token_olx: string | null
           alertaNovo: boolean | null
+          api3cplus: string | null
           apikeyvoice: string | null
           ativo: boolean | null
           ativoolx: boolean | null
@@ -202,6 +203,7 @@ export type Database = {
         Insert: {
           access_token_olx?: string | null
           alertaNovo?: boolean | null
+          api3cplus?: string | null
           apikeyvoice?: string | null
           ativo?: boolean | null
           ativoolx?: boolean | null
@@ -241,6 +243,7 @@ export type Database = {
         Update: {
           access_token_olx?: string | null
           alertaNovo?: boolean | null
+          api3cplus?: string | null
           apikeyvoice?: string | null
           ativo?: boolean | null
           ativoolx?: boolean | null
@@ -1500,6 +1503,334 @@ export type Database = {
         }
         Relationships: []
       }
+      vx_compras: {
+        Row: {
+          created_at: string
+          data_compra: string
+          fechada: boolean | null
+          id: string
+          id_comprador: string | null
+          id_empresa: string
+          id_fornecedor: string
+          id_veiculo_comprado: number
+          observacoes: string | null
+          valor_total_compra: number
+        }
+        Insert: {
+          created_at?: string
+          data_compra: string
+          fechada?: boolean | null
+          id?: string
+          id_comprador?: string | null
+          id_empresa: string
+          id_fornecedor: string
+          id_veiculo_comprado: number
+          observacoes?: string | null
+          valor_total_compra: number
+        }
+        Update: {
+          created_at?: string
+          data_compra?: string
+          fechada?: boolean | null
+          id?: string
+          id_comprador?: string | null
+          id_empresa?: string
+          id_fornecedor?: string
+          id_veiculo_comprado?: number
+          observacoes?: string | null
+          valor_total_compra?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vx_compras_id_comprador_fkey"
+            columns: ["id_comprador"]
+            isOneToOne: false
+            referencedRelation: "vw_investidor_carteira"
+            referencedColumns: ["id_pessoa"]
+          },
+          {
+            foreignKeyName: "vx_compras_id_comprador_fkey"
+            columns: ["id_comprador"]
+            isOneToOne: false
+            referencedRelation: "vw_rentabilidade_investidor"
+            referencedColumns: ["id_pessoa"]
+          },
+          {
+            foreignKeyName: "vx_compras_id_comprador_fkey"
+            columns: ["id_comprador"]
+            isOneToOne: false
+            referencedRelation: "vx_pessoa"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vx_compras_id_empresa_fkey1"
+            columns: ["id_empresa"]
+            isOneToOne: false
+            referencedRelation: "empresa"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vx_compras_id_fornecedor_fkey"
+            columns: ["id_fornecedor"]
+            isOneToOne: false
+            referencedRelation: "vw_investidor_carteira"
+            referencedColumns: ["id_pessoa"]
+          },
+          {
+            foreignKeyName: "vx_compras_id_fornecedor_fkey"
+            columns: ["id_fornecedor"]
+            isOneToOne: false
+            referencedRelation: "vw_rentabilidade_investidor"
+            referencedColumns: ["id_pessoa"]
+          },
+          {
+            foreignKeyName: "vx_compras_id_fornecedor_fkey"
+            columns: ["id_fornecedor"]
+            isOneToOne: false
+            referencedRelation: "vx_pessoa"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vx_compras_id_veiculo_comprado_fkey"
+            columns: ["id_veiculo_comprado"]
+            isOneToOne: false
+            referencedRelation: "estoque"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vx_compras_acerto: {
+        Row: {
+          created_at: string
+          data_lancamento: string
+          data_pagamento: string | null
+          id: string
+          id_compra: string
+          id_conta: string | null
+          id_forma_pagamento: string
+          id_movimento_gerado: string | null
+          numero: string | null
+          observacao: string | null
+          valor: number
+        }
+        Insert: {
+          created_at?: string
+          data_lancamento: string
+          data_pagamento?: string | null
+          id?: string
+          id_compra: string
+          id_conta?: string | null
+          id_forma_pagamento: string
+          id_movimento_gerado?: string | null
+          numero?: string | null
+          observacao?: string | null
+          valor: number
+        }
+        Update: {
+          created_at?: string
+          data_lancamento?: string
+          data_pagamento?: string | null
+          id?: string
+          id_compra?: string
+          id_conta?: string | null
+          id_forma_pagamento?: string
+          id_movimento_gerado?: string | null
+          numero?: string | null
+          observacao?: string | null
+          valor?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vx_compras_acerto_id_compra_fkey"
+            columns: ["id_compra"]
+            isOneToOne: false
+            referencedRelation: "vx_compras"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vx_compras_acerto_id_conta_fkey1"
+            columns: ["id_conta"]
+            isOneToOne: false
+            referencedRelation: "vx_fin_conta"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vx_compras_acerto_id_forma_pagamento_fkey1"
+            columns: ["id_forma_pagamento"]
+            isOneToOne: false
+            referencedRelation: "vx_forma_pagamento"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vx_compras_acerto_id_movimento_gerado_fkey1"
+            columns: ["id_movimento_gerado"]
+            isOneToOne: true
+            referencedRelation: "vx_fin_movimento"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      "vx_compras_acerto-TEMP": {
+        Row: {
+          data_lancamento: string
+          data_pagamento: string | null
+          id: string
+          id_conta: string
+          id_forma_pagamento: string
+          id_movimento_gerado: string | null
+          id_venda: string
+          numero: string
+          observacao: string | null
+          valor: number
+        }
+        Insert: {
+          data_lancamento: string
+          data_pagamento?: string | null
+          id?: string
+          id_conta: string
+          id_forma_pagamento: string
+          id_movimento_gerado?: string | null
+          id_venda: string
+          numero: string
+          observacao?: string | null
+          valor: number
+        }
+        Update: {
+          data_lancamento?: string
+          data_pagamento?: string | null
+          id?: string
+          id_conta?: string
+          id_forma_pagamento?: string
+          id_movimento_gerado?: string | null
+          id_venda?: string
+          numero?: string
+          observacao?: string | null
+          valor?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vx_compras_acerto_id_conta_fkey"
+            columns: ["id_conta"]
+            isOneToOne: false
+            referencedRelation: "vx_fin_conta"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vx_compras_acerto_id_forma_pagamento_fkey"
+            columns: ["id_forma_pagamento"]
+            isOneToOne: false
+            referencedRelation: "vx_forma_pagamento"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vx_compras_acerto_id_movimento_gerado_fkey"
+            columns: ["id_movimento_gerado"]
+            isOneToOne: true
+            referencedRelation: "vx_fin_movimento"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vx_compras_acerto_id_venda_fkey"
+            columns: ["id_venda"]
+            isOneToOne: false
+            referencedRelation: "vx_vendas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      "vx_compras-TEMP": {
+        Row: {
+          data_venda: string
+          fechada: boolean
+          id: string
+          id_cliente: string
+          id_empresa: string
+          id_veiculo_vendido: number
+          id_vendedor: string | null
+          observacoes: string | null
+          valor_total_venda: number
+        }
+        Insert: {
+          data_venda?: string
+          fechada?: boolean
+          id?: string
+          id_cliente: string
+          id_empresa: string
+          id_veiculo_vendido: number
+          id_vendedor?: string | null
+          observacoes?: string | null
+          valor_total_venda: number
+        }
+        Update: {
+          data_venda?: string
+          fechada?: boolean
+          id?: string
+          id_cliente?: string
+          id_empresa?: string
+          id_veiculo_vendido?: number
+          id_vendedor?: string | null
+          observacoes?: string | null
+          valor_total_venda?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vx_compras_id_cliente_fkey"
+            columns: ["id_cliente"]
+            isOneToOne: false
+            referencedRelation: "vw_investidor_carteira"
+            referencedColumns: ["id_pessoa"]
+          },
+          {
+            foreignKeyName: "vx_compras_id_cliente_fkey"
+            columns: ["id_cliente"]
+            isOneToOne: false
+            referencedRelation: "vw_rentabilidade_investidor"
+            referencedColumns: ["id_pessoa"]
+          },
+          {
+            foreignKeyName: "vx_compras_id_cliente_fkey"
+            columns: ["id_cliente"]
+            isOneToOne: false
+            referencedRelation: "vx_pessoa"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vx_compras_id_empresa_fkey"
+            columns: ["id_empresa"]
+            isOneToOne: false
+            referencedRelation: "empresa"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vx_compras_id_veiculo_vendido_fkey"
+            columns: ["id_veiculo_vendido"]
+            isOneToOne: false
+            referencedRelation: "estoque"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vx_compras_id_vendedor_fkey"
+            columns: ["id_vendedor"]
+            isOneToOne: false
+            referencedRelation: "vw_investidor_carteira"
+            referencedColumns: ["id_pessoa"]
+          },
+          {
+            foreignKeyName: "vx_compras_id_vendedor_fkey"
+            columns: ["id_vendedor"]
+            isOneToOne: false
+            referencedRelation: "vw_rentabilidade_investidor"
+            referencedColumns: ["id_pessoa"]
+          },
+          {
+            foreignKeyName: "vx_compras_id_vendedor_fkey"
+            columns: ["id_vendedor"]
+            isOneToOne: false
+            referencedRelation: "vx_pessoa"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       vx_fin_anexo: {
         Row: {
           base64: string | null
@@ -2736,12 +3067,12 @@ export type Tables<
   DefaultSchemaTableNameOrOptions extends
     | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
         DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -2765,11 +3096,11 @@ export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -2790,11 +3121,11 @@ export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -2815,11 +3146,11 @@ export type Enums<
   DefaultSchemaEnumNameOrOptions extends
     | keyof DefaultSchema["Enums"]
     | { schema: keyof DatabaseWithoutInternals },
-  EnumName extends DefaultSchemaEnumNameOrOptions extends {
+  EnumName extends (DefaultSchemaEnumNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaEnumNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -2832,11 +3163,11 @@ export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
     | keyof DefaultSchema["CompositeTypes"]
     | { schema: keyof DatabaseWithoutInternals },
-  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
+  CompositeTypeName extends (PublicCompositeTypeNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
-    : never = never,
+    : never) = never,
 > = PublicCompositeTypeNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
