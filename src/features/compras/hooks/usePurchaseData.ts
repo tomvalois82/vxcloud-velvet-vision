@@ -275,45 +275,14 @@ export function usePurchaseData(purchaseId?: string | null) {
             observacao: pag.observacao,
           }));
 
-          const { data: acertosCriados, error: acertosError } = await supabase
+          const { error: acertosError } = await supabase
             .from('vx_compras_acerto')
-            .insert(acertosInsert)
-            .select();
+            .insert(acertosInsert);
           if (acertosError) throw acertosError;
-
-          // Ao fechar a compra, gera os lançamentos financeiros (despesas)
-          if (fecharCompra && acertosCriados) {
-            for (const acerto of acertosCriados) {
-              const { data: movimento, error: movError } = await supabase
-                .from('vx_fin_movimento')
-                .insert({
-                  id_empresa: veiculoData.id_empresa,
-                  id_conta: acerto.id_conta,
-                  id_forma_pagamento: acerto.id_forma_pagamento,
-                  id_pessoa: id_fornecedor,
-                  id_estoque: veiculo.id,
-                  tipo_movimento: 'Pagar',
-                  valor_bruto: Number(acerto.valor),
-                  valor_liquido: Number(acerto.valor),
-                  data_vencimento: acerto.data_lancamento,
-                  data_pagamento: acerto.data_pagamento,
-                  status: acerto.data_pagamento ? 'Pago' : 'Pendente',
-                  descricao: `Compra de veículo ${veiculo.fabricante || ''} ${veiculo.modelo || ''}`.trim(),
-                  observacoes: acerto.observacao,
-                  conciliado: false,
-                })
-                .select()
-                .single();
-
-              if (movError) throw movError;
-
-              await supabase
-                .from('vx_compras_acerto')
-                .update({ id_movimento_gerado: movimento.id })
-                .eq('id', acerto.id);
-            }
-          }
         }
+
+        // Os lançamentos financeiros (vx_fin_movimento) e o id_movimento_gerado
+        // são criados automaticamente pela trigger do banco ao fechar a compra
 
         toast({
           title: 'Sucesso',
