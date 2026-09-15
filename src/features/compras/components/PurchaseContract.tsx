@@ -57,7 +57,7 @@ export const PurchaseContract = forwardRef<HTMLDivElement, PurchaseContractProps
     return (
       <div
         ref={ref}
-        className="bg-white text-gray-900 p-8 w-[210mm] min-h-[297mm] mx-auto font-sans text-sm"
+        className="bg-white text-black p-8 w-[210mm] min-h-[297mm] mx-auto font-sans text-sm"
         style={{ fontFamily: 'Inter, Roboto, sans-serif' }}
       >
         {/* Cabeçalho */}
@@ -75,39 +75,31 @@ export const PurchaseContract = forwardRef<HTMLDivElement, PurchaseContractProps
               </div>
             )}
             <div>
-              <h1 className="text-xl font-bold text-gray-900">
+              <h1 className="text-xl font-bold text-black">
                 {data.empresa?.nome_fantasia || 'VX MOTORS'}
               </h1>
-              <p className="text-xs text-gray-600">
+              <p className="text-xs text-black">
                 CNPJ: {formatCPFCNPJ(data.empresa?.cnpj || null)}
               </p>
-              <p className="text-xs text-gray-600">
+              <p className="text-xs text-black">
                 {data.empresa?.logradouro}, {data.empresa?.numero} - {data.empresa?.bairro}
               </p>
-              <p className="text-xs text-gray-600">
+              <p className="text-xs text-black">
                 {data.empresa?.municipio}/{data.empresa?.estado} - CEP: {data.empresa?.cep}
               </p>
-              <p className="text-xs text-gray-600">
+              <p className="text-xs text-black">
                 Tel: {data.empresa?.telefone || '-'} | {data.empresa?.site || data.empresa?.email}
               </p>
             </div>
           </div>
 
           <div className="text-right">
-            <p className="text-lg font-bold text-gray-900">
+            <p className="text-lg font-bold text-black">
               CONTRATO Nº {data.id.slice(0, 8).toUpperCase()}
             </p>
-            <p className="text-sm text-gray-600">Data: {formatDate(data.data_compra)}</p>
-            <p className="text-sm text-gray-600">Tipo: COMPRA DE VEÍCULO</p>
-            <p
-              className={`text-sm font-semibold ${
-                data.cancelada
-                  ? 'text-red-600'
-                  : data.fechada
-                    ? 'text-green-600'
-                    : 'text-yellow-600'
-              }`}
-            >
+            <p className="text-sm text-black">Data: {formatDate(data.data_compra)}</p>
+            <p className="text-sm text-black">Tipo: COMPRA DE VEÍCULO</p>
+            <p className="text-sm font-semibold text-black">
               Status: {statusCompra}
             </p>
           </div>
@@ -116,8 +108,8 @@ export const PurchaseContract = forwardRef<HTMLDivElement, PurchaseContractProps
         {/* Dados do vendedor */}
         <div className="mb-6">
           <div className="bg-gray-100 px-3 py-2 mb-3">
-            <h2 className="text-sm font-bold uppercase text-gray-800">DADOS DO VENDEDOR</h2>
-            <p className="text-xs text-gray-600">
+            <h2 className="text-sm font-bold uppercase text-black">DADOS DO VENDEDOR</h2>
+            <p className="text-xs text-black">
               PROPRIETÁRIO QUE VENDEU O VEÍCULO À {data.empresa?.nome_fantasia || 'LOJA'}
             </p>
           </div>
@@ -147,18 +139,18 @@ export const PurchaseContract = forwardRef<HTMLDivElement, PurchaseContractProps
         {/* Veículo adquirido */}
         <div className="mb-6">
           <div className="bg-gray-100 px-3 py-2 mb-3">
-            <h2 className="text-sm font-bold uppercase text-gray-800">VEÍCULO DE COMPRA</h2>
-            <p className="text-xs text-gray-600">
+            <h2 className="text-sm font-bold uppercase text-black">VEÍCULO DE COMPRA</h2>
+            <p className="text-xs text-black">
               ADQUIRIDO PELA {data.empresa?.nome_fantasia || 'LOJA'} DO VENDEDOR
             </p>
           </div>
 
           <div className="bg-gray-50 border border-gray-200 rounded p-3 mb-3">
             <div className="flex justify-between items-center">
-              <p className="text-lg font-bold text-gray-900">
+              <p className="text-lg font-bold text-black">
                 {data.veiculo?.fabricante} {data.veiculo?.modelo}
               </p>
-              <p className="text-lg font-bold text-blue-700">
+              <p className="text-lg font-bold text-black">
                 {formatCurrency(data.totais.valorCompra)}
               </p>
             </div>
@@ -197,8 +189,8 @@ export const PurchaseContract = forwardRef<HTMLDivElement, PurchaseContractProps
         {data.pagamentos.length > 0 && (
           <div className="mb-6">
             <div className="bg-gray-100 px-3 py-2 mb-3">
-              <h2 className="text-sm font-bold uppercase text-gray-800">ACERTO FINANCEIRO</h2>
-              <p className="text-xs text-gray-600">
+              <h2 className="text-sm font-bold uppercase text-black">ACERTO FINANCEIRO</h2>
+              <p className="text-xs text-black">
                 VALORES PAGOS PELA {data.empresa?.nome_fantasia || 'LOJA'} AO VENDEDOR
               </p>
             </div>
@@ -236,7 +228,7 @@ export const PurchaseContract = forwardRef<HTMLDivElement, PurchaseContractProps
         {/* Resumo financeiro */}
         <div className="mb-8">
           <div className="bg-gray-100 px-3 py-2 mb-3">
-            <h2 className="text-sm font-bold uppercase text-gray-800">RESUMO FINANCEIRO</h2>
+            <h2 className="text-sm font-bold uppercase text-black">RESUMO FINANCEIRO</h2>
           </div>
           <div className="flex justify-end">
             <div className="w-96 text-sm">
@@ -255,7 +247,7 @@ export const PurchaseContract = forwardRef<HTMLDivElement, PurchaseContractProps
               {data.totais.totalPago > 0 && (
                 <div className="flex justify-between py-1 border-b border-gray-100">
                   <span>(-) Pago ao vendedor:</span>
-                  <span className="font-semibold text-green-700">
+                  <span className="font-semibold text-black">
                     {formatCurrency(data.totais.totalPago)}
                   </span>
                 </div>
@@ -264,13 +256,7 @@ export const PurchaseContract = forwardRef<HTMLDivElement, PurchaseContractProps
               <div className="flex justify-between py-2 border-t-2 border-gray-300 mt-2">
                 <span className="font-bold text-base">(=) SALDO FINAL:</span>
                 <span
-                  className={`font-bold text-base ${
-                    data.totais.saldoFinal === 0
-                      ? 'text-green-700'
-                      : data.totais.saldoFinal > 0
-                        ? 'text-yellow-600'
-                        : 'text-red-600'
-                  }`}
+                  className="font-bold text-base text-black"
                 >
                   {formatCurrency(data.totais.saldoFinal)}
                 </span>
@@ -283,7 +269,7 @@ export const PurchaseContract = forwardRef<HTMLDivElement, PurchaseContractProps
         {data.observacoes && (
           <div className="mb-6">
             <div className="bg-gray-100 px-3 py-2 mb-3">
-              <h2 className="text-sm font-bold uppercase text-gray-800">OBSERVAÇÕES</h2>
+              <h2 className="text-sm font-bold uppercase text-black">OBSERVAÇÕES</h2>
             </div>
             <p className="text-sm whitespace-pre-line">{data.observacoes}</p>
           </div>
@@ -300,7 +286,7 @@ export const PurchaseContract = forwardRef<HTMLDivElement, PurchaseContractProps
             <div>
               <div className="border-t border-gray-900 pt-2 mt-12">
                 <p className="font-semibold">{data.fornecedor?.nome || 'VENDEDOR'}</p>
-                <p className="text-xs text-gray-600">
+                <p className="text-xs text-black">
                   CPF/CNPJ: {formatCPFCNPJ(data.fornecedor?.cpf_cnpj || null)}
                 </p>
               </div>
@@ -309,7 +295,7 @@ export const PurchaseContract = forwardRef<HTMLDivElement, PurchaseContractProps
             <div>
               <div className="border-t border-gray-900 pt-2 mt-12">
                 <p className="font-semibold">{data.empresa?.nome_fantasia || 'COMPRADOR'}</p>
-                <p className="text-xs text-gray-600">
+                <p className="text-xs text-black">
                   CNPJ: {formatCPFCNPJ(data.empresa?.cnpj || null)}
                 </p>
               </div>
@@ -318,7 +304,7 @@ export const PurchaseContract = forwardRef<HTMLDivElement, PurchaseContractProps
             <div>
               <div className="border-t border-gray-900 pt-2 mt-12">
                 <p className="font-semibold">TESTEMUNHA</p>
-                <p className="text-xs text-gray-600">CPF: ___________________</p>
+                <p className="text-xs text-black">CPF: ___________________</p>
               </div>
             </div>
           </div>
