@@ -15,6 +15,7 @@ export interface PurchaseListItem {
   id: string;
   data_compra: string;
   fechada: boolean | null;
+  cancelada: boolean | null;
   valor_total_compra: number;
   observacoes: string | null;
   id_fornecedor: string;
@@ -58,7 +59,7 @@ export function usePurchasesList() {
       let query = supabase
         .from('vx_compras')
         .select(
-          'id, data_compra, fechada, valor_total_compra, observacoes, id_fornecedor, id_comprador, id_veiculo_comprado'
+          'id, data_compra, fechada, cancelada, valor_total_compra, observacoes, id_fornecedor, id_comprador, id_veiculo_comprado'
         )
         .order('data_compra', { ascending: false });
 
