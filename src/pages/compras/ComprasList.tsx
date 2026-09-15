@@ -63,11 +63,46 @@ const ComprasList = () => {
     colaboradores,
     updateFilters,
     reopenPurchase,
+    fetchPaidMovements,
+    cancelPurchase,
   } = usePurchasesList();
 
   const [showFilters, setShowFilters] = useState(false);
   const [reopenDialogOpen, setReopenDialogOpen] = useState(false);
   const [selectedPurchaseId, setSelectedPurchaseId] = useState<string | null>(null);
+
+  // Estado da seleção e do cancelamento
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
+  const [cancelTargetId, setCancelTargetId] = useState<string | null>(null);
+  const [paidMovements, setPaidMovements] = useState<PaidMovement[]>([]);
+  const [loadingMovements, setLoadingMovements] = useState(false);
+
+  // Compras ainda não canceladas podem ser selecionadas
+  const selecionaveis = purchases.filter(p => !p.cancelada);
+  const allSelected =
+    selecionaveis.length > 0 && selecionaveis.every(p => selectedIds.includes(p.id));
+
+  const toggleSelectAll = (checked: boolean) => {
+    setSelectedIds(checked ? selecionaveis.map(p => p.id) : []);
+  };
+
+  const toggleSelect = (id: string, checked: boolean) => {
+    setSelectedIds(prev => (checked ? [...prev, id] : prev.filter(item => item !== id)));
+  };
+
+  // Abre o diálogo de cancelamento carregando os títulos pagos da compra
+  const openCancelDialog = async (purchaseId: string) => {
+    setCancelTargetId(purchaseId);
+    setCancelDialogOpen(true);
+    setLoadingMovements(true);
+    setPaidMovements([]);
+    const movimentos = await fetchPaidMovements(purchaseId);
+    setPaidMovements(movimentos);
+    setLoadingMovements(false);
+  };
+
+  const totalPago = paidMovements.reduce((acc, m) => acc + m.valor_liquido, 0);
 
   const hasActiveFilters =
     Boolean(filters.search) ||
