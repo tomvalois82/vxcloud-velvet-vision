@@ -2,6 +2,15 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 
+// Movimento financeiro pago atrelado à compra (exibido no diálogo de cancelamento)
+export interface PaidMovement {
+  id: string;
+  descricao: string | null;
+  valor_liquido: number;
+  data_vencimento: string;
+  data_pagamento: string | null;
+}
+
 export interface PurchaseListItem {
   id: string;
   data_compra: string;
