@@ -366,6 +366,15 @@ const ComprasList = () => {
                       {maskCurrency(compra.valor_total_compra)}
                     </TableCell>
                     <TableCell>
+                      {compra.cancelada ? (
+                        <Badge
+                          variant="secondary"
+                          className="bg-red-500/20 text-red-400 border-red-500/30"
+                        >
+                          <Ban className="w-3 h-3 mr-1" />
+                          Cancelada
+                        </Badge>
+                      ) : (
                       <Badge
                         variant={compra.fechada ? 'default' : 'secondary'}
                         className={cn(
