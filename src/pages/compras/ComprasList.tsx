@@ -91,18 +91,27 @@ const ComprasList = () => {
     setSelectedIds(prev => (checked ? [...prev, id] : prev.filter(item => item !== id)));
   };
 
-  // Abre o diálogo de cancelamento carregando os títulos pagos da compra
-  const openCancelDialog = async (purchaseId: string) => {
-    setCancelTargetId(purchaseId);
+  // Abre o diálogo de cancelamento carregando os títulos pagos das compras selecionadas
+  const openCancelDialog = async (purchaseIds: string[]) => {
+    setCancelTargetIds(purchaseIds);
     setCancelDialogOpen(true);
     setLoadingMovements(true);
     setPaidMovements([]);
-    const movimentos = await fetchPaidMovements(purchaseId);
-    setPaidMovements(movimentos);
+    const resultados = await Promise.all(
+      purchaseIds.map(async id => ({
+        idCompra: id,
+        movimentos: await fetchPaidMovements(id),
+      }))
+    );
+    setPaidMovements(resultados);
     setLoadingMovements(false);
   };
 
-  const totalPago = paidMovements.reduce((acc, m) => acc + m.valor_liquido, 0);
+  const totalPago = paidMovements.reduce(
+    (acc, item) => acc + item.movimentos.reduce((soma, m) => soma + m.valor_liquido, 0),
+    0
+  );
+  const temPago = paidMovements.some(item => item.movimentos.length > 0);
 
   const hasActiveFilters =
     Boolean(filters.search) ||
