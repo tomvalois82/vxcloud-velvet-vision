@@ -470,6 +470,88 @@ const ComprasList = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <AlertDialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
+        <AlertDialogContent className="max-w-lg">
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              Cancelar compra{cancelTargetIds.length > 1 ? 's' : ''}?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {cancelTargetIds.length > 1
+                ? `As ${cancelTargetIds.length} compras selecionadas serão canceladas.`
+                : 'A compra selecionada será cancelada.'}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+
+          {loadingMovements ? (
+            <div className="flex items-center justify-center py-6">
+              <Loader2 className="w-6 h-6 animate-spin text-accent" />
+            </div>
+          ) : (
+            temPago && (
+              <div className="space-y-3">
+                <p className="text-sm text-foreground font-medium">
+                  Existe(m) movimento(s) financeiro(s) pago(s) atrelado(s) a esta compra:
+                </p>
+                <div className="max-h-48 overflow-auto rounded-md border border-border">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="hover:bg-transparent border-b border-border">
+                        <TableHead className="text-muted-foreground">Descrição</TableHead>
+                        <TableHead className="text-muted-foreground">Vencimento</TableHead>
+                        <TableHead className="text-muted-foreground text-right">Valor</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {paidMovements.flatMap(item =>
+                        item.movimentos.map(mov => (
+                          <TableRow key={mov.id} className="border-b border-border/50">
+                            <TableCell className="text-xs">
+                              {mov.descricao || 'Sem descrição'}
+                            </TableCell>
+                            <TableCell className="text-xs text-muted-foreground">
+                              {format(new Date(mov.data_vencimento + 'T00:00:00'), 'dd/MM/yyyy', {
+                                locale: ptBR,
+                              })}
+                            </TableCell>
+                            <TableCell className="text-xs text-right font-semibold text-accent">
+                              {maskCurrency(mov.valor_liquido)}
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  Será lançado um título "a Receber" com a soma dos títulos pagos (
+                  <span className="font-semibold text-accent">{maskCurrency(totalPago)}</span>) e os
+                  títulos pendentes de pagamento serão excluídos.
+                </p>
+              </div>
+            )
+          )}
+
+          <AlertDialogFooter>
+            <AlertDialogCancel>Voltar</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={loadingMovements}
+              onClick={async () => {
+                for (const id of cancelTargetIds) {
+                  await cancelPurchase(id);
+                }
+                setSelectedIds([]);
+                setCancelDialogOpen(false);
+                setCancelTargetIds([]);
+              }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Confirmar cancelamento
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
