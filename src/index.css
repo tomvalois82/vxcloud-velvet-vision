@@ -144,4 +144,8 @@
   .gradient-accent {
     background: linear-gradient(135deg, color-mix(in oklch, var(--primary) 20%, transparent), transparent);
   }
+
+  #lovable-badge{
+   display: none !important;
+  }
 }
