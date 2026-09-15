@@ -231,6 +231,9 @@ export function usePurchaseData(purchaseId?: string | null) {
           throw new Error('Empresa não encontrada');
         }
 
+        // Importante: a compra é sempre gravada como aberta (fechada = false).
+        // O fechamento acontece em um UPDATE separado, no final, para que a trigger
+        // fn_gerar_financeiro_compra encontre os acertos já gravados no banco.
         const payload = {
           id_empresa: veiculoData.id_empresa,
           id_fornecedor,
@@ -239,7 +242,7 @@ export function usePurchaseData(purchaseId?: string | null) {
           valor_total_compra: valor_compra,
           data_compra: purchaseData.data_compra.toISOString(),
           observacoes: purchaseData.observacoes || null,
-          fechada: fecharCompra,
+          fechada: false,
         };
 
         let compraId = purchaseId || null;
