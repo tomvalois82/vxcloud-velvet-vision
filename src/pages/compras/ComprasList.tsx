@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { useReactToPrint } from 'react-to-print';
 import {
   Ban,
   CalendarIcon,
@@ -11,6 +12,7 @@ import {
   LockOpen,
   Pencil,
   Plus,
+  Printer,
   Search,
   ShoppingBag,
   X,
@@ -51,6 +53,8 @@ import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/utils';
 import { usePurchasesList, PaidMovement } from '@/features/compras/hooks/usePurchasesList';
+import { usePurchaseContract } from '@/features/compras/hooks/usePurchaseContract';
+import { PurchaseContract } from '@/features/compras/components/PurchaseContract';
 import { maskCurrency } from '@/features/estoque/utils/masks';
 
 const ComprasList = () => {
@@ -66,6 +70,33 @@ const ComprasList = () => {
     fetchPaidMovements,
     cancelPurchase,
   } = usePurchasesList();
+
+  const {
+    loading: contractLoading,
+    contractData,
+    fetchContractData,
+  } = usePurchaseContract();
+  const contractRef = useRef<HTMLDivElement>(null);
+  const [printPurchaseId, setPrintPurchaseId] = useState<string | null>(null);
+
+  const handlePrint = useReactToPrint({
+    contentRef: contractRef,
+    documentTitle: `Contrato-Compra-${contractData?.id.slice(0, 8) || 'compra'}`,
+    onAfterPrint: () => setPrintPurchaseId(null),
+  });
+
+  // Carrega os dados da compra e dispara a impressão do contrato
+  const handlePrintContract = async (purchaseId: string) => {
+    setPrintPurchaseId(purchaseId);
+    const data = await fetchContractData(purchaseId);
+    if (data) {
+      setTimeout(() => {
+        handlePrint();
+      }, 100);
+    } else {
+      setPrintPurchaseId(null);
+    }
+  };
 
   const [showFilters, setShowFilters] = useState(false);
   const [reopenDialogOpen, setReopenDialogOpen] = useState(false);
@@ -399,6 +430,25 @@ const ComprasList = () => {
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-2">
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handlePrintContract(compra.id)}
+                              disabled={printPurchaseId === compra.id || contractLoading}
+                              className="gap-1"
+                            >
+                              {printPurchaseId === compra.id ? (
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                              ) : (
+                                <Printer className="w-4 h-4" />
+                              )}
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>Imprimir contrato</TooltipContent>
+                        </Tooltip>
+
                         {compra.fechada ? (
                           <Tooltip>
                             <TooltipTrigger asChild>
@@ -552,6 +602,13 @@ const ComprasList = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Componente oculto usado apenas na impressão */}
+      <div className="hidden">
+        <div ref={contractRef}>
+          {contractData && <PurchaseContract data={contractData} />}
+        </div>
+      </div>
     </div>
   );
 };
