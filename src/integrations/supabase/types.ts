@@ -1505,6 +1505,7 @@ export type Database = {
       }
       vx_compras: {
         Row: {
+          cancelada: boolean
           created_at: string
           data_compra: string
           fechada: boolean | null
@@ -1517,6 +1518,7 @@ export type Database = {
           valor_total_compra: number
         }
         Insert: {
+          cancelada?: boolean
           created_at?: string
           data_compra: string
           fechada?: boolean | null
@@ -1529,6 +1531,7 @@ export type Database = {
           valor_total_compra: number
         }
         Update: {
+          cancelada?: boolean
           created_at?: string
           data_compra?: string
           fechada?: boolean | null
