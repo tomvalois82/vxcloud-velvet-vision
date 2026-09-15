@@ -226,7 +226,7 @@ export const PurchaseContract = forwardRef<HTMLDivElement, PurchaseContractProps
         )}
 
         {/* Resumo financeiro */}
-        <div className="mb-8">
+        <div className="mb-3">
           <div className="bg-gray-100 px-3 py-2 mb-3">
             <h2 className="text-sm font-bold uppercase text-black">RESUMO FINANCEIRO</h2>
           </div>
@@ -276,15 +276,15 @@ export const PurchaseContract = forwardRef<HTMLDivElement, PurchaseContractProps
         )}
 
         {/* Assinaturas */}
-        <div className="mt-12 pt-6 border-t border-gray-300">
-          <p className="text-center text-sm mb-8">
+        <div className="mt-4">
+          <p className="text-center text-sm mb-4">
             {data.empresa?.municipio || 'Local'}/{data.empresa?.estado || 'UF'},{' '}
             {formatDateLong(data.data_compra)}
           </p>
 
           <div className="grid grid-cols-3 gap-8 text-center text-sm">
             <div>
-              <div className="border-t border-gray-900 pt-2 mt-12">
+              <div className="border-t border-gray-900 pt-2 mt-8">
                 <p className="font-semibold">{data.fornecedor?.nome || 'VENDEDOR'}</p>
                 <p className="text-xs text-black">
                   CPF/CNPJ: {formatCPFCNPJ(data.fornecedor?.cpf_cnpj || null)}
@@ -293,7 +293,7 @@ export const PurchaseContract = forwardRef<HTMLDivElement, PurchaseContractProps
             </div>
 
             <div>
-              <div className="border-t border-gray-900 pt-2 mt-12">
+              <div className="border-t border-gray-900 pt-2 mt-8">
                 <p className="font-semibold">{data.empresa?.nome_fantasia || 'COMPRADOR'}</p>
                 <p className="text-xs text-black">
                   CNPJ: {formatCPFCNPJ(data.empresa?.cnpj || null)}
@@ -302,7 +302,7 @@ export const PurchaseContract = forwardRef<HTMLDivElement, PurchaseContractProps
             </div>
 
             <div>
-              <div className="border-t border-gray-900 pt-2 mt-12">
+              <div className="border-t border-gray-900 pt-2 mt-8">
                 <p className="font-semibold">TESTEMUNHA</p>
                 <p className="text-xs text-black">CPF: ___________________</p>
               </div>
