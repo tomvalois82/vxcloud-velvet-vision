@@ -284,7 +284,7 @@ export const PurchaseContract = forwardRef<HTMLDivElement, PurchaseContractProps
 
           <div className="grid grid-cols-3 gap-8 text-center text-sm">
             <div>
-              <div className="border-t border-gray-900 pt-2 mt-12">
+              <div className="border-t border-gray-900 pt-2 mt-8">
                 <p className="font-semibold">{data.fornecedor?.nome || 'VENDEDOR'}</p>
                 <p className="text-xs text-black">
                   CPF/CNPJ: {formatCPFCNPJ(data.fornecedor?.cpf_cnpj || null)}
@@ -293,7 +293,7 @@ export const PurchaseContract = forwardRef<HTMLDivElement, PurchaseContractProps
             </div>
 
             <div>
-              <div className="border-t border-gray-900 pt-2 mt-12">
+              <div className="border-t border-gray-900 pt-2 mt-8">
                 <p className="font-semibold">{data.empresa?.nome_fantasia || 'COMPRADOR'}</p>
                 <p className="text-xs text-black">
                   CNPJ: {formatCPFCNPJ(data.empresa?.cnpj || null)}
@@ -302,7 +302,7 @@ export const PurchaseContract = forwardRef<HTMLDivElement, PurchaseContractProps
             </div>
 
             <div>
-              <div className="border-t border-gray-900 pt-2 mt-12">
+              <div className="border-t border-gray-900 pt-2 mt-8">
                 <p className="font-semibold">TESTEMUNHA</p>
                 <p className="text-xs text-black">CPF: ___________________</p>
               </div>
