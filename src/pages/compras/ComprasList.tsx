@@ -137,10 +137,22 @@ const ComprasList = () => {
         title="Compras realizadas"
         description="Gerencie todas as compras de veículos registradas"
         action={
-          <Button className="bg-accent hover:bg-accent/90" onClick={() => navigate('/compras/nova')}>
-            <Plus className="w-4 h-4 mr-2" />
-            Nova compra
-          </Button>
+          <div className="flex items-center gap-2">
+            {selectedIds.length > 0 && (
+              <Button
+                variant="destructive"
+                onClick={() => openCancelDialog(selectedIds)}
+                disabled={actionLoading !== null}
+              >
+                <Ban className="w-4 h-4 mr-2" />
+                Cancelar selecionada{selectedIds.length > 1 ? 's' : ''} ({selectedIds.length})
+              </Button>
+            )}
+            <Button className="bg-accent hover:bg-accent/90" onClick={() => navigate('/compras/nova')}>
+              <Plus className="w-4 h-4 mr-2" />
+              Nova compra
+            </Button>
+          </div>
         }
       />
 
