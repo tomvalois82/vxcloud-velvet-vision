@@ -71,6 +71,33 @@ const ComprasList = () => {
     cancelPurchase,
   } = usePurchasesList();
 
+  const {
+    loading: contractLoading,
+    contractData,
+    fetchContractData,
+  } = usePurchaseContract();
+  const contractRef = useRef<HTMLDivElement>(null);
+  const [printPurchaseId, setPrintPurchaseId] = useState<string | null>(null);
+
+  const handlePrint = useReactToPrint({
+    contentRef: contractRef,
+    documentTitle: `Contrato-Compra-${contractData?.id.slice(0, 8) || 'compra'}`,
+    onAfterPrint: () => setPrintPurchaseId(null),
+  });
+
+  // Carrega os dados da compra e dispara a impressão do contrato
+  const handlePrintContract = async (purchaseId: string) => {
+    setPrintPurchaseId(purchaseId);
+    const data = await fetchContractData(purchaseId);
+    if (data) {
+      setTimeout(() => {
+        handlePrint();
+      }, 100);
+    } else {
+      setPrintPurchaseId(null);
+    }
+  };
+
   const [showFilters, setShowFilters] = useState(false);
   const [reopenDialogOpen, setReopenDialogOpen] = useState(false);
   const [selectedPurchaseId, setSelectedPurchaseId] = useState<string | null>(null);
