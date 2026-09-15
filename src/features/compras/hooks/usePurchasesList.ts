@@ -249,6 +249,8 @@ export function usePurchasesList() {
     colaboradores,
     updateFilters,
     reopenPurchase,
+    fetchPaidMovements,
+    cancelPurchase,
     refetch: fetchPurchases,
   };
 }
