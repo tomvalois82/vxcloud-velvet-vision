@@ -284,8 +284,17 @@ export function usePurchaseData(purchaseId?: string | null) {
           if (acertosError) throw acertosError;
         }
 
-        // Os lançamentos financeiros (vx_fin_movimento) e o id_movimento_gerado
-        // são criados automaticamente pela trigger do banco ao fechar a compra
+        // Fecha a compra somente depois de gravar os acertos: assim a trigger
+        // fn_gerar_financeiro_compra gera os títulos com id_compra e id_categoria
+        // e vincula o id_movimento_gerado em cada acerto.
+        if (fecharCompra) {
+          const { error: fecharError } = await supabase
+            .from('vx_compras')
+            .update({ fechada: true })
+            .eq('id', compraId as string);
+          if (fecharError) throw fecharError;
+        }
+
 
         toast({
           title: 'Sucesso',
