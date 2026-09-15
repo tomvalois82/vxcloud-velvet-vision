@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { useReactToPrint } from 'react-to-print';
 import {
   Ban,
   CalendarIcon,
@@ -11,6 +12,7 @@ import {
   LockOpen,
   Pencil,
   Plus,
+  Printer,
   Search,
   ShoppingBag,
   X,
@@ -51,6 +53,8 @@ import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/utils';
 import { usePurchasesList, PaidMovement } from '@/features/compras/hooks/usePurchasesList';
+import { usePurchaseContract } from '@/features/compras/hooks/usePurchaseContract';
+import { PurchaseContract } from '@/features/compras/components/PurchaseContract';
 import { maskCurrency } from '@/features/estoque/utils/masks';
 
 const ComprasList = () => {
