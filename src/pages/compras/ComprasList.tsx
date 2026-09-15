@@ -74,8 +74,10 @@ const ComprasList = () => {
   // Estado da seleção e do cancelamento
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
-  const [cancelTargetId, setCancelTargetId] = useState<string | null>(null);
-  const [paidMovements, setPaidMovements] = useState<PaidMovement[]>([]);
+  const [cancelTargetIds, setCancelTargetIds] = useState<string[]>([]);
+  const [paidMovements, setPaidMovements] = useState<
+    { idCompra: string; movimentos: PaidMovement[] }[]
+  >([]);
   const [loadingMovements, setLoadingMovements] = useState(false);
 
   // Compras ainda não canceladas podem ser selecionadas
