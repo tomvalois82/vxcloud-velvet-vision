@@ -430,6 +430,25 @@ const ComprasList = () => {
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-2">
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handlePrintContract(compra.id)}
+                              disabled={printPurchaseId === compra.id || contractLoading}
+                              className="gap-1"
+                            >
+                              {printPurchaseId === compra.id ? (
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                              ) : (
+                                <Printer className="w-4 h-4" />
+                              )}
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>Imprimir contrato</TooltipContent>
+                        </Tooltip>
+
                         {compra.fechada ? (
                           <Tooltip>
                             <TooltipTrigger asChild>
@@ -583,6 +602,13 @@ const ComprasList = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Componente oculto usado apenas na impressão */}
+      <div className="hidden">
+        <div ref={contractRef}>
+          {contractData && <PurchaseContract data={contractData} />}
+        </div>
+      </div>
     </div>
   );
 };
