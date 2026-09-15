@@ -199,6 +199,48 @@ export function usePurchasesList() {
     setFilters(prev => ({ ...prev, ...novos }));
   }, []);
 
+  // Busca os movimentos financeiros pagos atrelados à compra
+  const fetchPaidMovements = useCallback(async (purchaseId: string): Promise<PaidMovement[]> => {
+    const { data, error } = await supabase
+      .from('vx_fin_movimento')
+      .select('id, descricao, valor_liquido, data_vencimento, data_pagamento')
+      .eq('id_compra', purchaseId)
+      .eq('status', 'Pago');
+    if (error) {
+      toast({ title: 'Erro', description: 'Falha ao verificar títulos da compra', variant: 'destructive' });
+      return [];
+    }
+    return (data || []).map(m => ({
+      id: m.id,
+      descricao: m.descricao,
+      valor_liquido: Number(m.valor_liquido),
+      data_vencimento: m.data_vencimento,
+      data_pagamento: m.data_pagamento,
+    }));
+  }, []);
+
+  // Cancela a compra — a trigger do banco cuida dos movimentos financeiros
+  const cancelPurchase = useCallback(
+    async (purchaseId: string) => {
+      setActionLoading(purchaseId);
+      try {
+        const { error } = await supabase
+          .from('vx_compras')
+          .update({ cancelada: true })
+          .eq('id', purchaseId);
+        if (error) throw error;
+        toast({ title: 'Sucesso', description: 'Compra cancelada' });
+        await fetchPurchases();
+      } catch (error) {
+        console.error('Erro ao cancelar compra:', error);
+        toast({ title: 'Erro', description: 'Falha ao cancelar compra', variant: 'destructive' });
+      } finally {
+        setActionLoading(null);
+      }
+    },
+    [fetchPurchases]
+  );
+
   return {
     purchases,
     loading,
