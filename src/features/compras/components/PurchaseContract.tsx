@@ -99,15 +99,7 @@ export const PurchaseContract = forwardRef<HTMLDivElement, PurchaseContractProps
             </p>
             <p className="text-sm text-black">Data: {formatDate(data.data_compra)}</p>
             <p className="text-sm text-black">Tipo: COMPRA DE VEÍCULO</p>
-            <p
-              className={`text-sm font-semibold ${
-                data.cancelada
-                  ? 'text-black'
-                  : data.fechada
-                    ? 'text-black'
-                    : 'text-black'
-              }`}
-            >
+            <p className="text-sm font-semibold text-black">
               Status: {statusCompra}
             </p>
           </div>
@@ -264,13 +256,7 @@ export const PurchaseContract = forwardRef<HTMLDivElement, PurchaseContractProps
               <div className="flex justify-between py-2 border-t-2 border-gray-300 mt-2">
                 <span className="font-bold text-base">(=) SALDO FINAL:</span>
                 <span
-                  className={`font-bold text-base ${
-                    data.totais.saldoFinal === 0
-                      ? 'text-black'
-                      : data.totais.saldoFinal > 0
-                        ? 'text-black'
-                        : 'text-black'
-                  }`}
+                  className="font-bold text-base text-black"
                 >
                   {formatCurrency(data.totais.saldoFinal)}
                 </span>
