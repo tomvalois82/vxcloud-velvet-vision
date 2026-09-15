@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import {
+  Ban,
   CalendarIcon,
   Filter,
   Loader2,
@@ -47,8 +48,9 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/utils';
-import { usePurchasesList } from '@/features/compras/hooks/usePurchasesList';
+import { usePurchasesList, PaidMovement } from '@/features/compras/hooks/usePurchasesList';
 import { maskCurrency } from '@/features/estoque/utils/masks';
 
 const ComprasList = () => {
@@ -61,11 +63,57 @@ const ComprasList = () => {
     colaboradores,
     updateFilters,
     reopenPurchase,
+    fetchPaidMovements,
+    cancelPurchase,
   } = usePurchasesList();
 
   const [showFilters, setShowFilters] = useState(false);
   const [reopenDialogOpen, setReopenDialogOpen] = useState(false);
   const [selectedPurchaseId, setSelectedPurchaseId] = useState<string | null>(null);
+
+  // Estado da seleção e do cancelamento
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
+  const [cancelTargetIds, setCancelTargetIds] = useState<string[]>([]);
+  const [paidMovements, setPaidMovements] = useState<
+    { idCompra: string; movimentos: PaidMovement[] }[]
+  >([]);
+  const [loadingMovements, setLoadingMovements] = useState(false);
+
+  // Compras ainda não canceladas podem ser selecionadas
+  const selecionaveis = purchases.filter(p => !p.cancelada);
+  const allSelected =
+    selecionaveis.length > 0 && selecionaveis.every(p => selectedIds.includes(p.id));
+
+  const toggleSelectAll = (checked: boolean) => {
+    setSelectedIds(checked ? selecionaveis.map(p => p.id) : []);
+  };
+
+  const toggleSelect = (id: string, checked: boolean) => {
+    setSelectedIds(prev => (checked ? [...prev, id] : prev.filter(item => item !== id)));
+  };
+
+  // Abre o diálogo de cancelamento carregando os títulos pagos das compras selecionadas
+  const openCancelDialog = async (purchaseIds: string[]) => {
+    setCancelTargetIds(purchaseIds);
+    setCancelDialogOpen(true);
+    setLoadingMovements(true);
+    setPaidMovements([]);
+    const resultados = await Promise.all(
+      purchaseIds.map(async id => ({
+        idCompra: id,
+        movimentos: await fetchPaidMovements(id),
+      }))
+    );
+    setPaidMovements(resultados);
+    setLoadingMovements(false);
+  };
+
+  const totalPago = paidMovements.reduce(
+    (acc, item) => acc + item.movimentos.reduce((soma, m) => soma + m.valor_liquido, 0),
+    0
+  );
+  const temPago = paidMovements.some(item => item.movimentos.length > 0);
 
   const hasActiveFilters =
     Boolean(filters.search) ||
@@ -89,10 +137,22 @@ const ComprasList = () => {
         title="Compras realizadas"
         description="Gerencie todas as compras de veículos registradas"
         action={
-          <Button className="bg-accent hover:bg-accent/90" onClick={() => navigate('/compras/nova')}>
-            <Plus className="w-4 h-4 mr-2" />
-            Nova compra
-          </Button>
+          <div className="flex items-center gap-2">
+            {selectedIds.length > 0 && (
+              <Button
+                variant="destructive"
+                onClick={() => openCancelDialog(selectedIds)}
+                disabled={actionLoading !== null}
+              >
+                <Ban className="w-4 h-4 mr-2" />
+                Cancelar selecionada{selectedIds.length > 1 ? 's' : ''} ({selectedIds.length})
+              </Button>
+            )}
+            <Button className="bg-accent hover:bg-accent/90" onClick={() => navigate('/compras/nova')}>
+              <Plus className="w-4 h-4 mr-2" />
+              Nova compra
+            </Button>
+          </div>
         }
       />
 
@@ -249,6 +309,13 @@ const ComprasList = () => {
             <Table>
               <TableHeader>
                 <TableRow className="hover:bg-transparent border-b border-border">
+                  <TableHead className="w-10">
+                    <Checkbox
+                      checked={allSelected}
+                      onCheckedChange={checked => toggleSelectAll(checked === true)}
+                      aria-label="Selecionar todas"
+                    />
+                  </TableHead>
                   <TableHead className="text-muted-foreground">ID</TableHead>
                   <TableHead className="text-muted-foreground">Vendedor</TableHead>
                   <TableHead className="text-muted-foreground">Veículo</TableHead>
@@ -262,8 +329,19 @@ const ComprasList = () => {
                 {purchases.map(compra => (
                   <TableRow
                     key={compra.id}
-                    className="border-b border-border/50 hover:bg-muted/30 transition-colors"
+                    className={cn(
+                      'border-b border-border/50 hover:bg-muted/30 transition-colors',
+                      compra.cancelada && 'opacity-50'
+                    )}
                   >
+                    <TableCell>
+                      <Checkbox
+                        checked={selectedIds.includes(compra.id)}
+                        disabled={Boolean(compra.cancelada)}
+                        onCheckedChange={checked => toggleSelect(compra.id, checked === true)}
+                        aria-label="Selecionar compra"
+                      />
+                    </TableCell>
                     <TableCell className="font-mono text-xs text-muted-foreground">
                       {compra.id.slice(0, 8)}...
                     </TableCell>
@@ -288,6 +366,15 @@ const ComprasList = () => {
                       {maskCurrency(compra.valor_total_compra)}
                     </TableCell>
                     <TableCell>
+                      {compra.cancelada ? (
+                        <Badge
+                          variant="secondary"
+                          className="bg-red-500/20 text-red-400 border-red-500/30"
+                        >
+                          <Ban className="w-3 h-3 mr-1" />
+                          Cancelada
+                        </Badge>
+                      ) : (
                       <Badge
                         variant={compra.fechada ? 'default' : 'secondary'}
                         className={cn(
@@ -308,6 +395,7 @@ const ComprasList = () => {
                           </>
                         )}
                       </Badge>
+                      )}
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-2">
@@ -378,6 +466,88 @@ const ComprasList = () => {
               }}
             >
               Reabrir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
+        <AlertDialogContent className="max-w-lg">
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              Cancelar compra{cancelTargetIds.length > 1 ? 's' : ''}?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {cancelTargetIds.length > 1
+                ? `As ${cancelTargetIds.length} compras selecionadas serão canceladas.`
+                : 'A compra selecionada será cancelada.'}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+
+          {loadingMovements ? (
+            <div className="flex items-center justify-center py-6">
+              <Loader2 className="w-6 h-6 animate-spin text-accent" />
+            </div>
+          ) : (
+            temPago && (
+              <div className="space-y-3">
+                <p className="text-sm text-foreground font-medium">
+                  Existe(m) movimento(s) financeiro(s) pago(s) atrelado(s) a esta compra:
+                </p>
+                <div className="max-h-48 overflow-auto rounded-md border border-border">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="hover:bg-transparent border-b border-border">
+                        <TableHead className="text-muted-foreground">Descrição</TableHead>
+                        <TableHead className="text-muted-foreground">Vencimento</TableHead>
+                        <TableHead className="text-muted-foreground text-right">Valor</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {paidMovements.flatMap(item =>
+                        item.movimentos.map(mov => (
+                          <TableRow key={mov.id} className="border-b border-border/50">
+                            <TableCell className="text-xs">
+                              {mov.descricao || 'Sem descrição'}
+                            </TableCell>
+                            <TableCell className="text-xs text-muted-foreground">
+                              {format(new Date(mov.data_vencimento + 'T00:00:00'), 'dd/MM/yyyy', {
+                                locale: ptBR,
+                              })}
+                            </TableCell>
+                            <TableCell className="text-xs text-right font-semibold text-accent">
+                              {maskCurrency(mov.valor_liquido)}
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  Será lançado um título "a Receber" com a soma dos títulos pagos (
+                  <span className="font-semibold text-accent">{maskCurrency(totalPago)}</span>) e os
+                  títulos pendentes de pagamento serão excluídos.
+                </p>
+              </div>
+            )
+          )}
+
+          <AlertDialogFooter>
+            <AlertDialogCancel>Voltar</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={loadingMovements}
+              onClick={async () => {
+                for (const id of cancelTargetIds) {
+                  await cancelPurchase(id);
+                }
+                setSelectedIds([]);
+                setCancelDialogOpen(false);
+                setCancelTargetIds([]);
+              }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Confirmar cancelamento
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
