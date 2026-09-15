@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import {
+  Ban,
   CalendarIcon,
   Filter,
   Loader2,
@@ -47,8 +48,9 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/utils';
-import { usePurchasesList } from '@/features/compras/hooks/usePurchasesList';
+import { usePurchasesList, PaidMovement } from '@/features/compras/hooks/usePurchasesList';
 import { maskCurrency } from '@/features/estoque/utils/masks';
 
 const ComprasList = () => {
