@@ -309,6 +309,13 @@ const ComprasList = () => {
             <Table>
               <TableHeader>
                 <TableRow className="hover:bg-transparent border-b border-border">
+                  <TableHead className="w-10">
+                    <Checkbox
+                      checked={allSelected}
+                      onCheckedChange={checked => toggleSelectAll(checked === true)}
+                      aria-label="Selecionar todas"
+                    />
+                  </TableHead>
                   <TableHead className="text-muted-foreground">ID</TableHead>
                   <TableHead className="text-muted-foreground">Vendedor</TableHead>
                   <TableHead className="text-muted-foreground">Veículo</TableHead>
@@ -322,8 +329,19 @@ const ComprasList = () => {
                 {purchases.map(compra => (
                   <TableRow
                     key={compra.id}
-                    className="border-b border-border/50 hover:bg-muted/30 transition-colors"
+                    className={cn(
+                      'border-b border-border/50 hover:bg-muted/30 transition-colors',
+                      compra.cancelada && 'opacity-50'
+                    )}
                   >
+                    <TableCell>
+                      <Checkbox
+                        checked={selectedIds.includes(compra.id)}
+                        disabled={Boolean(compra.cancelada)}
+                        onCheckedChange={checked => toggleSelect(compra.id, checked === true)}
+                        aria-label="Selecionar compra"
+                      />
+                    </TableCell>
                     <TableCell className="font-mono text-xs text-muted-foreground">
                       {compra.id.slice(0, 8)}...
                     </TableCell>
