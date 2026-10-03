@@ -21,6 +21,7 @@ const PAGINAS_SISTEMA = [
   { path: "/vendas", label: "Vendas - Listagem" },
   { path: "/vendas/relatorios", label: "Vendas - Relatórios" },
   { path: "/compras", label: "Compras - Listagem" },
+  { path: "/compras/prospeccao", label: "Compras - Prospecção de Veículos" },
   { path: "/financeiro", label: "Financeiro - Painel" },
   { path: "/financeiro/contas", label: "Financeiro - Contas" },
   { path: "/financeiro/cartoes", label: "Financeiro - Cartões" },

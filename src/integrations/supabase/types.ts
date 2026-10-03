@@ -1068,6 +1068,7 @@ export type Database = {
           interesse: string | null
           intervencao: string | null
           nome: string | null
+          obs: string | null
           Origem: string | null
           proximofolowup: string | null
           session_id_olx: string | null
@@ -1085,6 +1086,7 @@ export type Database = {
           interesse?: string | null
           intervencao?: string | null
           nome?: string | null
+          obs?: string | null
           Origem?: string | null
           proximofolowup?: string | null
           session_id_olx?: string | null
@@ -1102,6 +1104,7 @@ export type Database = {
           interesse?: string | null
           intervencao?: string | null
           nome?: string | null
+          obs?: string | null
           Origem?: string | null
           proximofolowup?: string | null
           session_id_olx?: string | null
@@ -1387,6 +1390,126 @@ export type Database = {
           {
             foreignKeyName: "opotunidade_id_usuario_fkey"
             columns: ["id_usuario"]
+            isOneToOne: false
+            referencedRelation: "usuario"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      prospeccao_compra: {
+        Row: {
+          ano_fabricacao: string | null
+          ano_modelo: string | null
+          combustivel: string | null
+          config: number | null
+          cor: string | null
+          created_at: string
+          custo_documentacao: number | null
+          custo_plataforma: number | null
+          custo_preparacao: number | null
+          data_hora_fim: string | null
+          fabricante: string | null
+          fipe: number | null
+          foto: string | null
+          id: number
+          km: string | null
+          laudo: string | null
+          laudo_anexo: string | null
+          link_plataforma: string | null
+          localizacao: string | null
+          margem: number | null
+          modelo: string | null
+          observacao: string | null
+          pg_capa: string[] | null
+          placa: string | null
+          plataforma: Database["public"]["Enums"]["plataformas_compra"] | null
+          status: string | null
+          tipo_veiculo: string | null
+          usuario: number | null
+          valor_compra: number | null
+          valor_inicial: number | null
+          valor_maximo: number | null
+          valor_mercado: number | null
+        }
+        Insert: {
+          ano_fabricacao?: string | null
+          ano_modelo?: string | null
+          combustivel?: string | null
+          config?: number | null
+          cor?: string | null
+          created_at?: string
+          custo_documentacao?: number | null
+          custo_plataforma?: number | null
+          custo_preparacao?: number | null
+          data_hora_fim?: string | null
+          fabricante?: string | null
+          fipe?: number | null
+          foto?: string | null
+          id?: number
+          km?: string | null
+          laudo?: string | null
+          laudo_anexo?: string | null
+          link_plataforma?: string | null
+          localizacao?: string | null
+          margem?: number | null
+          modelo?: string | null
+          observacao?: string | null
+          pg_capa?: string[] | null
+          placa?: string | null
+          plataforma?: Database["public"]["Enums"]["plataformas_compra"] | null
+          status?: string | null
+          tipo_veiculo?: string | null
+          usuario?: number | null
+          valor_compra?: number | null
+          valor_inicial?: number | null
+          valor_maximo?: number | null
+          valor_mercado?: number | null
+        }
+        Update: {
+          ano_fabricacao?: string | null
+          ano_modelo?: string | null
+          combustivel?: string | null
+          config?: number | null
+          cor?: string | null
+          created_at?: string
+          custo_documentacao?: number | null
+          custo_plataforma?: number | null
+          custo_preparacao?: number | null
+          data_hora_fim?: string | null
+          fabricante?: string | null
+          fipe?: number | null
+          foto?: string | null
+          id?: number
+          km?: string | null
+          laudo?: string | null
+          laudo_anexo?: string | null
+          link_plataforma?: string | null
+          localizacao?: string | null
+          margem?: number | null
+          modelo?: string | null
+          observacao?: string | null
+          pg_capa?: string[] | null
+          placa?: string | null
+          plataforma?: Database["public"]["Enums"]["plataformas_compra"] | null
+          status?: string | null
+          tipo_veiculo?: string | null
+          usuario?: number | null
+          valor_compra?: number | null
+          valor_inicial?: number | null
+          valor_maximo?: number | null
+          valor_mercado?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "prospeccao_compra_config_fkey"
+            columns: ["config"]
+            isOneToOne: false
+            referencedRelation: "config"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "prospeccao_compra_usuario_fkey"
+            columns: ["usuario"]
             isOneToOne: false
             referencedRelation: "usuario"
             referencedColumns: ["id"]
@@ -2937,6 +3060,14 @@ export type Database = {
     }
     Enums: {
       cargos: "Gerente" | "Supervisor" | "Vendedor" | "Avaliador"
+      plataformas_compra:
+        | "Autoavaliar"
+        | "Localiza"
+        | "Valoriza +"
+        | "OLX"
+        | "Particular"
+        | "Leilão"
+        | "Outros"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -3065,6 +3196,15 @@ export const Constants = {
   public: {
     Enums: {
       cargos: ["Gerente", "Supervisor", "Vendedor", "Avaliador"],
+      plataformas_compra: [
+        "Autoavaliar",
+        "Localiza",
+        "Valoriza +",
+        "OLX",
+        "Particular",
+        "Leilão",
+        "Outros",
+      ],
     },
   },
 } as const
