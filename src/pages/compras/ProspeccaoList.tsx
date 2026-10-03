@@ -33,7 +33,7 @@ function tempoRestante(fim: string | null, agora: number): { texto: string; urge
   const h = Math.floor((min % 1440) / 60);
   const m = min % 60;
   const s = Math.floor((diff % 60000) / 1000);
-  const texto = d > 0 ? `${d}d ${h}h ${m}min` : h > 0 ? `${h}h ${m}min` : `${m}min${s.toString().padStart(2, '0')}s`;
+  const texto = d > 0 ? `${d}d ${h}h ${m}min ${s.toString().padStart(2, '0')}s` : h > 0 ? `${h}h ${m}min ${s.toString().padStart(2, '0')}s` : `${m}min ${s.toString().padStart(2, '0')}s`;
   return { texto, urgente: diff < 3 * 60000, encerrado: false };
 }
 
