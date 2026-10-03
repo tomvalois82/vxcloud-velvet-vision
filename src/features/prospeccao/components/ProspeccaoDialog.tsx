@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Loader2, Upload, X, Calculator } from 'lucide-react';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -70,6 +70,10 @@ export function ProspeccaoDialog({ open, onOpenChange, prospeccao, onSaved }: Pr
 
   const set = (campo: keyof FormState, valor: string) => setForm((f) => ({ ...f, [campo]: valor }));
 
+  // Referência estável do toast para não reexecutar a consulta FIPE a cada renderização
+  const toastRef = useRef(toast);
+  toastRef.current = toast;
+
   // Dados da FIPE
   const [marcas, setMarcas] = useState<OpcaoFipe[]>([]);
   const [modelos, setModelos] = useState<OpcaoFipe[]>([]);
@@ -114,15 +118,18 @@ export function ProspeccaoDialog({ open, onOpenChange, prospeccao, onSaved }: Pr
     if (!alteradoPeloUsuario || !codigoMarca || !codigoModelo || !form.ano_modelo || anosFipe.length === 0) return;
     const ano = anosFipe.find((a) => a.codigo.startsWith(`${form.ano_modelo}-`))
       ?? (Number(form.ano_modelo) >= new Date().getFullYear() ? anosFipe.find((a) => a.codigo.startsWith('32000-')) : undefined);
-    if (!ano) return;
+    if (!ano) {
+      toastRef.current({ title: 'Ano não encontrado na FIPE', description: 'Este modelo não possui valor FIPE para o ano selecionado.' });
+      return;
+    }
     let ativo = true;
     setCarregandoFipe(true);
     getFipeValor(codigoMarca, codigoModelo, ano.codigo, tipoFipe)
       .then((v) => { if (ativo) setForm((f) => ({ ...f, fipe: maskCurrency(parseFipeValor(v.Valor)) })); })
-      .catch(() => toast({ title: 'Não foi possível consultar a FIPE', variant: 'destructive' }))
+      .catch(() => toastRef.current({ title: 'Não foi possível consultar a FIPE', variant: 'destructive' }))
       .finally(() => { if (ativo) setCarregandoFipe(false); });
     return () => { ativo = false; };
-  }, [alteradoPeloUsuario, codigoMarca, codigoModelo, form.ano_modelo, anosFipe, tipoFipe, toast]);
+  }, [alteradoPeloUsuario, codigoMarca, codigoModelo, form.ano_modelo, anosFipe, tipoFipe]);
 
   // Anos de modelo: do mais antigo da FIPE até o ano atual + 1
   const anosDisponiveis = (() => {
