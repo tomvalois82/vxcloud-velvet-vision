@@ -32,8 +32,9 @@ function tempoRestante(fim: string | null, agora: number): { texto: string; urge
   const d = Math.floor(min / 1440);
   const h = Math.floor((min % 1440) / 60);
   const m = min % 60;
-  const texto = d > 0 ? `${d}d ${h}h ${m}min` : h > 0 ? `${h}h ${m}min` : `${m}min`;
-  return { texto, urgente: diff < 3 * 3600000, encerrado: false };
+  const s = Math.floor((diff % 60000) / 1000);
+  const texto = d > 0 ? `${d}d ${h}h ${m}min` : h > 0 ? `${h}h ${m}min` : `${m}min${s.toString().padStart(2, '0')}s`;
+  return { texto, urgente: diff < 3 * 60000, encerrado: false };
 }
 
 const ProspeccaoList = () => {
@@ -47,9 +48,9 @@ const ProspeccaoList = () => {
   const [paraExcluir, setParaExcluir] = useState<Prospeccao | null>(null);
   const [agora, setAgora] = useState(Date.now());
 
-  // Atualiza o contador a cada 30 segundos
+  // Atualiza o contador a cada segundo para correr regressivamente
   useEffect(() => {
-    const t = setInterval(() => setAgora(Date.now()), 30000);
+    const t = setInterval(() => setAgora(Date.now()), 1000);
     return () => clearInterval(t);
   }, []);
 
@@ -164,7 +165,7 @@ const ProspeccaoList = () => {
                     </TableCell>
                     <TableCell>{p.plataforma ?? '—'}</TableCell>
                     <TableCell>
-                      <div className={cn('flex items-center gap-1 text-sm font-medium', tempo.urgente && 'text-destructive', tempo.encerrado && 'text-muted-foreground')}>
+                      <div className={cn('flex items-center gap-1 text-sm font-medium', tempo.encerrado ? 'text-muted-foreground' : tempo.urgente ? 'text-destructive' : 'text-lime-500')}>
                         <Clock className="h-3.5 w-3.5" />{tempo.texto}
                       </div>
                       {p.data_hora_fim && <p className="text-xs text-muted-foreground">{format(new Date(p.data_hora_fim), 'dd/MM/yyyy HH:mm')}</p>}
