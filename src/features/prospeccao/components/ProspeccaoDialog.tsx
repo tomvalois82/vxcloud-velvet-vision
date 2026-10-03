@@ -12,6 +12,12 @@ import {
   COMBUSTIVEIS, LAUDOS, PLATAFORMAS, STATUS_PROSPECCAO, TIPOS_VEICULO,
   Prospeccao, PlataformaCompra, buscarUsuarioLogado, enviarArquivo, salvarProspeccao,
 } from '../services/prospeccao-service';
+import {
+  getFipeMarcas, getFipeModelos, getFipeAnos, getFipeValor, parseFipeValor, TipoVeiculo,
+} from '@/features/estoque/services/fipeService';
+
+interface OpcaoFipe { codigo: string; nome: string }
+const ANO_LIMITE = new Date().getFullYear() + 1;
 
 interface ProspeccaoDialogProps {
   open: boolean;
@@ -63,6 +69,100 @@ export function ProspeccaoDialog({ open, onOpenChange, prospeccao, onSaved }: Pr
   }, [open, prospeccao]);
 
   const set = (campo: keyof FormState, valor: string) => setForm((f) => ({ ...f, [campo]: valor }));
+
+  // Dados da FIPE
+  const [marcas, setMarcas] = useState<OpcaoFipe[]>([]);
+  const [modelos, setModelos] = useState<OpcaoFipe[]>([]);
+  const [anosFipe, setAnosFipe] = useState<OpcaoFipe[]>([]);
+  const [carregandoFipe, setCarregandoFipe] = useState(false);
+  const [alteradoPeloUsuario, setAlteradoPeloUsuario] = useState(false);
+
+  const tipoFipe = (form.tipo_veiculo || 'carros') as TipoVeiculo;
+  const codigoMarca = marcas.find((m) => m.nome === form.fabricante)?.codigo ?? '';
+  const codigoModelo = modelos.find((m) => m.nome === form.modelo)?.codigo ?? '';
+
+  useEffect(() => { if (open) setAlteradoPeloUsuario(false); }, [open]);
+
+  // Carrega fabricantes conforme o tipo de veículo
+  useEffect(() => {
+    if (!open) return;
+    getFipeMarcas(tipoFipe)
+      .then((d) => setMarcas(d.map((m) => ({ codigo: String(m.codigo), nome: m.nome }))))
+      .catch(() => setMarcas([]));
+  }, [open, tipoFipe]);
+
+  // Carrega modelos do fabricante selecionado
+  useEffect(() => {
+    setModelos([]);
+    if (!codigoMarca) return;
+    getFipeModelos(codigoMarca, tipoFipe)
+      .then((d) => setModelos(d.modelos.map((m) => ({ codigo: String(m.codigo), nome: m.nome }))))
+      .catch(() => setModelos([]));
+  }, [codigoMarca, tipoFipe]);
+
+  // Carrega anos do modelo selecionado
+  useEffect(() => {
+    setAnosFipe([]);
+    if (!codigoMarca || !codigoModelo) return;
+    getFipeAnos(codigoMarca, codigoModelo, tipoFipe)
+      .then((d) => setAnosFipe(d.map((a) => ({ codigo: a.codigo, nome: a.nome }))))
+      .catch(() => setAnosFipe([]));
+  }, [codigoMarca, codigoModelo, tipoFipe]);
+
+  // Preenche o valor FIPE quando fabricante, modelo e ano modelo estiverem definidos
+  useEffect(() => {
+    if (!alteradoPeloUsuario || !codigoMarca || !codigoModelo || !form.ano_modelo || anosFipe.length === 0) return;
+    const ano = anosFipe.find((a) => a.codigo.startsWith(`${form.ano_modelo}-`))
+      ?? (Number(form.ano_modelo) >= new Date().getFullYear() ? anosFipe.find((a) => a.codigo.startsWith('32000-')) : undefined);
+    if (!ano) return;
+    let ativo = true;
+    setCarregandoFipe(true);
+    getFipeValor(codigoMarca, codigoModelo, ano.codigo, tipoFipe)
+      .then((v) => { if (ativo) setForm((f) => ({ ...f, fipe: maskCurrency(parseFipeValor(v.Valor)) })); })
+      .catch(() => toast({ title: 'Não foi possível consultar a FIPE', variant: 'destructive' }))
+      .finally(() => { if (ativo) setCarregandoFipe(false); });
+    return () => { ativo = false; };
+  }, [alteradoPeloUsuario, codigoMarca, codigoModelo, form.ano_modelo, anosFipe, tipoFipe, toast]);
+
+  // Anos de modelo: do mais antigo da FIPE até o ano atual + 1
+  const anosDisponiveis = (() => {
+    const anosNumericos = anosFipe.map((a) => Number(a.codigo.split('-')[0])).filter((n) => n > 1900 && n < 32000);
+    const inicio = anosNumericos.length ? Math.min(...anosNumericos) : 1950;
+    const lista: string[] = [];
+    for (let a = ANO_LIMITE; a >= inicio; a--) lista.push(String(a));
+    if (form.ano_modelo && !lista.includes(form.ano_modelo)) lista.push(form.ano_modelo);
+    return lista;
+  })();
+
+  const alterarFipe = (campo: 'tipo_veiculo' | 'fabricante' | 'modelo' | 'ano_modelo', valor: string) => {
+    setAlteradoPeloUsuario(true);
+    setForm((f) => {
+      const novo = { ...f, [campo]: valor };
+      if (campo === 'tipo_veiculo') { novo.fabricante = ''; novo.modelo = ''; }
+      if (campo === 'fabricante') novo.modelo = '';
+      if (campo === 'ano_modelo' && !f.ano_fabricacao) novo.ano_fabricacao = valor;
+      return novo;
+    });
+  };
+
+  const selectFipe = (
+    campo: 'tipo_veiculo' | 'fabricante' | 'modelo' | 'ano_modelo', rotulo: string,
+    opcoes: { value: string; label: string }[], desabilitado = false,
+  ) => {
+    const valor = form[campo];
+    const lista = valor && !opcoes.some((o) => o.value === valor) ? [{ value: valor, label: valor }, ...opcoes] : opcoes;
+    return (
+      <div className="space-y-1.5">
+        <Label>{rotulo}</Label>
+        <Select value={valor || undefined} onValueChange={(v) => alterarFipe(campo, v)} disabled={desabilitado}>
+          <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+          <SelectContent>
+            {lista.map((o) => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
+          </SelectContent>
+        </Select>
+      </div>
+    );
+  };
 
   const custosTotais =
     unmaskCurrency(form.custo_preparacao) + unmaskCurrency(form.custo_plataforma) + unmaskCurrency(form.custo_documentacao);
@@ -158,11 +258,11 @@ export function ProspeccaoDialog({ open, onOpenChange, prospeccao, onSaved }: Pr
                 <Label>Placa</Label>
                 <Input value={form.placa} placeholder="AAA-9A99" onChange={(e) => set('placa', maskPlaca(e.target.value))} />
               </div>
-              {campoSelect('tipo_veiculo', 'Tipo de veículo', TIPOS_VEICULO)}
-              <div className="space-y-1.5"><Label>Fabricante</Label><Input value={form.fabricante} onChange={(e) => set('fabricante', e.target.value)} /></div>
-              <div className="space-y-1.5"><Label>Modelo</Label><Input value={form.modelo} onChange={(e) => set('modelo', e.target.value)} /></div>
+              {selectFipe('tipo_veiculo', 'Tipo de veículo', TIPOS_VEICULO)}
+              {selectFipe('fabricante', 'Fabricante', marcas.map((m) => ({ value: m.nome, label: m.nome })), marcas.length === 0)}
+              {selectFipe('modelo', 'Modelo', modelos.map((m) => ({ value: m.nome, label: m.nome })), !form.fabricante)}
+              {selectFipe('ano_modelo', 'Ano modelo', anosDisponiveis.map((a) => ({ value: a, label: a })))}
               <div className="space-y-1.5"><Label>Ano fabricação</Label><Input value={form.ano_fabricacao} onChange={(e) => set('ano_fabricacao', maskYear(e.target.value))} /></div>
-              <div className="space-y-1.5"><Label>Ano modelo</Label><Input value={form.ano_modelo} onChange={(e) => set('ano_modelo', maskYear(e.target.value))} /></div>
               <div className="space-y-1.5"><Label>Cor</Label><Input value={form.cor} onChange={(e) => set('cor', e.target.value)} /></div>
               <div className="space-y-1.5"><Label>KM</Label><Input value={form.km} onChange={(e) => set('km', maskKm(e.target.value))} /></div>
               {campoSelect('combustivel', 'Combustível', op(COMBUSTIVEIS))}
@@ -177,7 +277,10 @@ export function ProspeccaoDialog({ open, onOpenChange, prospeccao, onSaved }: Pr
                 <Label>Margem (%)</Label>
                 <Input value={form.margem} inputMode="decimal" onChange={(e) => set('margem', e.target.value.replace(/[^\d.,]/g, ''))} />
               </div>
-              {campoMoeda('fipe', 'FIPE')}
+              <div className="space-y-1.5">
+                <Label className="flex items-center gap-2">FIPE {carregandoFipe && <Loader2 className="h-3 w-3 animate-spin" />}</Label>
+                <Input value={form.fipe} onChange={(e) => set('fipe', maskCurrency(e.target.value))} />
+              </div>
               {campoMoeda('valor_inicial', 'Valor inicial')}
               <div className="space-y-1.5">
                 <Label>Valor máximo</Label>
