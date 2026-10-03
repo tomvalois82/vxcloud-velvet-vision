@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { format } from 'date-fns';
-import { Car, ExternalLink, Pencil, Plus, Search, Trash2, Clock } from 'lucide-react';
+import { Car, ExternalLink, Pencil, Plus, Search, Trash2, Clock, ZoomIn } from 'lucide-react';
 import { PageHeader } from '@/components/PageHeader';
 import { EmptyState } from '@/components/EmptyState';
 import { Button } from '@/components/ui/button';
@@ -17,6 +17,7 @@ import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { maskCurrency } from '@/features/estoque/utils/masks';
 import { ProspeccaoDialog } from '@/features/prospeccao/components/ProspeccaoDialog';
+import { ProspeccaoDetailDialog } from '@/features/prospeccao/components/ProspeccaoDetailDialog';
 import {
   PLATAFORMAS, STATUS_PROSPECCAO, Prospeccao, buscarUsuarioLogado, excluirProspeccao, listarProspeccoes,
 } from '@/features/prospeccao/services/prospeccao-service';
@@ -45,6 +46,7 @@ const ProspeccaoList = () => {
   const [filtroPlataforma, setFiltroPlataforma] = useState('todas');
   const [dialogAberto, setDialogAberto] = useState(false);
   const [selecionada, setSelecionada] = useState<Prospeccao | null>(null);
+  const [visualizar, setVisualizar] = useState<Prospeccao | null>(null);
   const [paraExcluir, setParaExcluir] = useState<Prospeccao | null>(null);
   const [agora, setAgora] = useState(Date.now());
 
@@ -150,11 +152,21 @@ const ProspeccaoList = () => {
                   <TableRow key={p.id}>
                     <TableCell>
                       <div className="flex items-center gap-3">
-                        {p.foto ? (
-                          <img src={p.foto} alt={p.modelo ?? 'Veículo'} className="h-10 w-14 object-cover rounded" />
-                        ) : (
-                          <div className="h-10 w-14 rounded bg-muted flex items-center justify-center"><Car className="h-4 w-4 text-muted-foreground" /></div>
-                        )}
+                        <button
+                          type="button"
+                          title="Visualizar detalhes"
+                          onClick={() => setVisualizar(p)}
+                          className="group relative shrink-0 rounded focus-visible:outline-none cursor-zoom-in"
+                        >
+                          {p.foto ? (
+                            <img src={p.foto} alt={p.modelo ?? 'Veículo'} className="h-10 w-14 object-cover rounded" />
+                          ) : (
+                            <div className="h-10 w-14 rounded bg-muted flex items-center justify-center"><Car className="h-4 w-4 text-muted-foreground" /></div>
+                          )}
+                          <span className="absolute inset-0 hidden group-hover:flex items-center justify-center bg-foreground/50 rounded">
+                            <ZoomIn className="h-4 w-4 text-background" />
+                          </span>
+                        </button>
                         <div>
                           <p className="font-medium">{[p.fabricante, p.modelo].filter(Boolean).join(' ') || '—'}</p>
                           <p className="text-xs text-muted-foreground">
@@ -196,6 +208,8 @@ const ProspeccaoList = () => {
       )}
 
       <ProspeccaoDialog open={dialogAberto} onOpenChange={setDialogAberto} prospeccao={selecionada} onSaved={recarregar} />
+
+      <ProspeccaoDetailDialog open={!!visualizar} onOpenChange={(o) => !o && setVisualizar(null)} prospeccao={visualizar} />
 
       <AlertDialog open={!!paraExcluir} onOpenChange={(o) => !o && setParaExcluir(null)}>
         <AlertDialogContent>
