@@ -78,8 +78,16 @@ const menuItems: MenuItem[] = [{
   }]
 }, {
   title: "Compras",
-  url: "/compras",
-  icon: ShoppingBag
+  icon: ShoppingBag,
+  items: [{
+    title: "Listagem",
+    url: "/compras",
+    icon: ShoppingBag
+  }, {
+    title: "Prospecção de Veículos",
+    url: "/compras/prospeccao",
+    icon: Car
+  }]
 }, {
   title: "Financeiro",
   icon: Wallet,
