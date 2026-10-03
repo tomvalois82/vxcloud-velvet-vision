@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
-import { Loader2, Upload, X, Calculator } from 'lucide-react';
+import { Loader2, Upload, X, Calculator, Search } from 'lucide-react';
+import { consultarPlaca } from '@/features/estoque/services/consultaPlacaService';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -141,6 +142,33 @@ export function ProspeccaoDialog({ open, onOpenChange, prospeccao, onSaved }: Pr
     return lista;
   })();
 
+  // Consulta a placa (primeiro no histórico de consultas, depois na API) e preenche os campos
+  const [consultandoPlaca, setConsultandoPlaca] = useState(false);
+  const handleConsultaPlaca = async () => {
+    setConsultandoPlaca(true);
+    try {
+      const dados = await consultarPlaca(form.placa);
+      const normalizar = (t: string) => t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase().trim();
+      const marca = marcas.find((m) => normalizar(m.nome) === normalizar(dados.fabricante))
+        ?? marcas.find((m) => normalizar(dados.fabricante).includes(normalizar(m.nome)));
+      setAlteradoPeloUsuario(false);
+      setForm((f) => ({
+        ...f,
+        fabricante: marca?.nome ?? dados.fabricante ?? f.fabricante,
+        modelo: dados.modelo || f.modelo,
+        ano_modelo: dados.ano || f.ano_modelo,
+        ano_fabricacao: dados.ano_fabricacao || f.ano_fabricacao,
+        cor: dados.cor || f.cor,
+        fipe: dados.valorFipe ? maskCurrency(parseFipeValor(dados.valorFipe)) : f.fipe,
+      }));
+      toast({ title: 'Placa consultada', description: 'Os dados do veículo foram preenchidos.' });
+    } catch (e) {
+      toast({ title: 'Erro na consulta da placa', description: e instanceof Error ? e.message : 'Tente novamente.', variant: 'destructive' });
+    } finally {
+      setConsultandoPlaca(false);
+    }
+  };
+
   const alterarFipe = (campo: 'tipo_veiculo' | 'fabricante' | 'modelo' | 'ano_modelo', valor: string) => {
     setAlteradoPeloUsuario(true);
     setForm((f) => {
@@ -263,7 +291,12 @@ export function ProspeccaoDialog({ open, onOpenChange, prospeccao, onSaved }: Pr
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div className="space-y-1.5">
                 <Label>Placa</Label>
-                <Input value={form.placa} placeholder="AAA-9A99" onChange={(e) => set('placa', maskPlaca(e.target.value))} />
+                <div className="flex gap-2">
+                  <Input value={form.placa} placeholder="AAA-9A99" onChange={(e) => set('placa', maskPlaca(e.target.value))} />
+                  <Button type="button" variant="outline" size="icon" title="Consultar placa" onClick={handleConsultaPlaca} disabled={consultandoPlaca || form.placa.replace(/[^a-zA-Z0-9]/g, '').length < 7}>
+                    {consultandoPlaca ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
+                  </Button>
+                </div>
               </div>
               {selectFipe('tipo_veiculo', 'Tipo de veículo', TIPOS_VEICULO)}
               {selectFipe('fabricante', 'Fabricante', marcas.map((m) => ({ value: m.nome, label: m.nome })), marcas.length === 0)}
