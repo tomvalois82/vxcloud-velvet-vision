@@ -10,7 +10,7 @@ export const PLATAFORMAS: PlataformaCompra[] = [
 ];
 export const COMBUSTIVEIS = ['Gasolina', 'Etanol', 'Flex', 'GNV', 'Diesel', 'Híbrido', 'Elétrico'];
 export const LAUDOS = ['Aprovado', 'Com Apontamento', 'Reprovado'];
-export const STATUS_PROSPECCAO = ['Em andamento', 'Perdido', 'Cancelado'];
+export const STATUS_PROSPECCAO = ['Aguardando', 'Pausado', 'Em negociação', 'Lance dado', 'Proposta ofertada', 'Comprado', 'Em andamento', 'Perdido', 'Cancelado'];
 export const TIPOS_VEICULO = [
   { value: 'carros', label: 'Carros' },
   { value: 'motos', label: 'Motos' },
