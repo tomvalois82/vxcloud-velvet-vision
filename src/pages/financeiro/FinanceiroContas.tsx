@@ -21,11 +21,12 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Plus, Wallet, Search, Pencil, Trash2, Loader2, Star, FileUp } from "lucide-react";
+import { Plus, Wallet, Search, Pencil, Trash2, Loader2, Star, FileUp, ScrollText } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { ContaDialog } from "@/features/financeiro/components/ContaDialog";
 import { OfxImportDialog } from "@/features/financeiro/components/OfxImportDialog";
+import { ExtratoContaDialog } from "@/features/financeiro/components/ExtratoContaDialog";
 import { maskCurrency } from "@/features/estoque/utils/masks";
 
 interface Conta {
@@ -49,6 +50,7 @@ const FinanceiroContas = () => {
   const [togglingPadrao, setTogglingPadrao] = useState<string | null>(null);
   const [ofxDialogOpen, setOfxDialogOpen] = useState(false);
   const [contaParaImportar, setContaParaImportar] = useState<Conta | null>(null);
+  const [contaExtrato, setContaExtrato] = useState<Conta | null>(null);
 
   const fetchContas = async () => {
     setLoading(true);
@@ -248,6 +250,15 @@ const FinanceiroContas = () => {
                               variant="ghost"
                               size="icon"
                               className="h-8 w-8 hover:bg-accent/20"
+                              onClick={() => setContaExtrato(conta)}
+                              title="Extrato"
+                            >
+                              <ScrollText className="w-4 h-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 hover:bg-accent/20"
                               onClick={() => {
                                 setContaParaImportar(conta);
                                 setOfxDialogOpen(true);
@@ -308,6 +319,12 @@ const FinanceiroContas = () => {
         onOpenChange={setOfxDialogOpen}
         conta={contaParaImportar}
         onSuccess={fetchContas}
+      />
+
+      <ExtratoContaDialog
+        open={!!contaExtrato}
+        onOpenChange={(aberto) => !aberto && setContaExtrato(null)}
+        conta={contaExtrato}
       />
 
 
