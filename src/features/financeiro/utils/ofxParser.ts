@@ -74,3 +74,63 @@ export const findBestPessoaMatch = <T extends { id: string; nome: string }>(
   // exige no mínimo 60% de sobreposição
   return bestScore >= 0.6 ? best : null;
 };
+
+// Palavras de operação bancária comuns que não fazem parte do nome
+const PALAVRAS_OPERACAO = new Set([
+  "pix", "ted", "doc", "tef", "enviado", "enviada", "recebido", "recebida", "pagamento", "pagamentos",
+  "pagto", "pgto", "transferencia", "transf", "deposito", "dep", "credito", "debito", "cred", "deb",
+  "boleto", "tarifa", "compra", "saque", "estorno", "devolucao", "qrcode", "qr", "code", "agendado",
+  "agendada", "entre", "contas", "conta", "para", "de", "via", "app", "internet", "banking", "ib",
+  "liquidacao", "titulo", "cobranca", "convenio", "debito", "automatico", "remetente", "favorecido",
+]);
+
+const somenteDigitos = (s: string | null | undefined): string => (s || "").replace(/\D/g, "");
+
+// Extrai CPF/CNPJ (formatado ou só dígitos) e o nome da pessoa contidos no MEMO
+export const extrairPessoaDoMemo = (memo: string): { nome: string; documento: string } => {
+  if (!memo) return { nome: "", documento: "" };
+  const reDoc = /(\d{2}\.?\d{3}\.?\d{3}\/?\d{4}-?\d{2})|(\d{3}\.?\d{3}\.?\d{3}-?\d{2})/;
+  const m = memo.match(reDoc);
+  let documento = "";
+  let texto = memo;
+  if (m) {
+    const dig = somenteDigitos(m[0]);
+    if (dig.length === 11 || dig.length === 14) {
+      documento = dig;
+      texto = memo.slice(0, m.index);
+    }
+  }
+  // Remove códigos com dígitos (ex.: 104.3880.JOSE -> JOSE) e palavras de operação
+  const tokens = texto
+    .replace(/[\d./\\\-_:*]+/g, " ")
+    .split(/\s+/)
+    .filter(Boolean);
+  let inicio = 0;
+  while (inicio < tokens.length && PALAVRAS_OPERACAO.has(normalize(tokens[inicio]))) inicio += 1;
+  let nomeTokens = tokens.slice(inicio);
+  // Se o primeiro nome se repete (ex.: "JOSE C F D JOSE CLEITON"), usa a última ocorrência
+  if (nomeTokens.length > 2) {
+    const primeiro = normalize(nomeTokens[0]);
+    const ultimaPos = nomeTokens.map((t) => normalize(t)).lastIndexOf(primeiro);
+    if (ultimaPos > 0 && nomeTokens.length - ultimaPos >= 2) nomeTokens = nomeTokens.slice(ultimaPos);
+  }
+  return { nome: nomeTokens.join(" ").trim(), documento };
+};
+
+// Busca a pessoa pelo CPF/CNPJ do MEMO; se não achar, pelo nome
+export const findPessoaPorMemo = <T extends { id: string; nome: string; cpf_cnpj?: string | null }>(
+  memo: string,
+  nameOfx: string,
+  pessoas: T[],
+): { pessoa: T | null; nomeExtraido: string } => {
+  const { nome, documento } = extrairPessoaDoMemo(memo);
+  if (documento) {
+    const porDoc = pessoas.find((p) => somenteDigitos(p.cpf_cnpj) === documento);
+    if (porDoc) return { pessoa: porDoc, nomeExtraido: nome || porDoc.nome };
+  }
+  const porNome =
+    (nome && findBestPessoaMatch(nome, pessoas)) ||
+    (nameOfx && findBestPessoaMatch(nameOfx, pessoas)) ||
+    null;
+  return { pessoa: porNome, nomeExtraido: nome || nameOfx };
+};

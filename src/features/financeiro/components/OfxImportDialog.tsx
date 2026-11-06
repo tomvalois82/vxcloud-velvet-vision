@@ -42,7 +42,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { findBestPessoaMatch, parseOfx } from "../utils/ofxParser";
+import { findPessoaPorMemo, parseOfx } from "../utils/ofxParser";
 import { maskCurrency, unmaskCurrency } from "@/features/estoque/utils/masks";
 import { PessoaDialog } from "@/features/pessoas/components/PessoaDialog";
 
@@ -78,6 +78,7 @@ interface Conta {
 interface Pessoa {
   id: string;
   nome: string;
+  cpf_cnpj?: string | null;
   id_categoria: string | null;
   id_forma_pagamento: string | null;
 }
@@ -152,7 +153,7 @@ export function OfxImportDialog({
   const fetchPessoas = async (): Promise<Pessoa[]> => {
     const { data } = await supabase
       .from("vx_pessoa")
-      .select("id, nome, id_categoria, id_forma_pagamento")
+      .select("id, nome, cpf_cnpj, id_categoria, id_forma_pagamento")
       .order("nome");
     const lista = (data || []) as Pessoa[];
     setPessoas(lista);
@@ -288,13 +289,13 @@ export function OfxImportDialog({
       const novasLinhas: LinhaImportacao[] = txs.map((tx, idx) => {
         const tipo: "Pagar" | "Receber" =
           tx.trnType === "CREDIT" || tx.trnAmt > 0 ? "Receber" : "Pagar";
-        const match = findBestPessoaMatch(tx.name, pessoas);
+        const { pessoa: match, nomeExtraido } = findPessoaPorMemo(tx.memo, tx.name, pessoas);
         return {
           uid: `${tx.fitId || idx}-${idx}`,
           tipo,
           data: tx.dtPosted,
           descricao: tx.memo,
-          nome: tx.name,
+          nome: tx.name || nomeExtraido,
           id_pessoa: match?.id ?? null,
           valor: Math.abs(tx.trnAmt),
           id_categoria: match?.id_categoria ?? null,
