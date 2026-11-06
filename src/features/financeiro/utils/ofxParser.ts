@@ -117,6 +117,18 @@ export const extrairPessoaDoMemo = (memo: string): { nome: string; documento: st
   return { nome: nomeTokens.join(" ").trim(), documento };
 };
 
+// Prepara o cadastro com documento sem máscara para o diálogo aplicar CPF ou CNPJ.
+export const prepararCadastroPessoaDoMemo = (memo: string, nomeInicial: string) => {
+  const { nome, documento } = extrairPessoaDoMemo(memo);
+  const tipoCadastro: "Pessoa Física" | "Pessoa Jurídica" =
+    documento.length === 14 ? "Pessoa Jurídica" : "Pessoa Física";
+  return {
+    nome: nomeInicial || nome,
+    cpf_cnpj: documento,
+    tipo_cadastro: tipoCadastro,
+  };
+};
+
 // Busca a pessoa pelo CPF/CNPJ do MEMO; se não achar, pelo nome
 export const findPessoaPorMemo = <T extends { id: string; nome: string; cpf_cnpj?: string | null }>(
   memo: string,

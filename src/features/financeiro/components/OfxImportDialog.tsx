@@ -42,7 +42,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { findPessoaPorMemo, parseOfx } from "../utils/ofxParser";
+import { findPessoaPorMemo, parseOfx, prepararCadastroPessoaDoMemo } from "../utils/ofxParser";
 import { maskCurrency, unmaskCurrency } from "@/features/estoque/utils/masks";
 import { PessoaDialog } from "@/features/pessoas/components/PessoaDialog";
 
@@ -190,12 +190,14 @@ export function OfxImportDialog({
     })();
   }, [open]);
 
-  // Abre o diálogo em modo "criar", pré-preenchendo o nome com o texto da linha
+  // Abre o cadastro com nome, documento e tipo identificados no MEMO da linha.
   const handleAbrirCriarPessoa = (uidLinha: string, nomeInicial: string) => {
+    const linha = linhas.find((item) => item.uid === uidLinha);
+    if (!linha) return;
     setLinhaUidPendente(uidLinha);
     setEditingPessoaId(null);
     setPessoaDialogMode("create");
-    setPessoaDialogData({ nome: nomeInicial || "" });
+    setPessoaDialogData(prepararCadastroPessoaDoMemo(linha.descricao, nomeInicial));
     setPessoaDialogOpen(true);
   };
 
