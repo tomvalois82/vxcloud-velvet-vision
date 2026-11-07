@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Check, ChevronsUpDown, Download, Loader2, Pencil, Plus, Trash2, Upload } from "lucide-react";
 import { CategoriaAutocomplete } from "./CategoriaAutocomplete";
 import {
@@ -45,6 +45,9 @@ import { useToast } from "@/hooks/use-toast";
 import { findPessoaPorMemo, parseOfx, prepararCadastroPessoaDoMemo } from "../utils/ofxParser";
 import { maskCurrency, unmaskCurrency } from "@/features/estoque/utils/masks";
 import { PessoaDialog } from "@/features/pessoas/components/PessoaDialog";
+import { useAuth } from "@/contexts/AuthContext";
+import { carregarRascunhoOfx, salvarRascunhoOfx, apagarRascunhoOfx, type LinhaImportacao, type RascunhoOfx } from "../services/ofx-draft-service";
+import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter } from "@/components/ui/alert-dialog";
 
 interface MovimentoExistente {
   id: string;
@@ -106,19 +109,6 @@ interface Veiculo {
   ano: string | null;
 }
 
-interface LinhaImportacao {
-  uid: string;
-  tipo: "Pagar" | "Receber";
-  data: string;
-  descricao: string;
-  nome: string;
-  id_pessoa: string | null;
-  valor: number;
-  id_categoria: string | null;
-  id_forma_pagamento: string | null;
-  id_estoque: number | null;
-}
-
 interface OfxImportDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -133,6 +123,15 @@ export function OfxImportDialog({
   onSuccess,
 }: OfxImportDialogProps) {
   const { toast } = useToast();
+  const { user } = useAuth();
+  const usuarioId = user?.id;
+  const contaId = conta?.id;
+  const escopoAtual = usuarioId && contaId ? `${usuarioId}:${contaId}` : null;
+  const [escopoPronto, setEscopoPronto] = useState<string | null>(null);
+  const [nomeArquivo, setNomeArquivo] = useState("");
+  const [rascunhoPendente, setRascunhoPendente] = useState<RascunhoOfx | null>(null);
+  const [erroRascunho, setErroRascunho] = useState(false);
+  const falhaAvisada = useRef(false);
   const [file, setFile] = useState<File | null>(null);
   const [linhas, setLinhas] = useState<LinhaImportacao[]>([]);
   const [loading, setLoading] = useState(false);
@@ -145,10 +144,62 @@ export function OfxImportDialog({
 
   // Estado para o diálogo de adicionar/editar pessoa a partir de uma linha
   const [pessoaDialogOpen, setPessoaDialogOpen] = useState(false);
-  const [pessoaDialogData, setPessoaDialogData] = useState<any>(null);
+  const [pessoaDialogData, setPessoaDialogData] = useState<Record<string, unknown> | null>(null);
   const [pessoaDialogMode, setPessoaDialogMode] = useState<"create" | "edit">("create");
   const [linhaUidPendente, setLinhaUidPendente] = useState<string | null>(null);
   const [editingPessoaId, setEditingPessoaId] = useState<string | null>(null);
+
+  useEffect(() => {
+    setEscopoPronto(null);
+    setRascunhoPendente(null);
+    setErroRascunho(false);
+    setFile(null);
+    setNomeArquivo("");
+    setLinhas([]);
+    falhaAvisada.current = false;
+    if (!open || !usuarioId || !contaId) return;
+    try {
+      setRascunhoPendente(carregarRascunhoOfx(usuarioId, contaId));
+      setEscopoPronto(`${usuarioId}:${contaId}`);
+    } catch {
+      setErroRascunho(true);
+      toast({ title: "Erro ao recuperar extrato", description: "Não foi possível ler o extrato temporário. Ele foi mantido; tente novamente antes de iniciar outro.", variant: "destructive" });
+    }
+  }, [open, usuarioId, contaId, toast]);
+
+  // Grava após cada alteração, antes de fechar ou desmontar a tela, sem depender da conexão.
+  useLayoutEffect(() => {
+    if (!open || !usuarioId || !contaId || escopoPronto !== escopoAtual || rascunhoPendente || !nomeArquivo) return;
+    try {
+      salvarRascunhoOfx({ versao: 1, usuarioId, contaId, nomeArquivo, atualizadoEm: new Date().toISOString(), linhas });
+      falhaAvisada.current = false;
+    } catch {
+      if (!falhaAvisada.current) {
+        toast({ title: "Não foi possível salvar o extrato temporário", description: "O navegador não permitiu o salvamento. Não feche esta tela para não perder as alterações.", variant: "destructive" });
+        falhaAvisada.current = true;
+      }
+    }
+  }, [open, usuarioId, contaId, escopoPronto, escopoAtual, rascunhoPendente, nomeArquivo, linhas, toast]);
+
+  const handleRetomarRascunho = () => {
+    if (!rascunhoPendente) return;
+    setNomeArquivo(rascunhoPendente.nomeArquivo);
+    setLinhas(rascunhoPendente.linhas);
+    setRascunhoPendente(null);
+  };
+
+  const handleDescartarRascunho = () => {
+    if (!usuarioId || !contaId) return;
+    try {
+      apagarRascunhoOfx(usuarioId, contaId);
+      setRascunhoPendente(null);
+      setFile(null);
+      setNomeArquivo("");
+      setLinhas([]);
+    } catch {
+      toast({ title: "Erro ao descartar extrato", description: "Não foi possível apagar o temporário. Tente novamente.", variant: "destructive" });
+    }
+  };
 
   const fetchPessoas = async (): Promise<Pessoa[]> => {
     const { data } = await supabase
@@ -162,8 +213,6 @@ export function OfxImportDialog({
 
   useEffect(() => {
     if (!open) {
-      setFile(null);
-      setLinhas([]);
       return;
     }
     (async () => {
@@ -275,7 +324,7 @@ export function OfxImportDialog({
   );
 
   const handleParseFile = async () => {
-    if (!file) return;
+    if (!file || rascunhoPendente || escopoPronto !== escopoAtual || erroRascunho) return;
     setLoading(true);
     try {
       const text = await file.text();
@@ -305,6 +354,7 @@ export function OfxImportDialog({
           id_estoque: null,
         };
       });
+      setNomeArquivo(file.name);
       setLinhas(novasLinhas);
     } catch (error) {
       toast({
@@ -341,6 +391,7 @@ export function OfxImportDialog({
   ): Promise<Map<string, MovimentoExistente[]>> => {
     const result = new Map<string, MovimentoExistente[]>();
     if (!conta || linhasParaImportar.length === 0) return result;
+    const idConta = conta.id;
     const datas = [...new Set(linhasParaImportar.map((l) => l.data))];
     const valores = [...new Set(linhasParaImportar.map((l) => Number(l.valor)))];
     const { data, error } = await supabase
@@ -354,7 +405,7 @@ export function OfxImportDialog({
     for (const l of linhasParaImportar) {
       const matches = existentes.filter(
         (e) =>
-          e.id_conta === conta!.id &&
+          e.id_conta === idConta &&
           e.data_pagamento === l.data &&
           Number(e.valor_liquido) === Number(l.valor),
       );
@@ -421,7 +472,7 @@ export function OfxImportDialog({
     } catch (error) {
       toast({
         title: "Erro ao importar",
-        description: error instanceof Error ? error.message : String(error),
+        description: error instanceof Error ? error.message : typeof error === "object" && error !== null && "message" in error ? String(error.message) : "Não foi possível importar. Suas alterações foram mantidas no extrato em andamento.",
         variant: "destructive",
       });
       return false;
@@ -548,12 +599,14 @@ export function OfxImportDialog({
             <Input
               type="file"
               accept=".ofx"
+              disabled={importing || !!rascunhoPendente || !escopoPronto || erroRascunho}
               onChange={(e) => setFile(e.target.files?.[0] ?? null)}
             />
+            {nomeArquivo && <p className="mt-1 text-sm text-muted-foreground">{nomeArquivo}</p>}
           </div>
           <Button
             onClick={handleParseFile}
-            disabled={!file || loading}
+            disabled={!file || loading || importing || !!rascunhoPendente || !escopoPronto || erroRascunho}
             className="bg-accent hover:bg-accent/90"
           >
             {loading ? (
@@ -621,6 +674,21 @@ export function OfxImportDialog({
           </Button>
         </DialogFooter>
       </DialogContent>
+
+      <AlertDialog open={open && !!rascunhoPendente}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Continuar importação?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Existe um extrato ({rascunhoPendente?.nomeArquivo}) em processo de importação, deseja prosseguir ?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <Button variant="outline" onClick={handleDescartarRascunho}>Não</Button>
+            <Button onClick={handleRetomarRascunho}>Sim</Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <PessoaDialog
         open={pessoaDialogOpen}
