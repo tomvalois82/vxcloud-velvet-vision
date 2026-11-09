@@ -43,6 +43,7 @@ import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { findPessoaPorMemo, parseOfx, prepararCadastroPessoaDoMemo } from "../utils/ofxParser";
+import { prepararMovimentoOfx } from "../utils/ofx-movimento";
 import { maskCurrency, unmaskCurrency } from "@/features/estoque/utils/masks";
 import { PessoaDialog } from "@/features/pessoas/components/PessoaDialog";
 import { useAuth } from "@/contexts/AuthContext";
@@ -449,21 +450,7 @@ export function OfxImportDialog({
       if (empresaError) throw empresaError;
       if (!empresaData) throw new Error("Empresa não encontrada");
 
-      const payload = linhasParaImportar.map((l) => ({
-        id_empresa: empresaData.id,
-        id_conta: conta.id,
-        tipo_movimento: l.tipo,
-        descricao: l.descricao || l.nome || "Importado via OFX",
-        valor_bruto: l.valor,
-        valor_liquido: l.valor,
-        data_vencimento: l.data,
-        data_pagamento: l.data,
-        status: "Pago",
-        id_categoria: l.id_categoria,
-        id_forma_pagamento: l.id_forma_pagamento,
-        id_pessoa: l.id_pessoa,
-        id_estoque: l.id_estoque,
-      }));
+      const payload = linhasParaImportar.map((l) => prepararMovimentoOfx(l, empresaData.id, conta.id));
 
       const { error } = await supabase.from("vx_fin_movimento").insert(payload);
       if (error) throw error;
