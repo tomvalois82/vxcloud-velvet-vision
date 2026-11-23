@@ -4,7 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { format, addDays, addMonths, setDate, lastDayOfMonth } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { CalendarIcon, Loader2, Car, Repeat, ChevronsUpDown } from "lucide-react";
+import { CalendarIcon, Loader2, Car, Repeat, ChevronsUpDown, Check } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -35,6 +35,14 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
@@ -48,6 +56,11 @@ import {
 } from "../utils/recorrenciaUtils";
 import { CategoriaAutocomplete } from "./CategoriaAutocomplete";
 import { AnexosManager } from "./AnexosManager";
+import {
+  filtrarVeiculosParaSelecao,
+  formatarVeiculoParaSelecao,
+  type VeiculoResumo,
+} from "../utils/veiculo-selecao";
 
 // Generate competencia options from 01/2019 to current month/year
 const gerarOpcoesCompetencia = (): { value: string; label: string }[] => {
@@ -127,15 +140,6 @@ interface Cartao {
   dia_vencimento: number;
 }
 
-interface Veiculo {
-  id: number;
-  fabricante: string | null;
-  modelo: string | null;
-  placa: string | null;
-  ano: string | null;
-  status: string | null;
-}
-
 interface Movimento {
   id: string;
   tipo_movimento: string;
@@ -189,13 +193,15 @@ export function MovimentoDialog({
   const [categorias, setCategorias] = useState<Categoria[]>([]);
   const [formasPagamento, setFormasPagamento] = useState<FormaPagamento[]>([]);
   const [cartoes, setCartoes] = useState<Cartao[]>([]);
-  const [veiculos, setVeiculos] = useState<Veiculo[]>([]);
+  const [veiculos, setVeiculos] = useState<VeiculoResumo[]>([]);
   const [pessoas, setPessoas] = useState<Pessoa[]>([]);
   const [loadingData, setLoadingData] = useState(true);
   const [vincularVeiculo, setVincularVeiculo] = useState(false);
   const [pessoaSelecionada, setPessoaSelecionada] = useState<string>("");
   const [pessoaSearchTerm, setPessoaSearchTerm] = useState("");
   const [veiculoSelecionado, setVeiculoSelecionado] = useState<string>("");
+  const [veiculoSearchTerm, setVeiculoSearchTerm] = useState("");
+  const [veiculoPopoverOpen, setVeiculoPopoverOpen] = useState(false);
   const [cartaoSelecionado, setCartaoSelecionado] = useState<string>("");
 
   // Recurrence state
@@ -237,10 +243,29 @@ export function MovimentoDialog({
     const fetchData = async () => {
       setLoadingData(true);
       try {
-        const tresMesesAtras = new Date();
-        tresMesesAtras.setMonth(tresMesesAtras.getMonth() - 3);
+        const { data: userData, error: userError } = await supabase.auth.getUser();
+        if (userError) throw userError;
+        if (!userData.user) throw new Error("Usuário não autenticado");
 
-        const [contasRes, categoriasRes, formasPagamentoRes, cartoesRes, veiculosEstoqueRes, vendasRecentesRes, pessoasRes] = await Promise.all([
+        const { data: usuarioData, error: usuarioError } = await supabase
+          .from("usuario")
+          .select("config")
+          .eq("uid", userData.user.id)
+          .maybeSingle();
+
+        if (usuarioError) throw usuarioError;
+        if (!usuarioData?.config) throw new Error("Configuração não encontrada");
+
+        const { data: empresaData, error: empresaError } = await supabase
+          .from("empresa")
+          .select("id")
+          .eq("id_config", usuarioData.config)
+          .maybeSingle();
+
+        if (empresaError) throw empresaError;
+        if (!empresaData) throw new Error("Empresa não encontrada");
+
+        const [contasRes, categoriasRes, formasPagamentoRes, cartoesRes, veiculosRes, pessoasRes] = await Promise.all([
           supabase.from("vx_fin_conta").select("id, banco, descricao, padrao").order("banco"),
           supabase.from("vx_fin_categoria").select("*").eq("ativo", true).order("categoria"),
           supabase.from("vx_forma_pagamento").select("*").eq("ativa", true).order("descricao"),
@@ -248,17 +273,9 @@ export function MovimentoDialog({
           supabase
             .from("estoque")
             .select("id, fabricante, modelo, placa, ano, status")
-            .neq("status", "Vendido")
+            .eq("id_empresa", empresaData.id)
             .order("fabricante")
             .order("modelo"),
-          supabase
-            .from("vx_vendas")
-            .select(`
-              id_veiculo_vendido,
-              estoque!id_veiculo_vendido (id, fabricante, modelo, placa, ano, status)
-            `)
-            .eq("fechada", true)
-            .gte("data_venda", tresMesesAtras.toISOString()),
           supabase.from("vx_pessoa").select("id, nome, cpf_cnpj").order("nome"),
         ]);
 
@@ -266,40 +283,19 @@ export function MovimentoDialog({
         if (formasPagamentoRes.error) throw formasPagamentoRes.error;
         if (cartoesRes.error) throw cartoesRes.error;
         if (categoriasRes.error) throw categoriasRes.error;
-        if (veiculosEstoqueRes.error) throw veiculosEstoqueRes.error;
-        if (vendasRecentesRes.error) throw vendasRecentesRes.error;
+        if (veiculosRes.error) throw veiculosRes.error;
         if (pessoasRes.error) throw pessoasRes.error;
-
-        const veiculosEmEstoque = (veiculosEstoqueRes.data || []) as Veiculo[];
-        const veiculosVendidosRecentes = (vendasRecentesRes.data || [])
-          .map((v: any) => v.estoque)
-          .filter((v: any): v is Veiculo => v !== null);
-
-        const todosVeiculosMap = new Map<number, Veiculo>();
-        veiculosEmEstoque.forEach((v) => todosVeiculosMap.set(v.id, v));
-        veiculosVendidosRecentes.forEach((v) => {
-          if (!todosVeiculosMap.has(v.id)) {
-            todosVeiculosMap.set(v.id, v);
-          }
-        });
-
-        const todosVeiculos = Array.from(todosVeiculosMap.values())
-          .sort((a, b) => {
-            const fabA = a.fabricante || '';
-            const fabB = b.fabricante || '';
-            return fabA.localeCompare(fabB);
-          });
 
         setContas((contasRes.data || []) as Conta[]);
         setCategorias(categoriasRes.data || []);
         setFormasPagamento(formasPagamentoRes.data || []);
         setCartoes((cartoesRes.data || []) as Cartao[]);
-        setVeiculos(todosVeiculos);
+        setVeiculos((veiculosRes.data || []) as VeiculoResumo[]);
         setPessoas((pessoasRes.data || []) as Pessoa[]);
-      } catch (error: any) {
+      } catch (error: unknown) {
         toast({
           title: "Erro ao carregar dados",
-          description: error.message,
+          description: error instanceof Error ? error.message : "Não foi possível carregar os dados.",
           variant: "destructive",
         });
       } finally {
@@ -315,6 +311,8 @@ export function MovimentoDialog({
   // Reset form when dialog opens/closes or movimento changes
   useEffect(() => {
     if (open) {
+      setVeiculoSearchTerm("");
+      setVeiculoPopoverOpen(false);
       if (movimento) {
         form.reset({
           tipo_movimento: movimento.tipo_movimento as "Pagar" | "Receber",
@@ -404,12 +402,8 @@ export function MovimentoDialog({
     return conta.descricao ? `${conta.banco} - ${conta.descricao}` : conta.banco;
   };
 
-  const getVeiculoDisplayName = (veiculo: Veiculo) => {
-    const parts = [veiculo.fabricante, veiculo.modelo, veiculo.ano].filter(Boolean);
-    const base = parts.join(" ") || "Veículo sem nome";
-    const withPlaca = veiculo.placa ? `${base} - ${veiculo.placa}` : base;
-    return veiculo.status === "Vendido" ? `${withPlaca} [Vendido]` : withPlaca;
-  };
+  const veiculosFiltrados = filtrarVeiculosParaSelecao(veiculos, veiculoSearchTerm);
+  const veiculoAtual = veiculos.find((veiculo) => veiculo.id.toString() === veiculoSelecionado);
 
   const getCartaoDisplayName = (cartao: Cartao) => {
     return `${cartao.descricao || "Cartão"} - ${cartao.final}`;
@@ -794,10 +788,10 @@ export function MovimentoDialog({
 
       onSuccess();
       onOpenChange(false);
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast({
         title: "Erro ao salvar",
-        description: error.message,
+        description: error instanceof Error ? error.message : "Não foi possível salvar o lançamento.",
         variant: "destructive",
       });
     } finally {
@@ -1381,27 +1375,68 @@ export function MovimentoDialog({
                 </div>
 
                 {vincularVeiculo && (
-                  <Select
-                    value={veiculoSelecionado}
-                    onValueChange={setVeiculoSelecionado}
-                  >
-                    <SelectTrigger className="bg-background/50 border-border/50">
-                      <SelectValue placeholder="Selecione o veículo" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {veiculos.length === 0 ? (
-                        <div className="px-2 py-4 text-center text-muted-foreground text-sm">
-                          Nenhum veículo disponível
-                        </div>
-                      ) : (
-                        veiculos.map((v) => (
-                          <SelectItem key={v.id} value={v.id.toString()}>
-                            {getVeiculoDisplayName(v)}
-                          </SelectItem>
-                        ))
-                      )}
-                    </SelectContent>
-                  </Select>
+                  <Popover open={veiculoPopoverOpen} onOpenChange={setVeiculoPopoverOpen}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        role="combobox"
+                        aria-expanded={veiculoPopoverOpen}
+                        className="w-full justify-between bg-background/50 border-border/50 font-normal"
+                      >
+                        <span className="truncate text-left">
+                          {veiculoAtual
+                            ? formatarVeiculoParaSelecao(veiculoAtual)
+                            : "Selecione o veículo"}
+                        </span>
+                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent
+                      className="w-[var(--radix-popover-trigger-width)] p-0"
+                      align="start"
+                    >
+                      <Command shouldFilter={false}>
+                        <CommandInput
+                          value={veiculoSearchTerm}
+                          onValueChange={setVeiculoSearchTerm}
+                          placeholder="Buscar por placa, marca/fabricante ou modelo..."
+                        />
+                        <CommandList>
+                          <CommandEmpty>
+                            {veiculos.length === 0
+                              ? "Nenhum veículo cadastrado para esta empresa"
+                              : "Nenhum veículo encontrado"}
+                          </CommandEmpty>
+                          <CommandGroup>
+                            {veiculosFiltrados.map((veiculo) => (
+                              <CommandItem
+                                key={veiculo.id}
+                                value={`${veiculo.id} ${formatarVeiculoParaSelecao(veiculo)}`}
+                                onSelect={() => {
+                                  setVeiculoSelecionado(veiculo.id.toString());
+                                  setVeiculoPopoverOpen(false);
+                                  setVeiculoSearchTerm("");
+                                }}
+                              >
+                                <Check
+                                  className={cn(
+                                    "mr-2 h-4 w-4 shrink-0",
+                                    veiculoSelecionado === veiculo.id.toString()
+                                      ? "opacity-100"
+                                      : "opacity-0",
+                                  )}
+                                />
+                                <span className="truncate">
+                                  {formatarVeiculoParaSelecao(veiculo)}
+                                </span>
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
                 )}
               </div>
 
