@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
+import { mensagemErroBanco } from '@/lib/dbErrors';
 import type { 
   SaleData, 
   SaleVehicle, 
@@ -44,6 +45,8 @@ export function useEditSaleData(saleId: string | null) {
   const [financeiras, setFinanceiras] = useState<Financeira[]>([]);
   const [categorias, setCategorias] = useState<CategoriaFinanceira[]>([]);
   const [originalVehicleId, setOriginalVehicleId] = useState<number | null>(null);
+  // Venda fechada não pode ser editada (precisa ser reaberta antes)
+  const [vendaFechada, setVendaFechada] = useState(false);
 
   // Ref para manter referência atualizada do saleData (evita stale closure)
   const saleDataRef = useRef<SaleData>(saleData);
@@ -74,6 +77,7 @@ export function useEditSaleData(saleId: string | null) {
         if (vendaError) throw vendaError;
 
         setOriginalVehicleId(vendaData.id_veiculo_vendido);
+        setVendaFechada(vendaData.fechada === true);
 
         // Load vehicle data
         const { data: vehicleData } = await supabase
@@ -479,6 +483,23 @@ export function useEditSaleData(saleId: string | null) {
 
     setSaving(true);
     try {
+      // Confere no banco se a venda continua aberta antes de gravar
+      const { data: vendaAtual, error: vendaAtualError } = await supabase
+        .from('vx_vendas')
+        .select('fechada')
+        .eq('id', saleId)
+        .single();
+      if (vendaAtualError) throw vendaAtualError;
+      if (vendaAtual.fechada) {
+        setVendaFechada(true);
+        toast({
+          title: 'Venda fechada',
+          description: 'Esta venda já está fechada. Reabra a venda na listagem para poder editá-la.',
+          variant: 'destructive',
+        });
+        return null;
+      }
+
       // Update sale record
       const { error: vendaError } = await supabase
         .from('vx_vendas')
@@ -488,7 +509,7 @@ export function useEditSaleData(saleId: string | null) {
           data_venda: currentSaleData.data_venda.toISOString(),
           id_vendedor: currentSaleData.id_vendedor,
           observacoes: currentSaleData.observacoes || null,
-          fechada: fecharVenda,
+          // Mantém aberta até gravar os itens; o fechamento é feito no final
         })
         .eq('id', saleId);
 
@@ -592,15 +613,20 @@ export function useEditSaleData(saleId: string | null) {
         if (servicosError) throw servicosError;
       }
 
-      // A trigger fn_gerar_financeiro_venda no banco já cria os lançamentos
-      // financeiros automaticamente ao definir fechada=true
-
-      // Atualizar status do veículo para 'Vendido' ao fechar a venda
+      // Fechamento por último: o UPDATE false -> true dispara no banco o financeiro,
+      // a baixa do custo e o status 'Vendido' do veículo
       if (fecharVenda && currentSaleData.veiculo) {
-        await supabase
+        const { error: valorError } = await supabase
           .from('estoque')
-          .update({ status: 'Vendido', valor: String(currentSaleData.valor_venda) })
+          .update({ valor: String(currentSaleData.valor_venda) })
           .eq('id', currentSaleData.veiculo.id);
+        if (valorError) throw valorError;
+
+        const { error: fecharError } = await supabase
+          .from('vx_vendas')
+          .update({ fechada: true })
+          .eq('id', saleId);
+        if (fecharError) throw fecharError;
       }
 
       toast({
@@ -610,10 +636,9 @@ export function useEditSaleData(saleId: string | null) {
 
       return { id: saleId };
     } catch (error) {
-      console.error('Error saving sale:', error);
       toast({
         title: 'Erro',
-        description: 'Falha ao salvar a venda',
+        description: mensagemErroBanco(error, 'Falha ao salvar a venda'),
         variant: 'destructive',
       });
       return null;
@@ -646,6 +671,7 @@ export function useEditSaleData(saleId: string | null) {
     saleData,
     loading,
     saving,
+    vendaFechada,
     clientes,
     colaboradores,
     veiculosEstoque,

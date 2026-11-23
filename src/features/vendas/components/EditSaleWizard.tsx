@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, ArrowRight, Check, Loader2 } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Check, Loader2, Lock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { useEditSaleData } from '../hooks/useEditSaleData';
@@ -20,7 +20,7 @@ export function EditSaleWizard({ saleId, onClose }: EditSaleWizardProps) {
   const navigate = useNavigate();
   const [currentStep, setCurrentStep] = useState(1);
   const saleHook = useEditSaleData(saleId);
-  const { loading, saving, saleData, saveSale } = saleHook;
+  const { loading, saving, saleData, saveSale, vendaFechada } = saleHook;
 
   const canGoNext = () => {
     switch (currentStep) {
@@ -96,6 +96,24 @@ export function EditSaleWizard({ saleId, onClose }: EditSaleWizardProps) {
         <div className="text-center">
           <Loader2 className="w-12 h-12 animate-spin text-accent mx-auto mb-4" />
           <p className="text-muted-foreground">Carregando dados da venda...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (vendaFechada) {
+    return (
+      <div className="min-h-[60vh] flex items-center justify-center">
+        <div className="glass rounded-lg p-8 text-center max-w-md space-y-4">
+          <Lock className="w-12 h-12 text-accent mx-auto" />
+          <h2 className="text-lg font-semibold text-foreground">Esta venda está fechada</h2>
+          <p className="text-sm text-muted-foreground">
+            Vendas fechadas não podem ser editadas. Para alterar, reabra a venda na listagem de vendas.
+          </p>
+          <Button variant="outline" onClick={onClose}>
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Voltar para vendas
+          </Button>
         </div>
       </div>
     );

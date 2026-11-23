@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
+import { mensagemErroBanco } from '@/lib/dbErrors';
 import type { 
   SaleData, 
   SaleVehicle, 
@@ -340,7 +341,9 @@ export function useSaleData(vehicleId: number | null) {
           data_venda: saleData.data_venda.toISOString(),
           id_vendedor: saleData.id_vendedor,
           observacoes: saleData.observacoes || null,
-          fechada: fecharVenda,
+          // Sempre grava aberta: as triggers do banco só geram financeiro
+          // quando fechada passa de false para true num UPDATE
+          fechada: false,
         })
         .select()
         .single();
@@ -423,15 +426,20 @@ export function useSaleData(vehicleId: number | null) {
         if (servicosError) throw servicosError;
       }
 
-      // Se for fechar a venda, a trigger fn_gerar_financeiro_venda no banco
-      // já cria os lançamentos financeiros automaticamente ao definir fechada=true
-
-      // Atualizar status do veículo para 'Vendido' ao fechar a venda
+      // Fechamento por último: o UPDATE false -> true dispara no banco o financeiro,
+      // a baixa do custo e o status 'Vendido' do veículo
       if (fecharVenda) {
-        await supabase
+        const { error: valorError } = await supabase
           .from('estoque')
-          .update({ status: 'Vendido', valor: String(saleData.valor_venda) })
+          .update({ valor: String(saleData.valor_venda) })
           .eq('id', saleData.veiculo.id);
+        if (valorError) throw valorError;
+
+        const { error: fecharError } = await supabase
+          .from('vx_vendas')
+          .update({ fechada: true })
+          .eq('id', vendaData.id);
+        if (fecharError) throw fecharError;
       }
 
       toast({
@@ -441,10 +449,9 @@ export function useSaleData(vehicleId: number | null) {
 
       return vendaData;
     } catch (error) {
-      console.error('Error saving sale:', error);
       toast({
         title: 'Erro',
-        description: 'Falha ao salvar a venda',
+        description: mensagemErroBanco(error, 'Falha ao salvar a venda'),
         variant: 'destructive',
       });
       return null;
