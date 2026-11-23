@@ -746,7 +746,7 @@ export function StepAcerto({
 
       {/* Add Payment Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col overflow-hidden">
           <DialogHeader>
             <DialogTitle>Adicionar Pagamento</DialogTitle>
             <DialogDescription>
@@ -754,36 +754,10 @@ export function StepAcerto({
             </DialogDescription>
           </DialogHeader>
 
-          {/* Summary in Dialog */}
-          <div className="grid grid-cols-3 gap-4 text-center text-sm">
-            <div>
-              <p className="text-muted-foreground">Venda + Outros</p>
-              <p className="font-bold text-green-500">{maskCurrency(totals.valorVeiculo)}</p>
-            </div>
-            <div>
-              <p className="text-muted-foreground">Recebimentos</p>
-              <p className="font-bold text-green-500">{maskCurrency(totals.totalRecebimentos)}</p>
-            </div>
-            <div>
-              <p className="text-muted-foreground">Total a receber</p>
-              <p className="font-bold text-green-500">{maskCurrency(Math.abs(totals.valorAReceber))}</p>
-            </div>
-            <div>
-              <p className="text-muted-foreground">Pagamentos (saída)</p>
-              <p className="font-bold text-destructive">{maskCurrency(totals.totalPagamentosSaida)}</p>
-            </div>
-            <div>
-              <p className="text-muted-foreground">Troca Cliente</p>
-              <p className="font-bold text-destructive">{maskCurrency(totals.totalTrocas)}</p>
-            </div>
-            <div>
-              <p className="text-muted-foreground">Saldo Pendente</p>
-              <p className={cn("font-bold", getSaldoColor())}>
-                {maskCurrency(Math.abs(totals.saldoPendente))}
-              </p>
-            </div>
-          </div>
-
+          {/* Corpo com rolagem: formulário à esquerda e resumo à direita */}
+          <div className="flex-1 overflow-y-auto pr-1 -mr-1">
+          <div className="flex flex-col-reverse md:flex-row gap-4">
+          <div className="flex-1 min-w-0">
           {/* Payment Type Tabs - SEM financiamento */}
           <Tabs value={paymentType} onValueChange={(v) => setPaymentType(v as typeof paymentType)}>
             <TabsList className="grid grid-cols-3">
@@ -812,6 +786,7 @@ export function StepAcerto({
                   </div>
                 )}
 
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Valor</Label>
                   <Input
@@ -836,7 +811,9 @@ export function StepAcerto({
                     </SelectContent>
                   </Select>
                 </div>
+                </div>
 
+                <div className="grid grid-cols-1 sm:grid-cols-[1fr_90px_160px] gap-4">
                 <div className="space-y-2">
                   <Label>Forma</Label>
                   <Select value={idFormaPagamento} onValueChange={setIdFormaPagamento}>
@@ -853,7 +830,6 @@ export function StepAcerto({
                   </Select>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label>Número</Label>
                     <Input
@@ -1027,6 +1003,7 @@ export function StepAcerto({
                   )}
                 </div>
 
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Conta</Label>
                   <Select value={idConta} onValueChange={setIdConta}>
@@ -1058,6 +1035,7 @@ export function StepAcerto({
                     </SelectContent>
                   </Select>
                 </div>
+                </div>
 
                 <div className="space-y-2">
                   <Label>Observações</Label>
@@ -1071,6 +1049,39 @@ export function StepAcerto({
               </div>
             )}
           </Tabs>
+          </div>
+          {/* Resumo lateral */}
+          <div className="md:w-56 shrink-0 glass rounded-lg border border-border p-4 grid grid-cols-3 md:grid-cols-1 gap-3 text-center text-sm h-fit">
+            <p className="col-span-3 md:col-span-1 font-semibold">Resumo</p>
+            <div>
+              <p className="text-muted-foreground">Venda + Outros</p>
+              <p className="font-bold text-green-500">{maskCurrency(totals.valorVeiculo)}</p>
+            </div>
+            <div>
+              <p className="text-muted-foreground">Recebimentos</p>
+              <p className="font-bold text-green-500">{maskCurrency(totals.totalRecebimentos)}</p>
+            </div>
+            <div>
+              <p className="text-muted-foreground">Total a receber</p>
+              <p className="font-bold text-green-500">{maskCurrency(Math.abs(totals.valorAReceber))}</p>
+            </div>
+            <div>
+              <p className="text-muted-foreground">Pagamentos (saída)</p>
+              <p className="font-bold text-destructive">{maskCurrency(totals.totalPagamentosSaida)}</p>
+            </div>
+            <div>
+              <p className="text-muted-foreground">Troca Cliente</p>
+              <p className="font-bold text-destructive">{maskCurrency(totals.totalTrocas)}</p>
+            </div>
+            <div>
+              <p className="text-muted-foreground">Saldo Pendente</p>
+              <p className={cn("font-bold", getSaldoColor())}>
+                {maskCurrency(Math.abs(totals.saldoPendente))}
+              </p>
+            </div>
+          </div>
+          </div>
+          </div>
 
           <DialogFooter>
             <Button variant="outline" onClick={() => setDialogOpen(false)}>

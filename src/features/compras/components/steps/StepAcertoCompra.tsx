@@ -267,7 +267,7 @@ export function StepAcertoCompra({
 
       {/* Dialog de acerto */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-3xl max-h-[90vh] flex flex-col overflow-hidden">
           <DialogHeader>
             <DialogTitle>Adicionar acerto</DialogTitle>
             <DialogDescription>
@@ -275,6 +275,8 @@ export function StepAcertoCompra({
             </DialogDescription>
           </DialogHeader>
 
+          {/* Corpo com rolagem interna */}
+          <div className="flex-1 overflow-y-auto pr-1 -mr-1">
           <Tabs
             value={tipoAcerto}
             onValueChange={value => setTipoAcerto(value as 'pagamento' | 'parcelamento')}
@@ -285,6 +287,7 @@ export function StepAcertoCompra({
             </TabsList>
 
             <TabsContent value="pagamento" className="space-y-4 pt-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div className="space-y-2">
                 <Label>Valor</Label>
                 <Input
@@ -324,6 +327,7 @@ export function StepAcertoCompra({
                     ))}
                   </SelectContent>
                 </Select>
+              </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
@@ -423,6 +427,7 @@ export function StepAcertoCompra({
                 </div>
               </div>
 
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Valor da parcela</Label>
                 <Input
@@ -452,7 +457,9 @@ export function StepAcertoCompra({
                   </PopoverContent>
                 </Popover>
               </div>
+              </div>
 
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Forma de pagamento</Label>
                 <Select value={idFormaPagamento} onValueChange={setIdFormaPagamento}>
@@ -484,6 +491,7 @@ export function StepAcertoCompra({
                   </SelectContent>
                 </Select>
               </div>
+              </div>
 
               <div className="space-y-2">
                 <Label>Observação</Label>
@@ -501,6 +509,7 @@ export function StepAcertoCompra({
               )}
             </TabsContent>
           </Tabs>
+          </div>
 
           <DialogFooter>
             <Button variant="outline" onClick={() => setDialogOpen(false)}>
