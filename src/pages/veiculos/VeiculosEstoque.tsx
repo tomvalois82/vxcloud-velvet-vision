@@ -12,6 +12,7 @@ import { Badge } from '@/components/ui/badge';
 import { VehicleDialog } from '@/features/estoque/components/VehicleDialog';
 import { VehicleDetailDialog } from '@/features/estoque/components/VehicleDetailDialog';
 import { supabase } from '@/integrations/supabase/client';
+import { STATUS_ATIVOS } from '@/features/estoque/utils/ciclos';
 import { toast } from '@/hooks/use-toast';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -91,10 +92,10 @@ function VehicleCard({
             <p className="text-lg font-bold text-lime-500">
               {vehicle.valor ? maskCurrency(Number(vehicle.valor)) : 'R$ 0,00'}
             </p>
-            <Button size="sm" onClick={e => onSell(e, vehicle.id)} className="bg-accent hover:bg-accent/90">
+            {(STATUS_ATIVOS as readonly string[]).includes(vehicle.status ?? 'Em estoque') && <Button size="sm" onClick={e => onSell(e, vehicle.id)} className="bg-accent hover:bg-accent/90">
               <Handshake className="w-4 h-4 mr-1" />
               Vender
-            </Button>
+            </Button>}
           </div>
         </div>
       </CardContent>

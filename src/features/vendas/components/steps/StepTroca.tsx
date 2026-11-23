@@ -232,6 +232,10 @@ export function StepTroca({
                   </Button>
                 </div>
 
+                <p className="text-xs text-muted-foreground">
+                  Carro que já passou pela loja? Use <strong>Cadastrar Novo Veículo</strong> e informe a placa — o sistema inicia um novo ciclo.
+                </p>
+
                 <ScrollArea className="h-[400px] pr-4">
                   <div className="space-y-2">
                     {filteredVehicles.length === 0 ? (

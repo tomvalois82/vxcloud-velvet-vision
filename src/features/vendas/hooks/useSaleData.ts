@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { mensagemErroBanco } from '@/lib/dbErrors';
+import { buscarVeiculosDisponiveisTroca } from '../services/veiculos-disponiveis';
 import type { 
   SaleData, 
   SaleVehicle, 
@@ -62,12 +63,7 @@ export function useSaleData(vehicleId: number | null) {
   }, []);
 
   const refreshVeiculosEstoque = useCallback(async (): Promise<SaleVehicle[]> => {
-    const { data: estoqueData } = await supabase
-      .from('estoque')
-      .select('id, modelo, fabricante, ano, valor, km, cor, foto, placa')
-      .neq('id', vehicleId || 0)
-      .order('created_at', { ascending: false });
-    const list = (estoqueData || []) as SaleVehicle[];
+    const list = await buscarVeiculosDisponiveisTroca(vehicleId);
     setVeiculosEstoque(list);
     return list;
   }, [vehicleId]);
@@ -98,13 +94,7 @@ export function useSaleData(vehicleId: number | null) {
         await refreshPessoas();
 
         // Load estoque for trade-ins
-        const { data: estoqueData } = await supabase
-          .from('estoque')
-          .select('id, modelo, fabricante, ano, valor, km, cor, foto, placa')
-          .neq('id', vehicleId || 0)
-          .order('created_at', { ascending: false });
-        
-        setVeiculosEstoque(estoqueData || []);
+        setVeiculosEstoque(await buscarVeiculosDisponiveisTroca(vehicleId));
 
         // Load formas de pagamento
         const { data: formasData } = await supabase

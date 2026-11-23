@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { buscarVeiculosDisponiveisTroca } from '../services/veiculos-disponiveis';
 import { toast } from '@/hooks/use-toast';
 import { mensagemErroBanco } from '@/lib/dbErrors';
 import type { 
@@ -248,13 +249,11 @@ export function useEditSaleData(saleId: string | null) {
         setColaboradores(colaboradoresData || []);
 
         // Load estoque for trade-ins (exclude the sold vehicle)
-        const { data: estoqueData } = await supabase
-          .from('estoque')
-          .select('id, modelo, fabricante, ano, valor, km, cor, foto, placa')
-          .neq('id', vendaData.id_veiculo_vendido)
-          .order('created_at', { ascending: false });
-        
-        setVeiculosEstoque(estoqueData || []);
+        // Trocas já gravadas continuam disponíveis na lista
+        const disponiveis = await buscarVeiculosDisponiveisTroca(vendaData.id_veiculo_vendido);
+        const idsDisponiveis = new Set(disponiveis.map(v => v.id));
+        const jaGravadas = trocas.map(t => t.vehicle).filter(v => v && !idsDisponiveis.has(v.id));
+        setVeiculosEstoque([...jaGravadas, ...disponiveis]);
 
         // Load formas de pagamento
         const { data: formasData } = await supabase
