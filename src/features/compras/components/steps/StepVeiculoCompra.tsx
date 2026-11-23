@@ -1,13 +1,16 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Car, Plus, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 import { VehicleDialog } from '@/features/estoque/components/VehicleDialog';
 import { maskCurrency, unmaskCurrency } from '@/features/estoque/utils/masks';
 import type { PurchaseData, PurchaseVehicle } from '../../types';
+import { buscarUltimoCicloEncerrado } from '../../services/veiculos-compra-service';
+import { correspondeBuscaVeiculo, placaParaConsultarCiclos } from '../../utils/veiculos-compra';
 
 interface StepVeiculoCompraProps {
   purchaseData: PurchaseData;
@@ -27,15 +30,32 @@ export function StepVeiculoCompra({
   const [busca, setBusca] = useState('');
   const [vehicleDialogOpen, setVehicleDialogOpen] = useState(false);
 
-  const veiculosFiltrados = veiculosEstoque.filter(v => {
-    const termo = busca.toLowerCase();
-    return (
-      (v.modelo || '').toLowerCase().includes(termo) ||
-      (v.fabricante || '').toLowerCase().includes(termo) ||
-      (v.placa || '').toLowerCase().includes(termo) ||
-      (v.ano || '').includes(termo)
-    );
-  });
+  const [cicloEncerrado, setCicloEncerrado] = useState<{ placa: string; descricao: string } | null>(null);
+  const [erroConsulta, setErroConsulta] = useState<string | null>(null);
+  const veiculosFiltrados = veiculosEstoque.filter(veiculo => correspondeBuscaVeiculo(veiculo, busca));
+  const placaConsulta = veiculosFiltrados.length === 0 ? placaParaConsultarCiclos(busca) : null;
+
+  useEffect(() => {
+    let cancelado = false;
+    setCicloEncerrado(null);
+    setErroConsulta(null);
+    if (!placaConsulta) return;
+    const temporizador = setTimeout(() => {
+      buscarUltimoCicloEncerrado(placaConsulta)
+        .then(ciclo => {
+          if (!cancelado && ciclo) {
+            setCicloEncerrado({ placa: placaConsulta, descricao: ciclo.descricao_ciclo || '—' });
+          }
+        })
+        .catch(() => {
+          if (!cancelado) setErroConsulta('Não foi possível consultar o histórico deste veículo. Tente novamente.');
+        });
+    }, 300);
+    return () => {
+      cancelado = true;
+      clearTimeout(temporizador);
+    };
+  }, [placaConsulta]);
 
   const handleValorChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     updatePurchaseData({ valor_compra: unmaskCurrency(e.target.value) });
@@ -69,17 +89,26 @@ export function StepVeiculoCompra({
             />
           </div>
 
+          {cicloEncerrado?.placa === placaConsulta && cicloEncerrado && (
+            <p className="text-sm text-muted-foreground break-words" role="status">
+              Este veículo já passou pela loja (último ciclo: <em>{cicloEncerrado.descricao}</em>).
+              {' '}Clique em <strong>Cadastrar novo veículo</strong> e informe a placa para iniciar um novo ciclo.
+            </p>
+          )}
+          {erroConsulta && <p className="text-sm text-destructive" role="alert">{erroConsulta}</p>}
+
           <ScrollArea className="h-[340px] pr-4">
             <div className="space-y-2">
               {veiculosFiltrados.length === 0 ? (
                 <p className="text-center text-muted-foreground py-8">Nenhum veículo encontrado</p>
               ) : (
                 veiculosFiltrados.map(veiculo => (
-                  <button
+                  <Button
                     key={veiculo.id}
+                    variant="ghost"
                     onClick={() => setVeiculo(veiculo)}
                     className={cn(
-                      'w-full p-4 rounded-lg text-left transition-all border',
+                      'w-full h-auto p-4 rounded-lg text-left whitespace-normal flex flex-col items-start transition-all border',
                       purchaseData.veiculo?.id === veiculo.id
                         ? 'bg-accent/20 border-accent'
                         : 'bg-muted/50 border-transparent hover:border-accent/50'
@@ -91,10 +120,11 @@ export function StepVeiculoCompra({
                     <p className="text-sm text-muted-foreground">
                       {veiculo.ano} {veiculo.placa && `• ${veiculo.placa}`}
                     </p>
+                    <Badge variant="outline" className="my-1">{veiculo.status || '—'}</Badge>
                     <p className="text-sm text-accent">
                       {veiculo.valor ? maskCurrency(Number(veiculo.valor)) : 'R$ 0,00'}
                     </p>
-                  </button>
+                  </Button>
                 ))
               )}
             </div>

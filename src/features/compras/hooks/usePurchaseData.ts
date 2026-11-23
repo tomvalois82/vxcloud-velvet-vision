@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
+import { mensagemErroBanco } from '@/lib/dbErrors';
+import { buscarVeiculosCompra, VEHICLE_FIELDS } from '../services/veiculos-compra-service';
 import type {
   PurchaseData,
   PurchaseVehicle,
@@ -21,8 +23,6 @@ const initialPurchaseData: PurchaseData = {
   data_compra: new Date(),
   observacoes: '',
 };
-
-const VEHICLE_FIELDS = 'id, modelo, fabricante, ano, valor, km, cor, foto, placa';
 
 export function usePurchaseData(purchaseId?: string | null) {
   const [purchaseData, setPurchaseData] = useState<PurchaseData>(initialPurchaseData);
@@ -52,14 +52,10 @@ export function usePurchaseData(purchaseId?: string | null) {
   }, []);
 
   const refreshVeiculosEstoque = useCallback(async (): Promise<PurchaseVehicle[]> => {
-    const { data } = await supabase
-      .from('estoque')
-      .select(VEHICLE_FIELDS)
-      .order('created_at', { ascending: false });
-    const list = (data || []) as PurchaseVehicle[];
+    const list = await buscarVeiculosCompra(purchaseId);
     setVeiculosEstoque(list);
     return list;
-  }, []);
+  }, [purchaseId]);
 
   useEffect(() => {
     const loadData = async () => {
@@ -306,7 +302,7 @@ export function usePurchaseData(purchaseId?: string | null) {
         console.error('Erro ao salvar compra:', error);
         toast({
           title: 'Erro',
-          description: 'Falha ao salvar a compra',
+          description: mensagemErroBanco(error, 'Falha ao salvar a compra'),
           variant: 'destructive',
         });
         return null;

@@ -10,6 +10,7 @@ export interface PurchaseVehicle {
   cor: string | null;
   foto: string | null;
   placa: string | null;
+  status: string | null;
 }
 
 export interface PurchasePerson {
