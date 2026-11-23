@@ -658,6 +658,13 @@ export type Database = {
             referencedRelation: "estoque"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "estoque_anexos_id_estoque_fkey"
+            columns: ["id_estoque"]
+            isOneToOne: false
+            referencedRelation: "vw_estoque_ciclos"
+            referencedColumns: ["id_estoque"]
+          },
         ]
       }
       estoque_iputinga: {
@@ -1723,6 +1730,13 @@ export type Database = {
             referencedRelation: "estoque"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "vx_compras_id_veiculo_comprado_fkey"
+            columns: ["id_veiculo_comprado"]
+            isOneToOne: false
+            referencedRelation: "vw_estoque_ciclos"
+            referencedColumns: ["id_estoque"]
+          },
         ]
       }
       vx_compras_acerto: {
@@ -1766,6 +1780,13 @@ export type Database = {
           valor?: number
         }
         Relationships: [
+          {
+            foreignKeyName: "vx_compras_acerto_id_compra_fkey"
+            columns: ["id_compra"]
+            isOneToOne: false
+            referencedRelation: "vw_estoque_ciclos"
+            referencedColumns: ["id_compra"]
+          },
           {
             foreignKeyName: "vx_compras_acerto_id_compra_fkey"
             columns: ["id_compra"]
@@ -2112,6 +2133,13 @@ export type Database = {
             foreignKeyName: "fk_vx_fin_movimento_venda"
             columns: ["id_venda"]
             isOneToOne: false
+            referencedRelation: "vw_estoque_ciclos"
+            referencedColumns: ["id_venda"]
+          },
+          {
+            foreignKeyName: "fk_vx_fin_movimento_venda"
+            columns: ["id_venda"]
+            isOneToOne: false
             referencedRelation: "vx_vendas"
             referencedColumns: ["id"]
           },
@@ -2128,6 +2156,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "vx_fin_categoria"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vx_fin_movimento_id_compra_fkey"
+            columns: ["id_compra"]
+            isOneToOne: false
+            referencedRelation: "vw_estoque_ciclos"
+            referencedColumns: ["id_compra"]
           },
           {
             foreignKeyName: "vx_fin_movimento_id_compra_fkey"
@@ -2163,6 +2198,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "estoque"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vx_fin_movimento_id_estoque_fkey"
+            columns: ["id_estoque"]
+            isOneToOne: false
+            referencedRelation: "vw_estoque_ciclos"
+            referencedColumns: ["id_estoque"]
           },
           {
             foreignKeyName: "vx_fin_movimento_id_forma_pagamento_fkey"
@@ -2336,6 +2378,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "estoque"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vx_investimento_id_estoque_fkey"
+            columns: ["id_estoque"]
+            isOneToOne: false
+            referencedRelation: "vw_estoque_ciclos"
+            referencedColumns: ["id_estoque"]
           },
           {
             foreignKeyName: "vx_investimento_id_pessoa_fkey"
@@ -2724,6 +2773,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "vx_vendas_id_veiculo_vendido_fkey"
+            columns: ["id_veiculo_vendido"]
+            isOneToOne: false
+            referencedRelation: "vw_estoque_ciclos"
+            referencedColumns: ["id_estoque"]
+          },
+          {
             foreignKeyName: "vx_vendas_id_vendedor_fkey"
             columns: ["id_vendedor"]
             isOneToOne: false
@@ -2809,6 +2865,13 @@ export type Database = {
             foreignKeyName: "vx_vendas_acerto_id_venda_fkey"
             columns: ["id_venda"]
             isOneToOne: false
+            referencedRelation: "vw_estoque_ciclos"
+            referencedColumns: ["id_venda"]
+          },
+          {
+            foreignKeyName: "vx_vendas_acerto_id_venda_fkey"
+            columns: ["id_venda"]
+            isOneToOne: false
             referencedRelation: "vx_vendas"
             referencedColumns: ["id"]
           },
@@ -2889,6 +2952,20 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "vx_vendas_financiamento_id_veiculo_fkey"
+            columns: ["id_veiculo"]
+            isOneToOne: false
+            referencedRelation: "vw_estoque_ciclos"
+            referencedColumns: ["id_estoque"]
+          },
+          {
+            foreignKeyName: "vx_vendas_financiamento_id_venda_fkey"
+            columns: ["id_venda"]
+            isOneToOne: true
+            referencedRelation: "vw_estoque_ciclos"
+            referencedColumns: ["id_venda"]
+          },
+          {
             foreignKeyName: "vx_vendas_financiamento_id_venda_fkey"
             columns: ["id_venda"]
             isOneToOne: true
@@ -2938,6 +3015,20 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "vx_vendas_servico_produto_id_veiculo_fkey"
+            columns: ["id_veiculo"]
+            isOneToOne: false
+            referencedRelation: "vw_estoque_ciclos"
+            referencedColumns: ["id_estoque"]
+          },
+          {
+            foreignKeyName: "vx_vendas_servico_produto_id_venda_fkey"
+            columns: ["id_venda"]
+            isOneToOne: false
+            referencedRelation: "vw_estoque_ciclos"
+            referencedColumns: ["id_venda"]
+          },
+          {
             foreignKeyName: "vx_vendas_servico_produto_id_venda_fkey"
             columns: ["id_venda"]
             isOneToOne: false
@@ -2974,6 +3065,20 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "vx_vendas_troca_id_veiculo_troca_fkey"
+            columns: ["id_veiculo_troca"]
+            isOneToOne: false
+            referencedRelation: "vw_estoque_ciclos"
+            referencedColumns: ["id_estoque"]
+          },
+          {
+            foreignKeyName: "vx_vendas_troca_id_venda_fkey"
+            columns: ["id_venda"]
+            isOneToOne: false
+            referencedRelation: "vw_estoque_ciclos"
+            referencedColumns: ["id_venda"]
+          },
+          {
             foreignKeyName: "vx_vendas_troca_id_venda_fkey"
             columns: ["id_venda"]
             isOneToOne: false
@@ -2984,6 +3089,42 @@ export type Database = {
       }
     }
     Views: {
+      vw_estoque_ciclos: {
+        Row: {
+          ano: string | null
+          ativo: boolean | null
+          chassi: string | null
+          ciclo: number | null
+          comprado_de: string | null
+          data_compra: string | null
+          data_entrada: string | null
+          data_venda: string | null
+          descricao_ciclo: string | null
+          id_compra: string | null
+          id_empresa: string | null
+          id_estoque: number | null
+          id_venda: string | null
+          modelo: string | null
+          ordem_exibicao: number | null
+          placa: string | null
+          placa_normalizada: string | null
+          status: string | null
+          sugerido: boolean | null
+          titulo: string | null
+          total_ciclos: number | null
+          venda_fechada: boolean | null
+          vendido_para: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_estoque_empresa"
+            columns: ["id_empresa"]
+            isOneToOne: false
+            referencedRelation: "empresa"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       vw_investidor_carteira: {
         Row: {
           alocado: number | null
