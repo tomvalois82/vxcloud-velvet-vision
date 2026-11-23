@@ -78,6 +78,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
+import { mensagemErroBanco } from '@/lib/dbErrors';
 import {
   Tooltip,
   TooltipContent,
@@ -124,7 +125,7 @@ export function VehicleDialog({ open, onOpenChange, vehicleId, onSuccess }: Vehi
   const [activeTab, setActiveTab] = useState('info');
   const [loadingFipe, setLoadingFipe] = useState(false);
   const [loadingPlaca, setLoadingPlaca] = useState(false);
-  const [marcasFipe, setMarcasFipe] = useState<any[]>([]);
+  const [marcasFipe, setMarcasFipe] = useState<Awaited<ReturnType<typeof getFipeMarcas>>>([]);
   const [fipeValorSugerido, setFipeValorSugerido] = useState<string | null>(null);
   const [selectedMarcaCodigo, setSelectedMarcaCodigo] = useState<string>('');
   const [placaError, setPlacaError] = useState<string>('');
@@ -674,6 +675,10 @@ export function VehicleDialog({ open, onOpenChange, vehicleId, onSuccess }: Vehi
         return;
       }
 
+      const empresaRelacionada: unknown = configData.empresa;
+      const empresa = Array.isArray(empresaRelacionada) ? empresaRelacionada[0] : empresaRelacionada;
+      const idEmpresa = typeof empresa === 'object' && empresa !== null &&
+        'id' in empresa && typeof empresa.id === 'string' ? empresa.id : undefined;
       const mainPhoto = photos.find((p) => p.isMain);
       const photoUrls = photos.map((p) => p.url);
 
@@ -715,7 +720,7 @@ export function VehicleDialog({ open, onOpenChange, vehicleId, onSuccess }: Vehi
         tipo_aquisicao: data.tipo_aquisicao || 'Próprio',
         valor_aquisicao: valorCompraNumerico,
         adquirido_de: data.adquirido_de || null,
-        id_empresa: (configData.empresa as any)?.id,
+        id_empresa: idEmpresa,
       };
 
       if (isEditing) {
@@ -760,7 +765,7 @@ export function VehicleDialog({ open, onOpenChange, vehicleId, onSuccess }: Vehi
       console.error('Error saving vehicle:', error);
       toast({
         title: 'Erro',
-        description: 'Falha ao salvar veículo',
+        description: mensagemErroBanco(error, 'Falha ao salvar veículo'),
         variant: 'destructive',
       });
     } finally {
@@ -1455,13 +1460,17 @@ export function VehicleDialog({ open, onOpenChange, vehicleId, onSuccess }: Vehi
             <AlertDialogTitle>Veículo já foi da loja</AlertDialogTitle>
             <AlertDialogDescription className="space-y-2">
               <p>
-                Esse veículo já foi cadastrado anteriormente e está marcado como <strong>Vendido</strong>.
+                Esse veículo já foi cadastrado anteriormente e possui um ciclo encerrado
+                {' '}(<strong>Vendido</strong> ou <strong>Fora de Estoque</strong>).
               </p>
               {veiculoVendidoParaCiclo && (
                 <p className="text-sm text-muted-foreground">
                   {veiculoVendidoParaCiclo.fabricante} {veiculoVendidoParaCiclo.modelo} - {veiculoVendidoParaCiclo.ano}
                   {veiculoVendidoParaCiclo.placa && ` • Placa: ${veiculoVendidoParaCiclo.placa}`}
                 </p>
+              )}
+              {veiculoVendidoParaCiclo && (
+                <p>Este será o ciclo <strong>{veiculoVendidoParaCiclo.total_ciclos + 1}</strong>.</p>
               )}
               <p className="font-medium mt-2">
                 Deseja iniciar um novo ciclo de vida para esse veículo?

@@ -1,5 +1,5 @@
 import { supabase } from '@/integrations/supabase/client';
-import { normalizePlaca } from './masks';
+import { normalizarPlacaBusca } from './ciclos';
 
 export interface VeiculoVendido {
   id: number;
@@ -16,31 +16,34 @@ export interface VeiculoVendido {
   id_empresa: string;
   renavan: number | null;
   chassi: string | null;
+  total_ciclos: number;
 }
 
 export async function validatePlacaDuplicada(
   placa: string,
   currentVehicleId?: number
 ): Promise<{ valid: boolean; message?: string }> {
-  if (!placa || placa.length < 7) {
+  const placaNormalizada = normalizarPlacaBusca(placa || '');
+  if (placaNormalizada.length < 7) {
     return { valid: true };
   }
 
-  const normalizedPlaca = normalizePlaca(placa);
-
-  const { data, error } = await supabase
-    .from('estoque')
-    .select('id, placa, status')
-    .eq('placa', normalizedPlaca)
-    .neq('status', 'Vendido');
+  const consulta = supabase
+    .from('vw_estoque_ciclos')
+    .select('id_estoque')
+    .eq('placa_normalizada', placaNormalizada)
+    .eq('ativo', true);
+  const { data, error } = await (currentVehicleId !== undefined
+    ? consulta.neq('id_estoque', currentVehicleId)
+    : consulta).limit(1);
 
   if (error) {
     console.error('Erro ao validar placa:', error);
     return { valid: true }; // Em caso de erro, deixa passar
   }
 
-  // Verifica se existe algum veículo (não vendido) com essa placa
-  const veiculoAtivo = data?.find(v => !currentVehicleId || v.id !== currentVehicleId);
+  // A view define quais status pertencem ao estoque ativo.
+  const veiculoAtivo = data?.[0];
   
   if (veiculoAtivo) {
     return {
@@ -52,7 +55,7 @@ export async function validatePlacaDuplicada(
   return { valid: true };
 }
 
-// Verifica se existe veículo VENDIDO com placa, renavan ou chassi
+// Consulta somente ciclos encerrados e aproveita o cadastro mais recente.
 export async function checkVeiculoVendidoParaCiclo(
   placa?: string,
   renavan?: string,
@@ -62,42 +65,53 @@ export async function checkVeiculoVendidoParaCiclo(
     return null;
   }
 
-  const normalizedPlaca = placa ? normalizePlaca(placa) : null;
-  const renavamNum = renavan ? parseInt(renavan.replace(/\D/g, '')) : null;
-  const chassiNorm = chassi ? chassi.toUpperCase().trim() : null;
+  const placaNormalizada = normalizarPlacaBusca(placa || '');
+  const renavamNumero = Number.parseInt((renavan || '').replace(/\D/g, ''), 10);
+  const chassiNormalizado = (chassi || '').toUpperCase().trim();
+  const campos = 'id, modelo, ano, fabricante, ano_fabricacao, motor, cambio, cor, categoria, tipo_veiculo, placa, id_empresa, renavan, chassi';
+  const consultaEncerrados = () => supabase.from('estoque')
+    .select(campos)
+    .in('status', ['Vendido', 'Fora de Estoque']);
+  const consultas = [];
 
-  // Buscar veículos vendidos que correspondam a qualquer um dos identificadores
-  let query = supabase
-    .from('estoque')
-    .select('id, modelo, ano, fabricante, ano_fabricacao, motor, cambio, cor, categoria, tipo_veiculo, placa, id_empresa, renavan, chassi')
-    .eq('status', 'Vendido');
-
-  const { data, error } = await query;
-
-  if (error) {
-    console.error('Erro ao verificar veículo vendido:', error);
-    return null;
+  if (placaNormalizada.length >= 7) {
+    const { data: ciclo, error: erroCiclo } = await supabase.from('vw_estoque_ciclos')
+      .select('id_estoque')
+      .eq('placa_normalizada', placaNormalizada)
+      .in('status', ['Vendido', 'Fora de Estoque'])
+      .order('id_estoque', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (erroCiclo) throw erroCiclo;
+    if (ciclo?.id_estoque !== null && ciclo?.id_estoque !== undefined) {
+      consultas.push(consultaEncerrados().eq('id', ciclo.id_estoque)
+        .order('id', { ascending: false }).limit(1).maybeSingle());
+    }
   }
-
-  if (!data || data.length === 0) {
-    return null;
+  if (Number.isFinite(renavamNumero)) {
+    consultas.push(consultaEncerrados().eq('renavan', renavamNumero)
+      .order('id', { ascending: false }).limit(1).maybeSingle());
   }
+  if (chassiNormalizado) {
+    // Escapa curingas para que a busca não corresponda a outros chassis.
+    const chassiLiteral = chassiNormalizado.replace(/[\\%_]/g, '\\$&');
+    consultas.push(consultaEncerrados().ilike('chassi', chassiLiteral)
+      .order('id', { ascending: false }).limit(1).maybeSingle());
+  }
+  const resultados = await Promise.all(consultas);
+  const erro = resultados.find(resultado => resultado.error)?.error;
+  if (erro) throw erro;
+  const veiculo = resultados.map(resultado => resultado.data)
+    .filter(candidato => candidato !== null)
+    .sort((primeiro, segundo) => segundo.id - primeiro.id)[0];
+  if (!veiculo) return null;
 
-  // Procurar match por placa, renavan ou chassi
-  const veiculoEncontrado = data.find(v => {
-    if (normalizedPlaca && v.placa && normalizePlaca(v.placa) === normalizedPlaca) {
-      return true;
-    }
-    if (renavamNum && v.renavan && v.renavan === renavamNum) {
-      return true;
-    }
-    if (chassiNorm && v.chassi && v.chassi.toUpperCase().trim() === chassiNorm) {
-      return true;
-    }
-    return false;
-  });
-
-  return veiculoEncontrado || null;
+  const { data: ciclo, error: erroTotal } = await supabase.from('vw_estoque_ciclos')
+    .select('total_ciclos')
+    .eq('id_estoque', veiculo.id)
+    .maybeSingle();
+  if (erroTotal) throw erroTotal;
+  return { ...veiculo, total_ciclos: ciclo?.total_ciclos ?? 1 };
 }
 
 export function validateAnoModelo(anoModelo: string, anoFabricacao: string): {
