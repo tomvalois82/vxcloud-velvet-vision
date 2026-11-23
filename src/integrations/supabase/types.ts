@@ -3035,6 +3035,14 @@ export type Database = {
       }
     }
     Functions: {
+      fn_compra_eh_ultimo_evento: {
+        Args: {
+          p_data_compra: string
+          p_id_compra: string
+          p_id_veiculo: number
+        }
+        Returns: boolean
+      }
       get_user_config_id: { Args: never; Returns: number }
       get_users_by_config: {
         Args: { p_config: number }
