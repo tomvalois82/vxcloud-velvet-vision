@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
@@ -58,9 +59,10 @@ import { CategoriaAutocomplete } from "./CategoriaAutocomplete";
 import { AnexosManager } from "./AnexosManager";
 import {
   filtrarVeiculosParaSelecao,
-  formatarVeiculoParaSelecao,
+  formatarCicloParaSelecao,
   type VeiculoResumo,
 } from "../utils/veiculo-selecao";
+import { buscarCiclosFinanceiro } from '../services/veiculos-ciclos-service';
 
 // Generate competencia options from 01/2019 to current month/year
 const gerarOpcoesCompetencia = (): { value: string; label: string }[] => {
@@ -270,12 +272,7 @@ export function MovimentoDialog({
           supabase.from("vx_fin_categoria").select("*").eq("ativo", true).order("categoria"),
           supabase.from("vx_forma_pagamento").select("*").eq("ativa", true).order("descricao"),
           supabase.from("vx_fin_cartao").select("id, descricao, final, id_forma_pagamento, ativo, dia_fechamento, dia_vencimento").eq("ativo", true).order("descricao"),
-          supabase
-            .from("estoque")
-            .select("id, fabricante, modelo, placa, ano, status")
-            .eq("id_empresa", empresaData.id)
-            .order("fabricante")
-            .order("modelo"),
+          buscarCiclosFinanceiro(empresaData.id),
           supabase.from("vx_pessoa").select("id, nome, cpf_cnpj").order("nome"),
         ]);
 
@@ -283,14 +280,13 @@ export function MovimentoDialog({
         if (formasPagamentoRes.error) throw formasPagamentoRes.error;
         if (cartoesRes.error) throw cartoesRes.error;
         if (categoriasRes.error) throw categoriasRes.error;
-        if (veiculosRes.error) throw veiculosRes.error;
         if (pessoasRes.error) throw pessoasRes.error;
 
         setContas((contasRes.data || []) as Conta[]);
         setCategorias(categoriasRes.data || []);
         setFormasPagamento(formasPagamentoRes.data || []);
         setCartoes((cartoesRes.data || []) as Cartao[]);
-        setVeiculos((veiculosRes.data || []) as VeiculoResumo[]);
+        setVeiculos(veiculosRes);
         setPessoas((pessoasRes.data || []) as Pessoa[]);
       } catch (error: unknown) {
         toast({
@@ -1382,12 +1378,15 @@ export function MovimentoDialog({
                         variant="outline"
                         role="combobox"
                         aria-expanded={veiculoPopoverOpen}
-                        className="w-full justify-between bg-background/50 border-border/50 font-normal"
+                        className="w-full h-auto min-h-10 justify-between bg-background/50 border-border/50 font-normal py-2 whitespace-normal"
                       >
-                        <span className="truncate text-left">
-                          {veiculoAtual
-                            ? formatarVeiculoParaSelecao(veiculoAtual)
-                            : "Selecione o veículo"}
+                        <span className="min-w-0 flex-1 text-left break-words">
+                          {veiculoAtual ? (
+                            <>
+                              <span className="block font-semibold">{formatarCicloParaSelecao(veiculoAtual).titulo}</span>
+                              <span className="block text-xs text-muted-foreground">{formatarCicloParaSelecao(veiculoAtual).descricao}</span>
+                            </>
+                          ) : "Selecione o veículo"}
                         </span>
                         <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                       </Button>
@@ -1412,7 +1411,7 @@ export function MovimentoDialog({
                             {veiculosFiltrados.map((veiculo) => (
                               <CommandItem
                                 key={veiculo.id}
-                                value={`${veiculo.id} ${formatarVeiculoParaSelecao(veiculo)}`}
+                                value={`${veiculo.id} ${formatarCicloParaSelecao(veiculo).titulo}`}
                                 onSelect={() => {
                                   setVeiculoSelecionado(veiculo.id.toString());
                                   setVeiculoPopoverOpen(false);
@@ -1427,9 +1426,11 @@ export function MovimentoDialog({
                                       : "opacity-0",
                                   )}
                                 />
-                                <span className="truncate">
-                                  {formatarVeiculoParaSelecao(veiculo)}
+                                <span className="min-w-0 flex-1 break-words">
+                                  <span className="block font-semibold">{formatarCicloParaSelecao(veiculo).titulo}</span>
+                                  <span className="block text-xs text-muted-foreground">{formatarCicloParaSelecao(veiculo).descricao}</span>
                                 </span>
+                                <Badge variant="outline" className="ml-2 shrink-0">{veiculo.status || 'Sem status'}</Badge>
                               </CommandItem>
                             ))}
                           </CommandGroup>
@@ -1437,6 +1438,16 @@ export function MovimentoDialog({
                       </Command>
                     </PopoverContent>
                   </Popover>
+                )}
+                {vincularVeiculo && veiculoAtual?.venda_fechada === true && (
+                  <p className="text-xs text-muted-foreground" role="status">
+                    Veículo já vendido: este título entra como custo pós-venda e é rateado entre os investidores deste ciclo.
+                  </p>
+                )}
+                {vincularVeiculo && (veiculoAtual?.total_ciclos ?? 0) > 1 && (
+                  <p className="text-xs text-muted-foreground" role="status">
+                    Este veículo passou mais de uma vez pela loja. Confira se o ciclo selecionado é o correto.
+                  </p>
                 )}
               </div>
 

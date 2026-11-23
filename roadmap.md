@@ -13,3 +13,10 @@
 - [x] Mostrar o próximo ciclo e tratar erros ao salvar o veículo.
 - [x] Executar testes (29 aprovados) e conferir o acesso ao cadastro no navegador.
 - [ ] Validar o aviso dentro do cadastro autenticado — bloqueado pela sessão externa indisponível; navegador redireciona para login.
+
+# Etapa 5 — Financeiro por ciclo
+
+- [x] Consultar todos os ciclos da empresa e ordenar por placa e prioridade do ciclo.
+- [x] Mostrar título, descrição, status e avisos no seletor e na seleção fechada, sem alterar id_venda.
+- [x] Testar busca normalizada e ordenação de múltiplos ciclos (32 testes aprovados); conferir acesso no navegador.
+- [ ] Validar seleção e avisos no financeiro autenticado — bloqueado pela sessão externa indisponível; pagar e receber redirecionam para login.
