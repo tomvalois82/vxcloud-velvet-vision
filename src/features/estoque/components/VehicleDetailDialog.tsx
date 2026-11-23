@@ -20,6 +20,7 @@ import { MovimentoDialog } from '@/features/financeiro/components/MovimentoDialo
 import { useToast } from '@/hooks/use-toast';
 import { deleteAnexosDoMovimento } from '@/features/financeiro/utils/anexosUtils';
 import { EstoqueAnexosManager } from './EstoqueAnexosManager';
+import { HistoricoVeiculo } from './historico-veiculo';
 interface VehicleCost {
   id: string;
   descricao: string;
@@ -63,6 +64,7 @@ interface VehicleDetailDialogProps {
   onOpenChange: (open: boolean) => void;
   vehicleId: number | undefined;
   onEdit: (id: number) => void;
+  onView: (id: number) => void;
 }
 function calculateTimeInStock(createdAt: string): string {
   const startDate = new Date(createdAt);
@@ -122,7 +124,8 @@ export function VehicleDetailDialog({
   open,
   onOpenChange,
   vehicleId,
-  onEdit
+  onEdit,
+  onView
 }: VehicleDetailDialogProps) {
   const [vehicle, setVehicle] = useState<VehicleDetail | null>(null);
   const [loading, setLoading] = useState(false);
@@ -133,7 +136,7 @@ export function VehicleDetailDialog({
   const [empresa, setEmpresa] = useState<Empresa | null>(null);
   const [dataVenda, setDataVenda] = useState<string | null>(null);
   const [movimentoDialogOpen, setMovimentoDialogOpen] = useState(false);
-  const [selectedMovimento, setSelectedMovimento] = useState<any>(null);
+  const [selectedMovimento, setSelectedMovimento] = useState<React.ComponentProps<typeof MovimentoDialog>['movimento']>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [costToDelete, setCostToDelete] = useState<VehicleCost | null>(null);
   const [deleting, setDeleting] = useState(false);
@@ -283,10 +286,10 @@ export function VehicleDetailDialog({
       if (error) throw error;
       setSelectedMovimento(data);
       setMovimentoDialogOpen(true);
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast({
         title: "Erro ao carregar custo",
-        description: error.message,
+        description: error instanceof Error ? error.message : 'Não foi possível carregar o custo.',
         variant: "destructive"
       });
     }
@@ -308,10 +311,10 @@ export function VehicleDetailDialog({
         description: "O custo foi removido com sucesso."
       });
       loadVehicleCosts();
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast({
         title: "Erro ao excluir custo",
-        description: error.message,
+        description: error instanceof Error ? error.message : 'Não foi possível excluir o custo.',
         variant: "destructive"
       });
     } finally {
@@ -462,6 +465,7 @@ export function VehicleDetailDialog({
               </div>
 
               {/* Costs Section */}
+              <HistoricoVeiculo idVeiculo={vehicle.id} onView={onView} />
               <Separator />
               <div>
                 <div className="flex items-center justify-between mb-3">

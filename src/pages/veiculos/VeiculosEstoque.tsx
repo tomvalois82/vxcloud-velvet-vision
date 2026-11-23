@@ -12,7 +12,8 @@ import { Badge } from '@/components/ui/badge';
 import { VehicleDialog } from '@/features/estoque/components/VehicleDialog';
 import { VehicleDetailDialog } from '@/features/estoque/components/VehicleDetailDialog';
 import { supabase } from '@/integrations/supabase/client';
-import { STATUS_ATIVOS } from '@/features/estoque/utils/ciclos';
+import { STATUS_ATIVOS, correspondeBuscaEstoque } from '@/features/estoque/utils/ciclos';
+import { buscarMetadadosCiclos } from '@/features/estoque/services/historico-ciclos-service';
 import { toast } from '@/hooks/use-toast';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -35,6 +36,8 @@ interface Vehicle {
   tipo_aquisicao: string;
   motor?: string;
   cambio?: string;
+  ciclo?: number | null;
+  total_ciclos?: number | null;
 }
 interface VehicleCosts {
   [vehicleId: number]: number;
@@ -70,6 +73,7 @@ function VehicleCard({
           <h3 className="text-lg font-semibold text-foreground">
             {vehicle.fabricante} {vehicle.modelo}
           </h3>
+          {(vehicle.total_ciclos ?? 0) > 1 && <Badge variant="outline">Ciclo {vehicle.ciclo ?? '—'}</Badge>}
           <div className="flex items-center justify-between text-sm text-muted-foreground">
             <span>Ano: {vehicle.ano}</span>
             {vehicle.km && <span>{vehicle.km} km</span>}
@@ -162,7 +166,12 @@ const VeiculosEstoque = () => {
       });
       if (error) throw error;
       const vehicleData = data || [];
-      setVehicles(vehicleData);
+      const metadados = await buscarMetadadosCiclos(vehicleData.map(veiculo => veiculo.id));
+      const ciclosPorId = new Map(metadados.map(ciclo => [ciclo.id_estoque, ciclo]));
+      setVehicles(vehicleData.map(veiculo => ({ ...veiculo,
+        ciclo: ciclosPorId.get(veiculo.id)?.ciclo,
+        total_ciclos: ciclosPorId.get(veiculo.id)?.total_ciclos,
+      })));
 
       // Carregar custos dos veículos
       if (vehicleData.length > 0) {
@@ -196,8 +205,7 @@ const VeiculosEstoque = () => {
   // Contagem por tipo de aquisição (antes do filtro de tipo)
   const tipoAquisicaoCounts = useMemo(() => {
     const baseFiltered = vehicles.filter(vehicle => {
-      const searchLower = searchTerm.toLowerCase();
-      const matchesSearch = vehicle.modelo?.toLowerCase().includes(searchLower) || vehicle.placa?.toLowerCase().includes(searchLower);
+      const matchesSearch = correspondeBuscaEstoque(vehicle, searchTerm);
       const matchesStatus = statusFilter === 'todos' || (vehicle.status || 'Em estoque') === statusFilter;
       return matchesSearch && matchesStatus;
     });
@@ -209,8 +217,7 @@ const VeiculosEstoque = () => {
   }, [vehicles, searchTerm, statusFilter]);
   const filteredVehicles = useMemo(() => {
     return vehicles.filter(vehicle => {
-      const searchLower = searchTerm.toLowerCase();
-      const matchesSearch = vehicle.modelo?.toLowerCase().includes(searchLower) || vehicle.placa?.toLowerCase().includes(searchLower);
+      const matchesSearch = correspondeBuscaEstoque(vehicle, searchTerm);
       const matchesStatus = statusFilter === 'todos' || (vehicle.status || 'Em estoque') === statusFilter;
       const matchesTipoAquisicao = tipoAquisicaoFilter.length === 0 || tipoAquisicaoFilter.some(tipo => {
         if (tipo === 'Consignado') {
@@ -426,7 +433,7 @@ const VeiculosEstoque = () => {
           </div>}
       </div>
 
-      <VehicleDetailDialog open={detailDialogOpen} onOpenChange={setDetailDialogOpen} vehicleId={selectedVehicleId} onEdit={handleEdit} />
+      <VehicleDetailDialog key={selectedVehicleId} open={detailDialogOpen} onOpenChange={setDetailDialogOpen} vehicleId={selectedVehicleId} onEdit={handleEdit} onView={handleView} />
 
       <VehicleDialog open={dialogOpen} onOpenChange={handleDialogClose} vehicleId={selectedVehicleId} onSuccess={loadVehicles} />
 

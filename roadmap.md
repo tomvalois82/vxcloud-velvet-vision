@@ -20,3 +20,10 @@
 - [x] Mostrar título, descrição, status e avisos no seletor e na seleção fechada, sem alterar id_venda.
 - [x] Testar busca normalizada e ordenação de múltiplos ciclos (32 testes aprovados); conferir acesso no navegador.
 - [ ] Validar seleção e avisos no financeiro autenticado — bloqueado pela sessão externa indisponível; pagar e receber redirecionam para login.
+
+# Etapa 6 — Histórico do veículo
+
+- [x] Listar ciclos da mesma placa no detalhe e abrir o ciclo escolhido sem sair do estoque.
+- [x] Normalizar busca por placa e identificar ciclos nos cards quando houver múltiplas passagens.
+- [x] Executar testes de busca e consultas do histórico e verificar o acesso ao estoque no navegador.
+- [ ] Validar abertura de ciclos dentro do detalhe autenticado — bloqueado pela sessão externa indisponível; estoque redireciona para login.
