@@ -72,6 +72,7 @@ interface StepAcertoProps {
   financeiras: Financeira[];
   categorias: CategoriaFinanceira[];
   addPayment: (payment: Omit<PaymentEntry, 'id'>) => void;
+  updatePayment: (id: string, payment: Omit<PaymentEntry, 'id'>) => void;
   removePayment: (id: string) => void;
   setFinanciamento: (financiamento: Omit<FinanciamentoEntry, 'id'> | null) => void;
   removeFinanciamento: () => void;
@@ -98,6 +99,7 @@ export function StepAcerto({
   financeiras,
   categorias,
   addPayment,
+  updatePayment,
   removePayment,
   setFinanciamento,
   removeFinanciamento,
@@ -107,6 +109,7 @@ export function StepAcerto({
   totals,
 }: StepAcertoProps) {
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [editingPayment, setEditingPayment] = useState<PaymentEntry | null>(null);
   const [financiamentoDialogOpen, setFinanciamentoDialogOpen] = useState(false);
   const [servicoProdutoDialogOpen, setServicoProdutoDialogOpen] = useState(false);
   const [editingServicoProduto, setEditingServicoProduto] = useState<ServicoProdutoEntry | null>(null);
@@ -143,6 +146,7 @@ export function StepAcerto({
   const [dataVencimentoInicial, setDataVencimentoInicial] = useState<Date>(new Date());
 
   const resetForm = () => {
+    setEditingPayment(null);
     setValor('');
     setIdFormaPagamento('');
     setIdConta('');
@@ -156,6 +160,33 @@ export function StepAcerto({
     setIntervaloDias('30');
     setValorParcela('');
     setDataInicioParcelamento(new Date());
+  };
+
+  const handleDialogOpenChange = (open: boolean) => {
+    setDialogOpen(open);
+    if (!open) resetForm();
+  };
+
+  const handleOpenNewPayment = () => {
+    resetForm();
+    setPaymentType('recebimento');
+    setDialogOpen(true);
+  };
+
+  const handleEditPayment = (payment: PaymentEntry) => {
+    setEditingPayment(payment);
+    setPaymentType(payment.valor < 0 ? 'pagamento' : 'recebimento');
+    setValor(maskCurrency(Math.abs(payment.valor)));
+    setIdFormaPagamento(payment.id_forma_pagamento);
+    setIdConta(payment.id_conta);
+    setNumero(payment.numero);
+    setDataLancamento(parseDateOnlyAsLocal(payment.data_lancamento));
+    setObservacao(payment.observacao || '');
+    setRecebido(Boolean(payment.data_pagamento));
+    setDataPagamento(payment.data_pagamento
+      ? parseDateOnlyAsLocal(payment.data_pagamento)
+      : parseDateOnlyAsLocal(payment.data_lancamento));
+    setDialogOpen(true);
   };
 
   const resetFinanciamentoForm = () => {
@@ -284,7 +315,7 @@ export function StepAcerto({
       return `${year}-${month}-${day}`;
     };
 
-    addPayment({
+    const paymentData: Omit<PaymentEntry, 'id'> = {
       id_forma_pagamento: idFormaPagamento,
       id_conta: idConta,
       valor: valorFinal,
@@ -295,11 +326,19 @@ export function StepAcerto({
       forma_descricao: forma?.descricao,
       conta_descricao: conta ? getContaDisplayName(conta) : undefined,
       tipo_lancamento: paymentType === 'pagamento' ? 'pagamento' : 'recebimento',
-    });
+    };
 
-    toast.success(paymentType === 'pagamento' 
-      ? 'Pagamento (saída) adicionado com sucesso' 
-      : 'Recebimento adicionado com sucesso'
+    if (editingPayment) {
+      updatePayment(editingPayment.id, paymentData);
+    } else {
+      addPayment(paymentData);
+    }
+
+    toast.success(editingPayment
+      ? 'Lançamento atualizado com sucesso'
+      : paymentType === 'pagamento'
+        ? 'Pagamento (saída) adicionado com sucesso'
+        : 'Recebimento adicionado com sucesso'
     );
     resetForm();
     setDialogOpen(false);
@@ -456,7 +495,7 @@ export function StepAcerto({
           <Button 
             variant="outline" 
             size="sm"
-            onClick={() => setDialogOpen(true)}
+            onClick={handleOpenNewPayment}
           >
             adicionar
           </Button>
@@ -515,8 +554,19 @@ export function StepAcerto({
                     <Button
                       variant="ghost"
                       size="icon"
+                      onClick={() => handleEditPayment(payment)}
+                      className="text-muted-foreground hover:text-foreground"
+                      aria-label={`Editar ${isPagamento ? 'pagamento' : 'recebimento'}`}
+                      title="Editar lançamento"
+                    >
+                      <Edit2 className="w-4 h-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
                       onClick={() => removePayment(payment.id)}
                       className="text-destructive hover:text-destructive"
+                      aria-label={`Excluir ${isPagamento ? 'pagamento' : 'recebimento'}`}
                     >
                       <Trash2 className="w-4 h-4" />
                     </Button>
@@ -745,12 +795,14 @@ export function StepAcerto({
       </div>
 
       {/* Add Payment Dialog */}
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+      <Dialog open={dialogOpen} onOpenChange={handleDialogOpenChange}>
         <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col overflow-hidden">
           <DialogHeader>
-            <DialogTitle>Adicionar Pagamento</DialogTitle>
+            <DialogTitle>{editingPayment ? 'Editar lançamento' : 'Adicionar Pagamento'}</DialogTitle>
             <DialogDescription>
-              Adicione recebimentos, parcelamentos ou pagamentos à venda
+              {editingPayment
+                ? 'Altere os dados do recebimento ou pagamento selecionado'
+                : 'Adicione recebimentos, parcelamentos ou pagamentos à venda'}
             </DialogDescription>
           </DialogHeader>
 
@@ -762,7 +814,7 @@ export function StepAcerto({
           <Tabs value={paymentType} onValueChange={(v) => setPaymentType(v as typeof paymentType)}>
             <TabsList className="grid grid-cols-3">
               <TabsTrigger value="recebimento">Recebimento</TabsTrigger>
-              <TabsTrigger value="parcelamento">Parcelamento</TabsTrigger>
+              <TabsTrigger value="parcelamento" disabled={Boolean(editingPayment)}>Parcelamento</TabsTrigger>
               <TabsTrigger value="pagamento">Pagamento</TabsTrigger>
             </TabsList>
 
@@ -1084,7 +1136,7 @@ export function StepAcerto({
           </div>
 
           <DialogFooter>
-            <Button variant="outline" onClick={() => setDialogOpen(false)}>
+            <Button variant="outline" onClick={() => handleDialogOpenChange(false)}>
               Cancelar
             </Button>
             {paymentType === 'parcelamento' ? (
@@ -1101,7 +1153,7 @@ export function StepAcerto({
                 disabled={!valor || !idFormaPagamento || !idConta}
                 className="bg-accent hover:bg-accent/90"
               >
-                Adicionar
+                {editingPayment ? 'Salvar alterações' : 'Adicionar'}
               </Button>
             )}
           </DialogFooter>

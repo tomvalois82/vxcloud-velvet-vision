@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { buscarVeiculosDisponiveisTroca } from '../services/veiculos-disponiveis';
+import { atualizarPagamento } from '../utils/pagamentos';
 import { toast } from '@/hooks/use-toast';
 import { mensagemErroBanco } from '@/lib/dbErrors';
 import type { 
@@ -397,6 +398,13 @@ export function useEditSaleData(saleId: string | null) {
     }));
   }, []);
 
+  const updatePayment = useCallback((id: string, payment: Omit<PaymentEntry, 'id'>) => {
+    setSaleData(prev => ({
+      ...prev,
+      pagamentos: atualizarPagamento(prev.pagamentos, id, payment),
+    }));
+  }, []);
+
   const removePayment = useCallback((id: string) => {
     setSaleData(prev => ({
       ...prev,
@@ -685,6 +693,7 @@ export function useEditSaleData(saleId: string | null) {
     removeTradeIn,
     updateTradeInValue,
     addPayment,
+    updatePayment,
     removePayment,
     setFinanciamento,
     removeFinanciamento,

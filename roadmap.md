@@ -1,3 +1,9 @@
+# Edição de acertos da venda
+
+- [x] Permitir editar recebimentos e pagamentos na nova venda e na edição da venda.
+- [x] Testar atualização sem duplicação e troca entre entrada e saída; 49 testes aprovados, tipos e build sem erros.
+- [ ] Validar os dois fluxos na tela autenticada — bloqueado pela sessão externa indisponível; navegador redireciona para login.
+
 # Etapa 3 — Compras
 
 - [x] Selecionar veículos sem venda e sem compra de outro ciclo, preservando a compra em edição.

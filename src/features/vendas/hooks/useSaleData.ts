@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { mensagemErroBanco } from '@/lib/dbErrors';
 import { buscarVeiculosDisponiveisTroca } from '../services/veiculos-disponiveis';
+import { atualizarPagamento } from '../utils/pagamentos';
 import type { 
   SaleData, 
   SaleVehicle, 
@@ -206,6 +207,13 @@ export function useSaleData(vehicleId: number | null) {
     setSaleData(prev => ({
       ...prev,
       pagamentos: [...prev.pagamentos, newPayment],
+    }));
+  }, []);
+
+  const updatePayment = useCallback((id: string, payment: Omit<PaymentEntry, 'id'>) => {
+    setSaleData(prev => ({
+      ...prev,
+      pagamentos: atualizarPagamento(prev.pagamentos, id, payment),
     }));
   }, []);
 
@@ -488,6 +496,7 @@ export function useSaleData(vehicleId: number | null) {
     removeTradeIn,
     updateTradeInValue,
     addPayment,
+    updatePayment,
     removePayment,
     setFinanciamento,
     removeFinanciamento,
