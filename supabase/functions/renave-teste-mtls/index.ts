@@ -32,10 +32,23 @@ const TIMEOUT_MS = 15000;
 
 type Etapa = Record<string, unknown> & { nome: string; ok: boolean; ms: number };
 
+// Limite rígido por etapa: mesmo que a chamada ignore o próprio timeout, a etapa termina.
+const LIMITE_ETAPA_MS = 18000;
+
 async function etapa(nome: string, fn: () => Promise<Record<string, unknown>>): Promise<Etapa> {
+  const r = await etapaInterna(nome, fn);
+  console.log("RENAVE_TESTE_MTLS_ETAPA " + JSON.stringify(r)); // grava já, caso a função seja derrubada depois
+  return r;
+}
+
+async function etapaInterna(nome: string, fn: () => Promise<Record<string, unknown>>): Promise<Etapa> {
   const t0 = performance.now();
+  let timer: number | undefined;
   try {
-    const r = await fn();
+    const limite = new Promise<never>((_, reject) => {
+      timer = setTimeout(() => reject(new Error(`travou: sem resposta em ${LIMITE_ETAPA_MS}ms (limite rígido)`)), LIMITE_ETAPA_MS);
+    });
+    const r = await Promise.race([fn(), limite]);
     return { nome, ok: true, ms: Math.round(performance.now() - t0), ...r };
   } catch (e) {
     const err = e as Error & { code?: string; cause?: unknown };
@@ -48,6 +61,8 @@ async function etapa(nome: string, fn: () => Promise<Record<string, unknown>>): 
       codigo: err?.code,
       causa: err?.cause ? String((err.cause as Error)?.message ?? err.cause) : undefined,
     };
+  } finally {
+    clearTimeout(timer);
   }
 }
 
@@ -189,15 +204,26 @@ Deno.serve(async (req) => {
     return { titular: pem.titular, validade: pem.validade, certificadosNoPfx: pem.certificadosNoPfx };
   }));
 
+  // Ordem: primeiro as chamadas simples (sem certificado), depois as que podem travar.
+
+  // 5. Homologação sem certificado: esperado 200 com o "Estabelecimento padrão de teste" (mock do Serpro).
+  etapas.push(await etapa("5_renave_hom_sem_certificado_esperado_200", async () => await fetchComTimeout(RENAVE_HOM)));
+
+  // 7. Produção sem certificado: esperado 401.
+  etapas.push(await etapa("7_renave_prod_fetch_sem_certificado", async () => await fetchComTimeout(RENAVE_PROD)));
+
+  for (const alvo of ALVOS_ECO_MTLS) {
+    // 2. Sem certificado (controle): esperado 403
+    etapas.push(await etapa(`2_fetch_sem_certificado ${alvo}`, async () => {
+      const r = await fetchComTimeout(alvo);
+      return { ...r, certificadoChegou: certificadoChegou(r.corpo) };
+    }));
+  }
+
   if (pem) {
     const { certPem, keyPem } = pem;
 
     for (const alvo of ALVOS_ECO_MTLS) {
-      // 2. Sem certificado (controle)
-      etapas.push(await etapa(`2_fetch_sem_certificado ${alvo}`, async () => {
-        const r = await fetchComTimeout(alvo);
-        return { ...r, certificadoChegou: certificadoChegou(r.corpo) };
-      }));
 
       // 3. Deno.createHttpClient com certificado
       etapas.push(await etapa(`3_deno_createHttpClient_com_certificado ${alvo}`, async () => {
@@ -229,12 +255,6 @@ Deno.serve(async (req) => {
       await nodeGet(RENAVE_HOM, { cert: certPem, key: keyPem })
     ));
   }
-
-  // 5. Homologação sem certificado: esperado 200 com o "Estabelecimento padrão de teste" (mock do Serpro).
-  etapas.push(await etapa("5_renave_hom_sem_certificado_esperado_200", async () => await fetchComTimeout(RENAVE_HOM)));
-
-  // 7. Produção sem certificado: esperado 401.
-  etapas.push(await etapa("7_renave_prod_fetch_sem_certificado", async () => await fetchComTimeout(RENAVE_PROD)));
 
   const passou = (prefixo: string) =>
     etapas.some((e) => e.nome.startsWith(prefixo) && e.ok && e.certificadoChegou === true);
