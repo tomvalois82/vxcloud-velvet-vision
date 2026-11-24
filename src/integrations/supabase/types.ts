@@ -1541,6 +1541,71 @@ export type Database = {
           },
         ]
       }
+      renave_certificado: {
+        Row: {
+          ativo: boolean
+          cnpj: string
+          desativado_em: string | null
+          desativado_por: string | null
+          emissor: string | null
+          enviado_em: string
+          enviado_por: string | null
+          enviado_por_nome: string | null
+          id: string
+          id_empresa: string
+          numero_serie: string
+          titular: string | null
+          valido_ate: string
+          valido_de: string
+          vault_pfx_id: string | null
+          vault_senha_id: string | null
+        }
+        Insert: {
+          ativo?: boolean
+          cnpj: string
+          desativado_em?: string | null
+          desativado_por?: string | null
+          emissor?: string | null
+          enviado_em?: string
+          enviado_por?: string | null
+          enviado_por_nome?: string | null
+          id?: string
+          id_empresa: string
+          numero_serie: string
+          titular?: string | null
+          valido_ate: string
+          valido_de: string
+          vault_pfx_id?: string | null
+          vault_senha_id?: string | null
+        }
+        Update: {
+          ativo?: boolean
+          cnpj?: string
+          desativado_em?: string | null
+          desativado_por?: string | null
+          emissor?: string | null
+          enviado_em?: string
+          enviado_por?: string | null
+          enviado_por_nome?: string | null
+          id?: string
+          id_empresa?: string
+          numero_serie?: string
+          titular?: string | null
+          valido_ate?: string
+          valido_de?: string
+          vault_pfx_id?: string | null
+          vault_senha_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "renave_certificado_id_empresa_fkey"
+            columns: ["id_empresa"]
+            isOneToOne: false
+            referencedRelation: "empresa"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       renave_documento: {
         Row: {
           created_at: string
@@ -3808,6 +3873,36 @@ export type Database = {
       fn_doc_valido: { Args: { p: string }; Returns: boolean }
       fn_empresa_usuario: { Args: never; Returns: string }
       fn_renavam_normalizado: { Args: { p: string }; Returns: string }
+      fn_renave_certificado_obter: {
+        Args: { p_id_empresa: string }
+        Returns: {
+          cnpj: string
+          id_certificado: string
+          pfx_base64: string
+          senha: string
+          valido_ate: string
+        }[]
+      }
+      fn_renave_certificado_remover: {
+        Args: { p_id_empresa: string; p_por: string }
+        Returns: boolean
+      }
+      fn_renave_certificado_salvar: {
+        Args: {
+          p_cnpj: string
+          p_emissor: string
+          p_enviado_por: string
+          p_enviado_por_nome: string
+          p_id_empresa: string
+          p_numero_serie: string
+          p_pfx_base64: string
+          p_senha: string
+          p_titular: string
+          p_valido_ate: string
+          p_valido_de: string
+        }
+        Returns: string
+      }
       fn_renave_etapa: {
         Args: {
           p_assinatura_em: string
@@ -3823,6 +3918,7 @@ export type Database = {
         Args: { p_id_estoque: number; p_motivo?: string }
         Returns: string
       }
+      fn_renave_pode_gerenciar_certificado: { Args: never; Returns: boolean }
       get_user_config_id: { Args: never; Returns: number }
       get_users_by_config: {
         Args: { p_config: number }
