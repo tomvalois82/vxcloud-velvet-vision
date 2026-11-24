@@ -128,8 +128,6 @@ const Empresa = () => {
           renave_habilitado: empresa.renave_habilitado,
           renave_ambiente: empresa.renave_ambiente,
           renave_email: empresa.renave_email?.trim() || null,
-          renave_cnpj_certificado: empresa.renave_cnpj_certificado || null,
-          renave_certificado_validade: empresa.renave_certificado_validade || null,
         })
         .eq('id', empresa.id);
 
