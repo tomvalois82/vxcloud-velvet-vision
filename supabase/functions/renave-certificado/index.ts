@@ -193,7 +193,11 @@ async function testar(admin: any, idEmpresa: string, idUsuario: string) {
       usou_certificado: t.usouCertificado,
       http_status: r.status,
       ok: r.status === 200,
-      mensagem: r.status === 200 ? `Conectado como ${j?.nome ?? "?"} (CNPJ ${cnpjRetornado ?? "?"})` : mensagemStatusRenave(r),
+      mensagem: r.status === 200
+        ? `Conectado como ${j?.nome ?? "?"} (CNPJ ${cnpjRetornado ?? "?"})`
+        : r.status === 401 && t.usouCertificado
+        ? `O certificado foi aceito na conexão segura, mas o RENAVE não reconhece este estabelecimento em ${ambiente === "producao" ? "produção" : "homologação"}. Falta cadastrar o certificado no Credencia (Senatran) para este ambiente.`
+        : mensagemStatusRenave(r),
       estabelecimento: r.status === 200 ? { cnpj: cnpjRetornado, nome: j?.nome ?? null } : null,
       cnpj_confere: r.status === 200 && t.usouCertificado ? cnpjRetornado === cnpjEmpresa : null,
       duracao_ms: r.duracaoMs,
