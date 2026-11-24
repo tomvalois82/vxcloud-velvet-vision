@@ -7,7 +7,10 @@ export const VEHICLE_FIELDS = 'id, modelo, fabricante, ano, valor, km, cor, foto
 export async function buscarVeiculosCompra(idCompra?: string | null): Promise<PurchaseVehicle[]> {
   const consulta = supabase.from('vw_estoque_ciclos')
     .select('id_estoque, id_venda, id_compra')
-    .is('id_venda', null);
+    .is('id_venda', null)
+    // Ciclo recebido em troca já entrou no estoque pela venda; vincular uma compra
+    // a ele geraria custo e financeiro em dobro no mesmo ciclo.
+    .is('id_venda_troca', null);
   const { data: ciclos, error: erroCiclos } = await (idCompra
     ? consulta.or(`id_compra.is.null,id_compra.eq.${idCompra}`)
     : consulta.is('id_compra', null));

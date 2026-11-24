@@ -26,19 +26,27 @@ test('histórico aparece somente quando total de ciclos é maior que um', async 
 });
 test('histórico usa a mesma empresa e placa e ordena ciclos do mais recente para o mais antigo', async () => {
   const ciclos = [
-    { id_estoque: 42, ciclo: 2, total_ciclos: 2, descricao_ciclo: 'Ciclo atual', status: 'Em estoque' },
-    { id_estoque: 10, ciclo: 1, total_ciclos: 2, descricao_ciclo: 'Ciclo encerrado', status: 'Vendido' },
+    { id_estoque: 42, ciclo: 2, total_ciclos: 2, descricao_ciclo: 'Ciclo atual', status: 'Em estoque', origem: 'Troca' },
+    { id_estoque: 10, ciclo: 1, total_ciclos: 2, descricao_ciclo: 'Ciclo encerrado', status: 'Vendido', origem: 'Compra' },
   ];
   respostas.push({ placa_normalizada: 'PDB2J73', id_empresa: 'empresa', total_ciclos: 2 }, ciclos);
   expect(await buscarHistoricoVeiculo(42)).toEqual(ciclos);
   expect(chamadas).toContainEqual({ metodo: 'eq', argumentos: ['placa_normalizada', 'PDB2J73'] });
   expect(chamadas).toContainEqual({ metodo: 'eq', argumentos: ['id_empresa', 'empresa'] });
   expect(chamadas).toContainEqual({ metodo: 'order', argumentos: ['ciclo', { ascending: false }] });
+  expect(chamadas).toContainEqual({
+    metodo: 'select',
+    argumentos: ['id_estoque, ciclo, total_ciclos, descricao_ciclo, status, origem'],
+  });
 });
 test('metadados consultam apenas os IDs carregados', async () => {
   expect(await buscarMetadadosCiclos([])).toEqual([]);
   expect(chamadas).toHaveLength(0);
-  respostas.push([{ id_estoque: 42, ciclo: 2, total_ciclos: 2 }]);
+  respostas.push([{ id_estoque: 42, ciclo: 2, total_ciclos: 2, origem: 'Cadastro' }]);
   expect((await buscarMetadadosCiclos([42])).length).toBe(1);
   expect(chamadas).toContainEqual({ metodo: 'in', argumentos: ['id_estoque', [42]] });
+  expect(chamadas).toContainEqual({
+    metodo: 'select',
+    argumentos: ['id_estoque, ciclo, total_ciclos, origem'],
+  });
 });

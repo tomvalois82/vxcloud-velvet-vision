@@ -14,6 +14,7 @@ import { VehicleDetailDialog } from '@/features/estoque/components/VehicleDetail
 import { supabase } from '@/integrations/supabase/client';
 import { STATUS_ATIVOS, correspondeBuscaEstoque } from '@/features/estoque/utils/ciclos';
 import { buscarMetadadosCiclos } from '@/features/estoque/services/historico-ciclos-service';
+import { OrigemCicloBadge } from '@/features/estoque/components/origem-ciclo-badge';
 import { toast } from '@/hooks/use-toast';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -38,6 +39,7 @@ interface Vehicle {
   cambio?: string;
   ciclo?: number | null;
   total_ciclos?: number | null;
+  origem?: string | null;
 }
 interface VehicleCosts {
   [vehicleId: number]: number;
@@ -73,7 +75,10 @@ function VehicleCard({
           <h3 className="text-lg font-semibold text-foreground">
             {vehicle.fabricante} {vehicle.modelo}
           </h3>
-          {(vehicle.total_ciclos ?? 0) > 1 && <Badge variant="outline">Ciclo {vehicle.ciclo ?? '—'}</Badge>}
+          {((vehicle.total_ciclos ?? 0) > 1 || vehicle.origem) && <div className="flex items-center gap-1">
+              {(vehicle.total_ciclos ?? 0) > 1 && <Badge variant="outline">Ciclo {vehicle.ciclo ?? '—'}</Badge>}
+              <OrigemCicloBadge origem={vehicle.origem} />
+            </div>}
           <div className="flex items-center justify-between text-sm text-muted-foreground">
             <span>Ano: {vehicle.ano}</span>
             {vehicle.km && <span>{vehicle.km} km</span>}
@@ -171,6 +176,7 @@ const VeiculosEstoque = () => {
       setVehicles(vehicleData.map(veiculo => ({ ...veiculo,
         ciclo: ciclosPorId.get(veiculo.id)?.ciclo,
         total_ciclos: ciclosPorId.get(veiculo.id)?.total_ciclos,
+        origem: ciclosPorId.get(veiculo.id)?.origem,
       })));
 
       // Carregar custos dos veículos

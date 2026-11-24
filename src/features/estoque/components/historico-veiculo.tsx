@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { buscarHistoricoVeiculo, type CicloHistorico } from '../services/historico-ciclos-service';
+import { OrigemCicloBadge } from './origem-ciclo-badge';
 
 export function HistoricoVeiculo({ idVeiculo, onView }: { idVeiculo: number; onView: (id: number) => void }) {
   const [ciclos, setCiclos] = useState<CicloHistorico[]>([]);
@@ -34,7 +35,10 @@ export function HistoricoVeiculo({ idVeiculo, onView }: { idVeiculo: number; onV
               <span className="block font-semibold">Ciclo {ciclo.ciclo ?? '—'}{ciclo.id_estoque === idVeiculo ? ' · Selecionado' : ''}</span>
               <span className="block text-xs text-muted-foreground">{ciclo.descricao_ciclo || '—'}</span>
             </span>
-            <Badge variant="outline" className="max-w-28 shrink-0 whitespace-normal">{ciclo.status || 'Sem status'}</Badge>
+            <span className="flex shrink-0 flex-col items-end gap-1">
+              <Badge variant="outline" className="max-w-28 whitespace-normal">{ciclo.status || 'Sem status'}</Badge>
+              <OrigemCicloBadge origem={ciclo.origem} />
+            </span>
           </Button>
         ))}
       </div>
