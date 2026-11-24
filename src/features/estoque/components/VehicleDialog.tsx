@@ -211,6 +211,7 @@ export function VehicleDialog({ open, onOpenChange, vehicleId, onSuccess }: Vehi
 
   // Atualizar anos de fabricação quando ano modelo mudar
   const handleAnoModeloChange = (ano: string) => {
+    if (!ano) return;
     form.setValue('ano', ano);
     const anoNum = parseInt(ano);
     if (!isNaN(anoNum)) {
@@ -221,6 +222,8 @@ export function VehicleDialog({ open, onOpenChange, vehicleId, onSuccess }: Vehi
   };
 
   const handleMarcaChange = async (marcaNome: string) => {
+    // O Select do Radix pode disparar valor vazio ao resetar o formulário; ignorar para não apagar o fabricante
+    if (!marcaNome) return;
     form.setValue('fabricante', marcaNome);
     const marca = marcasFipe.find((m) => m.nome === marcaNome);
     if (marca) {
@@ -945,11 +948,17 @@ export function VehicleDialog({ open, onOpenChange, vehicleId, onSuccess }: Vehi
                                   <span className="ml-2">Carregando...</span>
                                 </div>
                               ) : (
-                                marcasFipe.map((marca) => (
-                                  <SelectItem key={marca.codigo} value={marca.nome}>
-                                    {marca.nome}
-                                  </SelectItem>
-                                ))
+                                <>
+                                  {/* Garante que o fabricante cadastrado apareça mesmo se não constar na lista FIPE */}
+                                  {field.value && !marcasFipe.some((m) => m.nome === field.value) && (
+                                    <SelectItem value={field.value}>{field.value}</SelectItem>
+                                  )}
+                                  {marcasFipe.map((marca) => (
+                                    <SelectItem key={marca.codigo} value={marca.nome}>
+                                      {marca.nome}
+                                    </SelectItem>
+                                  ))}
+                                </>
                               )}
                             </SelectContent>
                           </Select>
@@ -1014,8 +1023,10 @@ export function VehicleDialog({ open, onOpenChange, vehicleId, onSuccess }: Vehi
                           <FormLabel>Ano Fabricação *</FormLabel>
                           <Select
                             value={field.value}
-                            onValueChange={field.onChange}
-                            disabled={anosFabricacao.length === 0}
+                            onValueChange={(valor) => {
+                              if (valor) field.onChange(valor);
+                            }}
+                            disabled={anosFabricacao.length === 0 && !field.value}
                           >
                             <FormControl>
                               <SelectTrigger>
@@ -1023,6 +1034,9 @@ export function VehicleDialog({ open, onOpenChange, vehicleId, onSuccess }: Vehi
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
+                              {field.value && !anosFabricacao.includes(field.value) && (
+                                <SelectItem value={field.value}>{field.value}</SelectItem>
+                              )}
                               {anosFabricacao.map((ano) => (
                                 <SelectItem key={ano} value={ano}>
                                   {ano}
