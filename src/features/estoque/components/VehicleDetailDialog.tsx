@@ -1,3 +1,4 @@
+import { calcularMargemVeiculo } from '@/features/estoque/utils/margem';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { differenceInDays, differenceInMonths, format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -150,9 +151,14 @@ export function VehicleDetailDialog({
   const {
     custos,
     valorVenda,
-    margem,
     loading: financialsLoading
   } = useVehicleFinancials(vehicleId, vehicle?.valor_aquisicao || null);
+  const margemCalculada = calcularMargemVeiculo({
+    valorVenda,
+    valorAnunciado: vehicle?.valor ? Number(vehicle.valor) : null,
+    valorAquisicao: vehicle?.valor_aquisicao ?? null,
+    custos
+  });
   const handlePrint = useReactToPrint({
     contentRef: printRef,
     documentTitle: `Relatório - ${vehicle?.fabricante || ''} ${vehicle?.modelo || ''}`
@@ -414,11 +420,11 @@ export function VehicleDetailDialog({
                 <div className="glass rounded-lg p-4">
                   <div className="flex items-center gap-2 mb-1">
                     <TrendingUp className="w-3 h-3 text-muted-foreground" />
-                    <p className="text-xs text-muted-foreground">Margem</p>
+                    <p className="text-xs text-muted-foreground">{margemCalculada?.prevista ? 'Margem prevista' : 'Margem'}</p>
                   </div>
-                  {financialsLoading ? <Skeleton className="h-7 w-24" /> : margem !== null && valorVenda ? <p className={`text-xl font-bold ${margem >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                      {maskCurrency(margem)} / {(margem / valorVenda * 100).toFixed(0)}%
-                    </p> : <p className="text-sm text-muted-foreground italic">Sem venda</p>}
+                  {financialsLoading ? <Skeleton className="h-7 w-24" /> : margemCalculada ? <p className={`text-xl font-bold ${margemCalculada.valor >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                      {maskCurrency(margemCalculada.valor)} / {margemCalculada.percentual.toFixed(0)}%
+                    </p> : <p className="text-sm text-muted-foreground italic">Sem valor de venda</p>}
                 </div>
               </div>
 
