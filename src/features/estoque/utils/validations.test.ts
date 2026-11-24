@@ -71,10 +71,10 @@ test('renavam e chassi são filtrados no servidor e o mais recente prevalece', a
   respondeu({ id: 20 });
   respondeu({ id: 30 });
   respondeu({ total_ciclos: 2 });
-  const veiculo = await checkVeiculoVendidoParaCiclo(undefined, '123.456', ' abc123 ');
+  const veiculo = await checkVeiculoVendidoParaCiclo(undefined, '123.456.789', ' abc123 ');
   expect(veiculo?.id).toBe(30);
   expect(veiculo?.total_ciclos).toBe(2);
-  verificou('estoque', 'eq', 'renavan', 123456);
+  verificou('estoque', 'eq', 'renavam', '00123456789');
   verificou('estoque', 'ilike', 'chassi', 'ABC123');
   verificou('estoque', 'in', 'status', ['Vendido', 'Fora de Estoque']);
   verificou('estoque', 'order', 'id', { ascending: false });

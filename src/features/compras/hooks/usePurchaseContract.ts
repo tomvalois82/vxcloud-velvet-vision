@@ -58,6 +58,7 @@ export interface PurchaseContractData {
     placa: string | null;
     chassi: string | null;
     renavan: number | null;
+    renavam: string | null;
     cor: string | null;
     km: string | null;
     motor: string | null;
@@ -105,7 +106,7 @@ export function usePurchaseContract() {
         const { data: veiculoData } = await supabase
           .from('estoque')
           .select(
-            'id, modelo, fabricante, ano, ano_fabricacao, placa, chassi, renavan, cor, km, motor, valor'
+            'id, modelo, fabricante, ano, ano_fabricacao, placa, chassi, renavan, renavam, cor, km, motor, valor'
           )
           .eq('id', compraData.id_veiculo_comprado)
           .maybeSingle();

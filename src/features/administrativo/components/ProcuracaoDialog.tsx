@@ -32,6 +32,7 @@ interface Veiculo {
   id: number;
   placa?: string | null;
   renavan?: number | null;
+  renavam?: string | null;
   fabricante?: string | null;
   modelo?: string | null;
   chassi?: string | null;
@@ -78,7 +79,7 @@ export function ProcuracaoDialog({ open, onOpenChange, outorganteIdInicial, veic
     const [pessoasRes, despachantesRes, veiculosRes] = await Promise.all([
       supabase.from("vx_pessoa").select("id, nome, rg, cpf_cnpj, logradouro, numero, complemento, bairro, municipio, estado, cep"),
       supabase.from("vx_pessoa").select("id, nome, rg, cpf_cnpj, logradouro, numero, complemento, bairro, municipio, estado, cep").eq("eh_despachante", true),
-      supabase.from("estoque").select("id, placa, renavan, fabricante, modelo, chassi"),
+      supabase.from("estoque").select("id, placa, renavan, renavam, fabricante, modelo, chassi"),
     ]);
     if (pessoasRes.data) setPessoas(pessoasRes.data);
     if (despachantesRes.data) setDespachantes(despachantesRes.data);

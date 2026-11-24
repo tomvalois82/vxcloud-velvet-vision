@@ -13,7 +13,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { supabase } from '@/integrations/supabase/client';
 import { useVehicleMainPhoto } from '@/features/estoque/hooks/useVehicleMainPhoto';
 import { useVehicleFinancials } from '@/features/estoque/hooks/useVehicleFinancials';
-import { maskCurrency, maskKm } from '@/features/estoque/utils/masks';
+import { maskCurrency, maskKm, exibirRenavam } from '@/features/estoque/utils/masks';
 import { PhotoCarousel } from './PhotoCarousel';
 import { StorageManager, PhotoMetadata } from '@/features/estoque/utils/storageManager';
 import { VehicleReportPrint } from './VehicleReportPrint';
@@ -47,6 +47,7 @@ interface VehicleDetail {
   fotos: string[] | null;
   placa: string | null;
   renavan: number | null;
+  renavam: string | null;
   chassi: string | null;
   motor: string | null;
   cambio: string | null;
@@ -441,11 +442,11 @@ export function VehicleDetailDialog({
                   description: 'Placa copiada para a área de transferência.'
                 });
               }} />
-                  <DetailRow icon={Hash} label="Renavan" value={vehicle.renavan?.toString()} copyable onCopy={v => {
+                  <DetailRow icon={Hash} label="RENAVAM" value={exibirRenavam(vehicle.renavam, vehicle.renavan) || undefined} copyable onCopy={v => {
                 navigator.clipboard.writeText(v);
                 toast({
                   title: 'Copiado!',
-                  description: 'Renavan copiado para a área de transferência.'
+                  description: 'RENAVAM copiado para a área de transferência.'
                 });
               }} />
                   <DetailRow icon={FileText} label="Chassi" value={vehicle.chassi} copyable onCopy={v => {

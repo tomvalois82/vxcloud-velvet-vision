@@ -1,4 +1,5 @@
 import { useState, useRef } from 'react';
+import { RenaveBotao } from '@/features/renave/components/RenaveBotao';
 import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -430,6 +431,7 @@ const ComprasList = () => {
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-2">
+                        <RenaveBotao idEstoque={compra.id_veiculo_comprado} variante="icone" />
                         <Tooltip>
                           <TooltipTrigger asChild>
                             <Button

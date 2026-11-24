@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { RenaveBotao } from '@/features/renave/components/RenaveBotao';
 import { Plus, Search, Car, Trash2, ArrowLeftRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -86,6 +87,7 @@ function TradeInCard({
                   {tradeIn.vehicle.ano} {tradeIn.vehicle.placa && `• ${tradeIn.vehicle.placa}`}
                 </p>
               </div>
+              <RenaveBotao idEstoque={tradeIn.vehicle.id} variante="icone" />
               <Button
                 variant="ghost"
                 size="icon"

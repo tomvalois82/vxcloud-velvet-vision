@@ -1,5 +1,6 @@
 import { supabase } from '@/integrations/supabase/client';
 import { normalizarPlacaBusca } from './ciclos';
+import { normalizarRenavam } from './masks';
 
 export interface VeiculoVendido {
   id: number;
@@ -15,6 +16,7 @@ export interface VeiculoVendido {
   placa: string | null;
   id_empresa: string;
   renavan: number | null;
+  renavam: string | null;
   chassi: string | null;
   total_ciclos: number;
 }
@@ -66,9 +68,9 @@ export async function checkVeiculoVendidoParaCiclo(
   }
 
   const placaNormalizada = normalizarPlacaBusca(placa || '');
-  const renavamNumero = Number.parseInt((renavan || '').replace(/\D/g, ''), 10);
+  const renavamNormalizado = normalizarRenavam(renavan || '');
   const chassiNormalizado = (chassi || '').toUpperCase().trim();
-  const campos = 'id, modelo, ano, fabricante, ano_fabricacao, motor, cambio, cor, categoria, tipo_veiculo, placa, id_empresa, renavan, chassi';
+  const campos = 'id, modelo, ano, fabricante, ano_fabricacao, motor, cambio, cor, categoria, tipo_veiculo, placa, id_empresa, renavan, renavam, chassi';
   const consultaEncerrados = () => supabase.from('estoque')
     .select(campos)
     .in('status', ['Vendido', 'Fora de Estoque']);
@@ -88,8 +90,8 @@ export async function checkVeiculoVendidoParaCiclo(
         .order('id', { ascending: false }).limit(1).maybeSingle());
     }
   }
-  if (Number.isFinite(renavamNumero)) {
-    consultas.push(consultaEncerrados().eq('renavan', renavamNumero)
+  if (renavamNormalizado) {
+    consultas.push(consultaEncerrados().eq('renavam', renavamNormalizado)
       .order('id', { ascending: false }).limit(1).maybeSingle());
   }
   if (chassiNormalizado) {

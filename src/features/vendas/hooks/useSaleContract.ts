@@ -59,6 +59,7 @@ export interface ContractData {
     placa: string | null;
     chassi: string | null;
     renavan: number | null;
+    renavam: string | null;
     cor: string | null;
     km: string | null;
     motor: string | null;
@@ -78,6 +79,7 @@ export interface ContractData {
       placa: string | null;
       chassi: string | null;
       renavan: number | null;
+    renavam: string | null;
       cor: string | null;
       km: string | null;
     } | null;
@@ -148,7 +150,7 @@ export function useSaleContract() {
       // Buscar veículo
       const { data: veiculoData } = await supabase
         .from('estoque')
-        .select('id, modelo, fabricante, ano, ano_fabricacao, placa, chassi, renavan, cor, km, motor, valor, id_empresa')
+        .select('id, modelo, fabricante, ano, ano_fabricacao, placa, chassi, renavan, renavam, cor, km, motor, valor, id_empresa')
         .eq('id', vendaData.id_veiculo_vendido)
         .single();
 
@@ -191,7 +193,7 @@ export function useSaleContract() {
         (trocasData || []).map(async (troca) => {
           const { data: veiculoTroca } = await supabase
             .from('estoque')
-            .select('id, modelo, fabricante, ano, ano_fabricacao, placa, chassi, renavan, cor, km')
+            .select('id, modelo, fabricante, ano, ano_fabricacao, placa, chassi, renavan, renavam, cor, km')
             .eq('id', troca.id_veiculo_troca)
             .single();
           return { ...troca, veiculo: veiculoTroca };

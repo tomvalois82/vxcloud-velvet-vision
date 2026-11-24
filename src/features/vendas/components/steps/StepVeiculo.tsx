@@ -1,4 +1,7 @@
 import { Car } from 'lucide-react';
+import { RenaveBotao } from '@/features/renave/components/RenaveBotao';
+import { RenaveEtapaBadge } from '@/features/renave/components/RenaveEtapaBadge';
+import { useEtapaRenave } from '@/features/renave/hooks/use-renave-habilitado';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -13,6 +16,7 @@ interface StepVeiculoProps {
 
 export function StepVeiculo({ saleData, updateSaleData }: StepVeiculoProps) {
   const { veiculo, valor_venda, km_venda, observacoes_veiculo } = saleData;
+  const renave = useEtapaRenave(veiculo?.id);
   const { mainPhoto, loading } = useVehicleMainPhoto(veiculo?.id || null, veiculo?.foto || null);
 
   const handleValorChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -57,6 +61,12 @@ export function StepVeiculo({ saleData, updateSaleData }: StepVeiculoProps) {
             <h3 className="text-xl font-bold text-foreground">
               {veiculo.fabricante} {veiculo.modelo}
             </h3>
+            {renave.habilitado && (
+              <div className="flex flex-wrap items-center gap-2">
+                <RenaveEtapaBadge etapa={renave.etapa} mostrarFora />
+                <RenaveBotao idEstoque={veiculo.id} />
+              </div>
+            )}
             <div className="grid grid-cols-2 gap-4 text-sm">
               {veiculo.ano && (
                 <div>

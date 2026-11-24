@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useAvisoRenaveVenda } from '@/features/renave/hooks/use-aviso-renave-venda';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, ArrowRight, Check, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -18,6 +19,7 @@ interface SaleWizardProps {
 
 export function SaleWizard({ vehicleId, onClose }: SaleWizardProps) {
   const navigate = useNavigate();
+  const avisoRenave = useAvisoRenaveVenda(() => navigate('/vendas'));
   const [currentStep, setCurrentStep] = useState(1);
   const saleHook = useSaleData(vehicleId);
   const { loading, saving, saleData, saveSale } = saleHook;
@@ -55,7 +57,9 @@ export function SaleWizard({ vehicleId, onClose }: SaleWizardProps) {
   const handleSaveAndClose = async () => {
     const result = await saveSale(true);
     if (result) {
-      navigate('/vendas');
+      // Avisos RENAVE são informativos; a venda já foi fechada.
+      const exibiuAviso = await avisoRenave.verificar(saleData.veiculo?.id, result.id);
+      if (!exibiuAviso) navigate('/vendas');
     }
   };
 
@@ -95,6 +99,7 @@ export function SaleWizard({ vehicleId, onClose }: SaleWizardProps) {
 
   return (
     <div className="animate-fade-in space-y-6">
+      {avisoRenave.elemento}
       {/* Step Indicator */}
       <div className="glass rounded-lg p-4">
         <div className="flex items-center justify-between">

@@ -1,4 +1,5 @@
 import { forwardRef } from "react";
+import { exibirRenavam } from '@/features/estoque/utils/masks';
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -18,6 +19,7 @@ interface PessoaData {
 interface VeiculoData {
   placa?: string | null;
   renavan?: number | null;
+  renavam?: string | null;
   fabricante?: string | null;
   modelo?: string | null;
   chassi?: string | null;
@@ -84,7 +86,7 @@ export const ProcuracaoPrint = forwardRef<HTMLDivElement, ProcuracaoPrintProps>(
         </p>
         {veiculos.map((v, i) => (
           <div key={i} style={{ marginBottom: "16px" }}>
-            <p>PLACA: <strong>{v.placa || "___________"}</strong> &nbsp;&nbsp; RENAVAM: <strong>{v.renavan || "___________"}</strong></p>
+            <p>PLACA: <strong>{v.placa || "___________"}</strong> &nbsp;&nbsp; RENAVAM: <strong>{exibirRenavam(v.renavam, v.renavan) || "___________"}</strong></p>
             <p>MARCA/MODELO: <strong>{[v.fabricante, v.modelo].filter(Boolean).join("/") || "___________"}</strong></p>
             <p>CHASSI: <strong>{v.chassi || "___________"}</strong></p>
             {i < veiculos.length - 1 && <hr style={{ margin: "8px 0", borderColor: "#ccc" }} />}

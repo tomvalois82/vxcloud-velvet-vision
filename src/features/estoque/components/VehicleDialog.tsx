@@ -46,6 +46,7 @@ import {
   unmaskCurrency,
   unmaskKm,
   maskRenavan,
+  normalizarRenavam,
   maskChassi,
 } from '../utils/masks';
 import {
@@ -88,7 +89,10 @@ import {
 
 const vehicleSchema = z.object({
   placa: z.string().optional(),
-  renavan: z.string().optional(),
+  renavam: z.string().optional().refine(
+    (valor) => !valor || normalizarRenavam(valor) !== null,
+    'RENAVAM deve ter 11 dígitos (ou 9/10 dígitos antigos, que serão completados com zeros)'
+  ),
   chassi: z.string().optional(),
   tipo_veiculo_fipe: z.string().min(1, 'Tipo de veículo é obrigatório'),
   modelo: z.string().min(1, 'Modelo é obrigatório'),
@@ -143,7 +147,7 @@ export function VehicleDialog({ open, onOpenChange, vehicleId, onSuccess }: Vehi
     resolver: zodResolver(vehicleSchema),
     defaultValues: {
       placa: '',
-      renavan: '',
+      renavam: '',
       chassi: '',
       tipo_veiculo_fipe: 'carros',
       modelo: '',
@@ -232,12 +236,12 @@ export function VehicleDialog({ open, onOpenChange, vehicleId, onSuccess }: Vehi
   };
 
   // Verifica ciclo de vida para placa, renavan ou chassi
-  const checkCicloDeVida = async (campo: 'placa' | 'renavan' | 'chassi') => {
+  const checkCicloDeVida = async (campo: 'placa' | 'renavam' | 'chassi') => {
     // Só verifica para novos veículos
     if (isEditing) return;
 
     const placa = campo === 'placa' ? form.getValues('placa') : undefined;
-    const renavan = campo === 'renavan' ? form.getValues('renavan') : undefined;
+    const renavan = campo === 'renavam' ? form.getValues('renavam') : undefined;
     const chassi = campo === 'chassi' ? form.getValues('chassi') : undefined;
 
     if (!placa && !renavan && !chassi) return;
@@ -271,7 +275,8 @@ export function VehicleDialog({ open, onOpenChange, vehicleId, onSuccess }: Vehi
     form.setValue('cor', v.cor || '');
     form.setValue('carroceria', v.categoria || '');
     if (v.placa) form.setValue('placa', maskPlaca(v.placa));
-    if (v.renavan) form.setValue('renavan', String(v.renavan));
+    if (v.renavam) form.setValue('renavam', v.renavam);
+    else if (v.renavan) form.setValue('renavam', String(v.renavan).padStart(11, '0'));
     if (v.chassi) form.setValue('chassi', v.chassi);
     
     // Mapear tipo_veiculo para tipo_veiculo_fipe
@@ -337,7 +342,7 @@ export function VehicleDialog({ open, onOpenChange, vehicleId, onSuccess }: Vehi
 
   const handleRenavamBlur = async () => {
     if (!isEditing) {
-      await checkCicloDeVida('renavan');
+      await checkCicloDeVida('renavam');
     }
   };
 
@@ -482,7 +487,7 @@ export function VehicleDialog({ open, onOpenChange, vehicleId, onSuccess }: Vehi
       // Resetar formulário com valores padrão explícitos
       form.reset({
         placa: '',
-        renavan: '',
+        renavam: '',
         chassi: '',
         tipo_veiculo_fipe: 'carros',
         modelo: '',
@@ -595,7 +600,7 @@ export function VehicleDialog({ open, onOpenChange, vehicleId, onSuccess }: Vehi
 
       form.reset({
         placa: data.placa ? maskPlaca(data.placa) : '',
-        renavan: data.renavan ? String(data.renavan) : '',
+        renavam: data.renavam ?? (data.renavan ? String(data.renavan).padStart(11, '0') : ''),
         chassi: data.chassi || '',
         tipo_veiculo_fipe: tipoFipe,
         modelo: data.modelo || '',
@@ -717,7 +722,7 @@ export function VehicleDialog({ open, onOpenChange, vehicleId, onSuccess }: Vehi
         valor: String(valorNumerico),
         km: kmNumerico,
         placa: placaNormalizada,
-        renavan: data.renavan ? parseInt(data.renavan) : null,
+        renavam: normalizarRenavam(data.renavam || ''),
         chassi: data.chassi ? data.chassi.toUpperCase().trim() : null,
         data_aquisicao: data.data_aquisicao || new Date().toISOString().split('T')[0],
         tipo_aquisicao: data.tipo_aquisicao || 'Próprio',
@@ -855,10 +860,10 @@ export function VehicleDialog({ open, onOpenChange, vehicleId, onSuccess }: Vehi
 
                     <FormField
                       control={form.control}
-                      name="renavan"
+                      name="renavam"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Renavan</FormLabel>
+                          <FormLabel>RENAVAM</FormLabel>
                           <FormControl>
                             <Input
                               placeholder="Ex: 12345678901"

@@ -11,6 +11,10 @@ import { toast } from "sonner";
 import { Loader2, Save, Upload, Building2, MapPin, Phone, Mail, Globe } from "lucide-react";
 import { Navigate } from "react-router-dom";
 import { maskCEP, maskCNPJ, maskCPF, maskPhone } from "@/features/pessoas/utils/masks";
+import { useQueryClient } from "@tanstack/react-query";
+import { RenaveConfigCard, type ConfigRenave } from "@/features/renave/components/RenaveConfigCard";
+import { CHAVE_RENAVE_HABILITADO } from "@/features/renave/hooks/use-renave-habilitado";
+import { emailValido } from "@/features/renave/utils/pendencias";
 
 interface EmpresaData {
   id: string;
@@ -31,6 +35,11 @@ interface EmpresaData {
   ponto_referencia: string | null;
   foto_url: string | null;
   id_config: number;
+  renave_habilitado: boolean;
+  renave_ambiente: string;
+  renave_email: string | null;
+  renave_cnpj_certificado: string | null;
+  renave_certificado_validade: string | null;
 }
 
 const estadosBrasileiros = [
@@ -46,6 +55,7 @@ const Empresa = () => {
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const queryClient = useQueryClient();
 
   useEffect(() => {
     if (isSuperUser) {
@@ -89,6 +99,10 @@ const Empresa = () => {
 
   const handleSave = async () => {
     if (!empresa) return;
+    if (empresa.renave_email && !emailValido(empresa.renave_email)) {
+      toast.error('Informe um e-mail válido para o RENAVE');
+      return;
+    }
 
     setSaving(true);
     try {
@@ -111,11 +125,17 @@ const Empresa = () => {
           estado: empresa.estado,
           ponto_referencia: empresa.ponto_referencia,
           foto_url: empresa.foto_url,
+          renave_habilitado: empresa.renave_habilitado,
+          renave_ambiente: empresa.renave_ambiente,
+          renave_email: empresa.renave_email?.trim() || null,
+          renave_cnpj_certificado: empresa.renave_cnpj_certificado || null,
+          renave_certificado_validade: empresa.renave_certificado_validade || null,
         })
         .eq('id', empresa.id);
 
       if (error) throw error;
       toast.success('Empresa atualizada com sucesso!');
+      await queryClient.invalidateQueries({ queryKey: CHAVE_RENAVE_HABILITADO });
     } catch (error) {
       console.error('Erro ao salvar:', error);
       toast.error('Erro ao salvar dados da empresa');
@@ -456,6 +476,11 @@ const Empresa = () => {
             </div>
           </CardContent>
         </Card>
+
+        <RenaveConfigCard
+          valores={empresa}
+          onChange={(valores: ConfigRenave) => setEmpresa({ ...empresa, ...valores })}
+        />
 
         {/* Botão Salvar */}
         <div className="flex justify-end">

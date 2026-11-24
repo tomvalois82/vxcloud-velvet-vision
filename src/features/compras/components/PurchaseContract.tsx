@@ -1,4 +1,5 @@
 import { forwardRef } from 'react';
+import { exibirRenavam } from '@/features/estoque/utils/masks';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { PurchaseContractData } from '../hooks/usePurchaseContract';
@@ -174,7 +175,7 @@ export const PurchaseContract = forwardRef<HTMLDivElement, PurchaseContractProps
               <span className="font-semibold">Motor:</span> {data.veiculo?.motor || '-'}
             </div>
             <div>
-              <span className="font-semibold">Renavam:</span> {data.veiculo?.renavan || '-'}
+              <span className="font-semibold">RENAVAM:</span> {exibirRenavam(data.veiculo?.renavam, data.veiculo?.renavan) || '-'}
             </div>
             <div>
               <span className="font-semibold">KM:</span> {data.veiculo?.km || '-'}

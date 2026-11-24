@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { RenaveBotao } from '@/features/renave/components/RenaveBotao';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, ArrowRight, Check, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -130,6 +131,11 @@ export function PurchaseWizard({ purchaseId, onClose }: PurchaseWizardProps) {
 
   return (
     <div className="animate-fade-in space-y-6">
+      {purchaseId && purchaseHook.purchaseData.veiculo && (
+        <div className="flex justify-end">
+          <RenaveBotao idEstoque={purchaseHook.purchaseData.veiculo.id} />
+        </div>
+      )}
       {/* Indicador de etapas */}
       <div className="glass rounded-lg p-4">
         <div className="flex items-center justify-between">

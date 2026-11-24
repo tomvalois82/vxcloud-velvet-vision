@@ -21,6 +21,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { StorageManager } from '@/features/estoque/utils/storageManager';
 import { maskCurrency } from '@/features/estoque/utils/masks';
 import { VehicleListPrint } from '@/features/estoque/components/VehicleListPrint';
+import { useQuery } from '@tanstack/react-query';
+import { useRenaveHabilitado } from '@/features/renave/hooks/use-renave-habilitado';
+import { buscarEtapasRenave } from '@/features/renave/services/renave-service';
+import { RenaveEtapaBadge } from '@/features/renave/components/RenaveEtapaBadge';
+import { RenaveBotao } from '@/features/renave/components/RenaveBotao';
 interface Vehicle {
   id: number;
   modelo: string;
@@ -48,12 +53,14 @@ function VehicleCard({
   vehicle,
   onView,
   onDelete,
-  onSell
+  onSell,
+  etapaRenave
 }: {
   vehicle: Vehicle;
   onView: (id: number) => void;
   onDelete: (e: React.MouseEvent, vehicle: Vehicle) => void;
   onSell: (e: React.MouseEvent, vehicleId: number) => void;
+  etapaRenave?: string | null;
 }) {
   const {
     mainPhoto,
@@ -79,6 +86,7 @@ function VehicleCard({
               {(vehicle.total_ciclos ?? 0) > 1 && <Badge variant="outline">Ciclo {vehicle.ciclo ?? '—'}</Badge>}
               <OrigemCicloBadge origem={vehicle.origem} />
             </div>}
+          <RenaveEtapaBadge etapa={etapaRenave} />
           <div className="flex items-center justify-between text-sm text-muted-foreground">
             <span>Ano: {vehicle.ano}</span>
             {vehicle.km && <span>{vehicle.km} km</span>}
@@ -101,10 +109,13 @@ function VehicleCard({
             <p className="text-lg font-bold text-lime-500">
               {vehicle.valor ? maskCurrency(Number(vehicle.valor)) : 'R$ 0,00'}
             </p>
+            <div className="flex items-center gap-1">
+            <RenaveBotao idEstoque={vehicle.id} variante="icone" />
             {(STATUS_ATIVOS as readonly string[]).includes(vehicle.status ?? 'Em estoque') && <Button size="sm" onClick={e => onSell(e, vehicle.id)} className="bg-accent hover:bg-accent/90">
               <Handshake className="w-4 h-4 mr-1" />
               Vender
             </Button>}
+            </div>
           </div>
         </div>
       </CardContent>
@@ -234,6 +245,15 @@ const VeiculosEstoque = () => {
       return matchesSearch && matchesStatus && matchesTipoAquisicao;
     });
   }, [vehicles, searchTerm, statusFilter, tipoAquisicaoFilter]);
+
+  // Etapas RENAVE em lote dos veículos exibidos (somente com RENAVE habilitado).
+  const renaveHabilitado = useRenaveHabilitado();
+  const idsExibidos = useMemo(() => filteredVehicles.map(v => v.id), [filteredVehicles]);
+  const { data: etapasRenave } = useQuery({
+    queryKey: ['renave-etapas', idsExibidos],
+    queryFn: () => buscarEtapasRenave(idsExibidos),
+    enabled: renaveHabilitado && idsExibidos.length > 0,
+  });
 
   // Cálculos dos cards
   const statsCards = useMemo(() => {
@@ -435,7 +455,7 @@ const VeiculosEstoque = () => {
                 Adicionar Veículo
               </Button>}
           </div> : <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredVehicles.map(vehicle => <VehicleCard key={vehicle.id} vehicle={vehicle} onView={handleView} onDelete={handleDeleteClick} onSell={handleSellClick} />)}
+            {filteredVehicles.map(vehicle => <VehicleCard key={vehicle.id} vehicle={vehicle} onView={handleView} onDelete={handleDeleteClick} onSell={handleSellClick} etapaRenave={etapasRenave?.get(vehicle.id)} />)}
           </div>}
       </div>
 

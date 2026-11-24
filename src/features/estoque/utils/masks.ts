@@ -74,6 +74,21 @@ export function maskRenavan(value: string): string {
   return numbers.slice(0, 11);
 }
 
+// Normaliza RENAVAM para 11 dígitos; 9/10 dígitos antigos recebem zeros à esquerda.
+// Retorna null quando vazio ou com tamanho inválido.
+export function normalizarRenavam(valor: string): string | null {
+  const digitos = (valor || '').replace(/\D/g, '');
+  if (!digitos) return null;
+  if (digitos.length < 9 || digitos.length > 11) return null;
+  return digitos.padStart(11, '0');
+}
+
+// Exibição do RENAVAM com fallback para a coluna numérica antiga (renavan).
+export function exibirRenavam(renavam?: string | null, renavan?: number | null): string {
+  if (renavam) return renavam;
+  return renavan ? String(renavan).padStart(11, '0') : '';
+}
+
 export function maskChassi(value: string): string {
   return value.toUpperCase().replace(/[^A-HJ-NPR-Z0-9]/g, '').slice(0, 17);
 }
