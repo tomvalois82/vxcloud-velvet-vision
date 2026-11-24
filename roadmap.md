@@ -35,3 +35,10 @@
 - [x] Preservar VeiculosEstoqueFast.tsx e não alterar o banco.
 - [x] Executar testes de regressão e conferência final: 39 testes aprovados, lint do teste sem erros e compilação sem erros; nenhuma correção funcional necessária nos pontos solicitados.
 - [ ] Conferir os fluxos autenticados das etapas 3–6 — sessão externa indisponível; estoque redireciona para login.
+
+# Ajuste — troca e status Reservado
+
+- [x] Excluir ciclos recebidos em troca da lista de veículos de compra (novo e edição).
+- [x] Mostrar badge de origem (Compra / Troca / Cadastro) no histórico e no card do estoque.
+- [x] Testes: 41 aprovados, tipos e linter limpos.
+- [ ] Validar na tela autenticada (nova compra, histórico, Reserva de placa) — bloqueado pela sessão externa indisponível; navegador redireciona para login.
