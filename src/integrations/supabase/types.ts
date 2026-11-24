@@ -384,6 +384,11 @@ export type Database = {
           numero: string
           ponto_referencia: string | null
           razao_social: string
+          renave_ambiente: string
+          renave_certificado_validade: string | null
+          renave_cnpj_certificado: string | null
+          renave_email: string | null
+          renave_habilitado: boolean
           site: string | null
           telefone: string | null
           tipo_pessoa: string
@@ -407,6 +412,11 @@ export type Database = {
           numero: string
           ponto_referencia?: string | null
           razao_social: string
+          renave_ambiente?: string
+          renave_certificado_validade?: string | null
+          renave_cnpj_certificado?: string | null
+          renave_email?: string | null
+          renave_habilitado?: boolean
           site?: string | null
           telefone?: string | null
           tipo_pessoa: string
@@ -430,6 +440,11 @@ export type Database = {
           numero?: string
           ponto_referencia?: string | null
           razao_social?: string
+          renave_ambiente?: string
+          renave_certificado_validade?: string | null
+          renave_cnpj_certificado?: string | null
+          renave_email?: string | null
+          renave_habilitado?: boolean
           site?: string | null
           telefone?: string | null
           tipo_pessoa?: string
@@ -479,6 +494,7 @@ export type Database = {
           pg_capa: string[] | null
           pixel_meta: string | null
           placa: string | null
+          renavam: string | null
           renavan: number | null
           status: string | null
           tipo_aquisicao: string
@@ -523,6 +539,7 @@ export type Database = {
           pg_capa?: string[] | null
           pixel_meta?: string | null
           placa?: string | null
+          renavam?: string | null
           renavan?: number | null
           status?: string | null
           tipo_aquisicao?: string
@@ -567,6 +584,7 @@ export type Database = {
           pg_capa?: string[] | null
           pixel_meta?: string | null
           placa?: string | null
+          renavam?: string | null
           renavan?: number | null
           status?: string | null
           tipo_aquisicao?: string
@@ -1522,6 +1540,413 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      renave_documento: {
+        Row: {
+          created_at: string
+          id: string
+          id_empresa: string
+          id_renave_estoque: string
+          numero: string | null
+          storage_path: string
+          tipo: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          id_empresa: string
+          id_renave_estoque: string
+          numero?: string | null
+          storage_path: string
+          tipo: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          id_empresa?: string
+          id_renave_estoque?: string
+          numero?: string | null
+          storage_path?: string
+          tipo?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "renave_documento_id_empresa_fkey"
+            columns: ["id_empresa"]
+            isOneToOne: false
+            referencedRelation: "empresa"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "renave_documento_id_renave_estoque_fkey"
+            columns: ["id_renave_estoque"]
+            isOneToOne: false
+            referencedRelation: "renave_estoque"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "renave_documento_id_renave_estoque_fkey"
+            columns: ["id_renave_estoque"]
+            isOneToOne: false
+            referencedRelation: "vw_estoque_ciclos"
+            referencedColumns: ["renave_id"]
+          },
+          {
+            foreignKeyName: "renave_documento_id_renave_estoque_fkey"
+            columns: ["id_renave_estoque"]
+            isOneToOne: false
+            referencedRelation: "vw_renave_estoque"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      renave_estoque: {
+        Row: {
+          aptidao_apto: boolean | null
+          aptidao_em: string | null
+          aptidao_json: Json | null
+          assinatura_em: string | null
+          assinatura_tipo: string | null
+          cancelada_em: string | null
+          chave_nfe_entrada: string | null
+          chave_nfe_saida: string | null
+          codigo_seguranca_crv: string | null
+          created_at: string
+          data_entrada: string | null
+          data_medicao_hodometro: string | null
+          data_saida: string | null
+          em_processamento_desde: string | null
+          email_vendedor: string | null
+          entrada_em: string | null
+          estado: string | null
+          id: string
+          id_compra: string | null
+          id_empresa: string
+          id_estoque: number
+          id_pessoa_comprador: string | null
+          id_pessoa_proprietario_crv: string | null
+          id_venda: string | null
+          id_venda_troca: string | null
+          iniciado_em: string
+          iniciado_por: string | null
+          km_entrada: number | null
+          motivo: string | null
+          motivo_cancelamento: string | null
+          nfe_entrada_enviada_em: string | null
+          nfe_saida_enviada_em: string | null
+          numero_crv: string | null
+          numero_termo_entrada: number | null
+          numero_termo_saida: number | null
+          origem: string | null
+          renave_id_estoque: number | null
+          renave_id_estoque_anterior: number | null
+          saida_em: string | null
+          tem_codigo_seguranca: boolean | null
+          tipo_crv: string | null
+          ultimo_erro: Json | null
+          ultimo_sync_em: string | null
+          updated_at: string
+          valor_entrada: number | null
+          valor_saida: number | null
+        }
+        Insert: {
+          aptidao_apto?: boolean | null
+          aptidao_em?: string | null
+          aptidao_json?: Json | null
+          assinatura_em?: string | null
+          assinatura_tipo?: string | null
+          cancelada_em?: string | null
+          chave_nfe_entrada?: string | null
+          chave_nfe_saida?: string | null
+          codigo_seguranca_crv?: string | null
+          created_at?: string
+          data_entrada?: string | null
+          data_medicao_hodometro?: string | null
+          data_saida?: string | null
+          em_processamento_desde?: string | null
+          email_vendedor?: string | null
+          entrada_em?: string | null
+          estado?: string | null
+          id?: string
+          id_compra?: string | null
+          id_empresa: string
+          id_estoque: number
+          id_pessoa_comprador?: string | null
+          id_pessoa_proprietario_crv?: string | null
+          id_venda?: string | null
+          id_venda_troca?: string | null
+          iniciado_em?: string
+          iniciado_por?: string | null
+          km_entrada?: number | null
+          motivo?: string | null
+          motivo_cancelamento?: string | null
+          nfe_entrada_enviada_em?: string | null
+          nfe_saida_enviada_em?: string | null
+          numero_crv?: string | null
+          numero_termo_entrada?: number | null
+          numero_termo_saida?: number | null
+          origem?: string | null
+          renave_id_estoque?: number | null
+          renave_id_estoque_anterior?: number | null
+          saida_em?: string | null
+          tem_codigo_seguranca?: boolean | null
+          tipo_crv?: string | null
+          ultimo_erro?: Json | null
+          ultimo_sync_em?: string | null
+          updated_at?: string
+          valor_entrada?: number | null
+          valor_saida?: number | null
+        }
+        Update: {
+          aptidao_apto?: boolean | null
+          aptidao_em?: string | null
+          aptidao_json?: Json | null
+          assinatura_em?: string | null
+          assinatura_tipo?: string | null
+          cancelada_em?: string | null
+          chave_nfe_entrada?: string | null
+          chave_nfe_saida?: string | null
+          codigo_seguranca_crv?: string | null
+          created_at?: string
+          data_entrada?: string | null
+          data_medicao_hodometro?: string | null
+          data_saida?: string | null
+          em_processamento_desde?: string | null
+          email_vendedor?: string | null
+          entrada_em?: string | null
+          estado?: string | null
+          id?: string
+          id_compra?: string | null
+          id_empresa?: string
+          id_estoque?: number
+          id_pessoa_comprador?: string | null
+          id_pessoa_proprietario_crv?: string | null
+          id_venda?: string | null
+          id_venda_troca?: string | null
+          iniciado_em?: string
+          iniciado_por?: string | null
+          km_entrada?: number | null
+          motivo?: string | null
+          motivo_cancelamento?: string | null
+          nfe_entrada_enviada_em?: string | null
+          nfe_saida_enviada_em?: string | null
+          numero_crv?: string | null
+          numero_termo_entrada?: number | null
+          numero_termo_saida?: number | null
+          origem?: string | null
+          renave_id_estoque?: number | null
+          renave_id_estoque_anterior?: number | null
+          saida_em?: string | null
+          tem_codigo_seguranca?: boolean | null
+          tipo_crv?: string | null
+          ultimo_erro?: Json | null
+          ultimo_sync_em?: string | null
+          updated_at?: string
+          valor_entrada?: number | null
+          valor_saida?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "renave_estoque_id_compra_fkey"
+            columns: ["id_compra"]
+            isOneToOne: false
+            referencedRelation: "vw_estoque_ciclos"
+            referencedColumns: ["id_compra"]
+          },
+          {
+            foreignKeyName: "renave_estoque_id_compra_fkey"
+            columns: ["id_compra"]
+            isOneToOne: false
+            referencedRelation: "vx_compras"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "renave_estoque_id_empresa_fkey"
+            columns: ["id_empresa"]
+            isOneToOne: false
+            referencedRelation: "empresa"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "renave_estoque_id_estoque_fkey"
+            columns: ["id_estoque"]
+            isOneToOne: false
+            referencedRelation: "estoque"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "renave_estoque_id_estoque_fkey"
+            columns: ["id_estoque"]
+            isOneToOne: false
+            referencedRelation: "vw_estoque_ciclos"
+            referencedColumns: ["id_estoque"]
+          },
+          {
+            foreignKeyName: "renave_estoque_id_pessoa_comprador_fkey"
+            columns: ["id_pessoa_comprador"]
+            isOneToOne: false
+            referencedRelation: "vw_investidor_carteira"
+            referencedColumns: ["id_pessoa"]
+          },
+          {
+            foreignKeyName: "renave_estoque_id_pessoa_comprador_fkey"
+            columns: ["id_pessoa_comprador"]
+            isOneToOne: false
+            referencedRelation: "vw_rentabilidade_investidor"
+            referencedColumns: ["id_pessoa"]
+          },
+          {
+            foreignKeyName: "renave_estoque_id_pessoa_comprador_fkey"
+            columns: ["id_pessoa_comprador"]
+            isOneToOne: false
+            referencedRelation: "vx_pessoa"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "renave_estoque_id_pessoa_proprietario_crv_fkey"
+            columns: ["id_pessoa_proprietario_crv"]
+            isOneToOne: false
+            referencedRelation: "vw_investidor_carteira"
+            referencedColumns: ["id_pessoa"]
+          },
+          {
+            foreignKeyName: "renave_estoque_id_pessoa_proprietario_crv_fkey"
+            columns: ["id_pessoa_proprietario_crv"]
+            isOneToOne: false
+            referencedRelation: "vw_rentabilidade_investidor"
+            referencedColumns: ["id_pessoa"]
+          },
+          {
+            foreignKeyName: "renave_estoque_id_pessoa_proprietario_crv_fkey"
+            columns: ["id_pessoa_proprietario_crv"]
+            isOneToOne: false
+            referencedRelation: "vx_pessoa"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "renave_estoque_id_venda_fkey"
+            columns: ["id_venda"]
+            isOneToOne: false
+            referencedRelation: "vw_estoque_ciclos"
+            referencedColumns: ["id_venda"]
+          },
+          {
+            foreignKeyName: "renave_estoque_id_venda_fkey"
+            columns: ["id_venda"]
+            isOneToOne: false
+            referencedRelation: "vx_vendas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "renave_estoque_id_venda_troca_fkey"
+            columns: ["id_venda_troca"]
+            isOneToOne: false
+            referencedRelation: "vw_estoque_ciclos"
+            referencedColumns: ["id_venda"]
+          },
+          {
+            foreignKeyName: "renave_estoque_id_venda_troca_fkey"
+            columns: ["id_venda_troca"]
+            isOneToOne: false
+            referencedRelation: "vx_vendas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      renave_log: {
+        Row: {
+          created_at: string
+          duracao_ms: number | null
+          endpoint: string | null
+          http_status: number | null
+          id: number
+          id_empresa: string
+          id_renave_estoque: string | null
+          id_usuario: string | null
+          log_id_rastreabilidade: string | null
+          metodo: string | null
+          operacao: string
+          request_json: Json | null
+          response_json: Json | null
+        }
+        Insert: {
+          created_at?: string
+          duracao_ms?: number | null
+          endpoint?: string | null
+          http_status?: number | null
+          id?: number
+          id_empresa: string
+          id_renave_estoque?: string | null
+          id_usuario?: string | null
+          log_id_rastreabilidade?: string | null
+          metodo?: string | null
+          operacao: string
+          request_json?: Json | null
+          response_json?: Json | null
+        }
+        Update: {
+          created_at?: string
+          duracao_ms?: number | null
+          endpoint?: string | null
+          http_status?: number | null
+          id?: number
+          id_empresa?: string
+          id_renave_estoque?: string | null
+          id_usuario?: string | null
+          log_id_rastreabilidade?: string | null
+          metodo?: string | null
+          operacao?: string
+          request_json?: Json | null
+          response_json?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "renave_log_id_empresa_fkey"
+            columns: ["id_empresa"]
+            isOneToOne: false
+            referencedRelation: "empresa"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "renave_log_id_renave_estoque_fkey"
+            columns: ["id_renave_estoque"]
+            isOneToOne: false
+            referencedRelation: "renave_estoque"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "renave_log_id_renave_estoque_fkey"
+            columns: ["id_renave_estoque"]
+            isOneToOne: false
+            referencedRelation: "vw_estoque_ciclos"
+            referencedColumns: ["renave_id"]
+          },
+          {
+            foreignKeyName: "renave_log_id_renave_estoque_fkey"
+            columns: ["id_renave_estoque"]
+            isOneToOne: false
+            referencedRelation: "vw_renave_estoque"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      renave_municipio: {
+        Row: {
+          id: string
+          nome: string
+          uf: string
+        }
+        Insert: {
+          id: string
+          nome: string
+          uf: string
+        }
+        Update: {
+          id?: string
+          nome?: string
+          uf?: string
+        }
+        Relationships: []
       }
       usuario: {
         Row: {
@@ -2509,6 +2934,7 @@ export type Database = {
           id_categoria: string | null
           id_empresa: string
           id_forma_pagamento: string | null
+          id_municipio_renave: string | null
           logradouro: string | null
           municipio: string | null
           nome: string
@@ -2539,6 +2965,7 @@ export type Database = {
           id_categoria?: string | null
           id_empresa: string
           id_forma_pagamento?: string | null
+          id_municipio_renave?: string | null
           logradouro?: string | null
           municipio?: string | null
           nome: string
@@ -2569,6 +2996,7 @@ export type Database = {
           id_categoria?: string | null
           id_empresa?: string
           id_forma_pagamento?: string | null
+          id_municipio_renave?: string | null
           logradouro?: string | null
           municipio?: string | null
           nome?: string
@@ -2585,6 +3013,13 @@ export type Database = {
             columns: ["id_empresa"]
             isOneToOne: false
             referencedRelation: "empresa"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vx_pessoa_id_municipio_renave_fkey"
+            columns: ["id_municipio_renave"]
+            isOneToOne: false
+            referencedRelation: "renave_municipio"
             referencedColumns: ["id"]
           },
         ]
@@ -3112,6 +3547,9 @@ export type Database = {
           placa: string | null
           placa_normalizada: string | null
           recebido_de: string | null
+          renave_estado: string | null
+          renave_etapa: string | null
+          renave_id: string | null
           status: string | null
           sugerido: boolean | null
           titulo: string | null
@@ -3180,6 +3618,171 @@ export type Database = {
         }
         Relationships: []
       }
+      vw_renave_estoque: {
+        Row: {
+          aptidao_apto: boolean | null
+          aptidao_em: string | null
+          aptidao_json: Json | null
+          assinatura_em: string | null
+          assinatura_tipo: string | null
+          cancelada_em: string | null
+          chassi: string | null
+          chave_nfe_entrada: string | null
+          chave_nfe_saida: string | null
+          comprador_documento: string | null
+          comprador_nome: string | null
+          created_at: string | null
+          data_entrada: string | null
+          data_medicao_hodometro: string | null
+          data_saida: string | null
+          em_processamento_desde: string | null
+          email_vendedor: string | null
+          entrada_em: string | null
+          estado: string | null
+          etapa: string | null
+          id: string | null
+          id_compra: string | null
+          id_empresa: string | null
+          id_estoque: number | null
+          id_pessoa_comprador: string | null
+          id_pessoa_proprietario_crv: string | null
+          id_venda: string | null
+          id_venda_troca: string | null
+          iniciado_em: string | null
+          iniciado_por: string | null
+          km_entrada: number | null
+          modelo: string | null
+          motivo: string | null
+          motivo_cancelamento: string | null
+          nfe_entrada_enviada_em: string | null
+          nfe_saida_enviada_em: string | null
+          numero_crv: string | null
+          numero_termo_entrada: number | null
+          numero_termo_saida: number | null
+          origem: string | null
+          placa: string | null
+          proprietario_crv_documento: string | null
+          proprietario_crv_nome: string | null
+          renavam: string | null
+          renave_id_estoque: number | null
+          renave_id_estoque_anterior: number | null
+          saida_em: string | null
+          tem_codigo_seguranca: boolean | null
+          tipo_crv: string | null
+          ultimo_erro: Json | null
+          ultimo_sync_em: string | null
+          updated_at: string | null
+          valor_entrada: number | null
+          valor_saida: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "renave_estoque_id_compra_fkey"
+            columns: ["id_compra"]
+            isOneToOne: false
+            referencedRelation: "vw_estoque_ciclos"
+            referencedColumns: ["id_compra"]
+          },
+          {
+            foreignKeyName: "renave_estoque_id_compra_fkey"
+            columns: ["id_compra"]
+            isOneToOne: false
+            referencedRelation: "vx_compras"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "renave_estoque_id_empresa_fkey"
+            columns: ["id_empresa"]
+            isOneToOne: false
+            referencedRelation: "empresa"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "renave_estoque_id_estoque_fkey"
+            columns: ["id_estoque"]
+            isOneToOne: false
+            referencedRelation: "estoque"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "renave_estoque_id_estoque_fkey"
+            columns: ["id_estoque"]
+            isOneToOne: false
+            referencedRelation: "vw_estoque_ciclos"
+            referencedColumns: ["id_estoque"]
+          },
+          {
+            foreignKeyName: "renave_estoque_id_pessoa_comprador_fkey"
+            columns: ["id_pessoa_comprador"]
+            isOneToOne: false
+            referencedRelation: "vw_investidor_carteira"
+            referencedColumns: ["id_pessoa"]
+          },
+          {
+            foreignKeyName: "renave_estoque_id_pessoa_comprador_fkey"
+            columns: ["id_pessoa_comprador"]
+            isOneToOne: false
+            referencedRelation: "vw_rentabilidade_investidor"
+            referencedColumns: ["id_pessoa"]
+          },
+          {
+            foreignKeyName: "renave_estoque_id_pessoa_comprador_fkey"
+            columns: ["id_pessoa_comprador"]
+            isOneToOne: false
+            referencedRelation: "vx_pessoa"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "renave_estoque_id_pessoa_proprietario_crv_fkey"
+            columns: ["id_pessoa_proprietario_crv"]
+            isOneToOne: false
+            referencedRelation: "vw_investidor_carteira"
+            referencedColumns: ["id_pessoa"]
+          },
+          {
+            foreignKeyName: "renave_estoque_id_pessoa_proprietario_crv_fkey"
+            columns: ["id_pessoa_proprietario_crv"]
+            isOneToOne: false
+            referencedRelation: "vw_rentabilidade_investidor"
+            referencedColumns: ["id_pessoa"]
+          },
+          {
+            foreignKeyName: "renave_estoque_id_pessoa_proprietario_crv_fkey"
+            columns: ["id_pessoa_proprietario_crv"]
+            isOneToOne: false
+            referencedRelation: "vx_pessoa"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "renave_estoque_id_venda_fkey"
+            columns: ["id_venda"]
+            isOneToOne: false
+            referencedRelation: "vw_estoque_ciclos"
+            referencedColumns: ["id_venda"]
+          },
+          {
+            foreignKeyName: "renave_estoque_id_venda_fkey"
+            columns: ["id_venda"]
+            isOneToOne: false
+            referencedRelation: "vx_vendas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "renave_estoque_id_venda_troca_fkey"
+            columns: ["id_venda_troca"]
+            isOneToOne: false
+            referencedRelation: "vw_estoque_ciclos"
+            referencedColumns: ["id_venda"]
+          },
+          {
+            foreignKeyName: "renave_estoque_id_venda_troca_fkey"
+            columns: ["id_venda_troca"]
+            isOneToOne: false
+            referencedRelation: "vx_vendas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       vw_rentabilidade_investidor: {
         Row: {
           id_pessoa: string | null
@@ -3201,6 +3804,24 @@ export type Database = {
           p_id_veiculo: number
         }
         Returns: boolean
+      }
+      fn_doc_valido: { Args: { p: string }; Returns: boolean }
+      fn_empresa_usuario: { Args: never; Returns: string }
+      fn_renavam_normalizado: { Args: { p: string }; Returns: string }
+      fn_renave_etapa: {
+        Args: {
+          p_assinatura_em: string
+          p_estado: string
+          p_nfe_entrada_em: string
+          p_nfe_saida_em: string
+          p_renave_id: number
+          p_saida_em: string
+        }
+        Returns: string
+      }
+      fn_renave_iniciar: {
+        Args: { p_id_estoque: number; p_motivo?: string }
+        Returns: string
       }
       get_user_config_id: { Args: never; Returns: number }
       get_users_by_config: {
