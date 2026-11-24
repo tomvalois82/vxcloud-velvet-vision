@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
 import { format, addDays, addMonths, setDate, lastDayOfMonth } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { CalendarIcon, Loader2, Car, Repeat, ChevronsUpDown, Check } from "lucide-react";
@@ -62,6 +61,10 @@ import {
   formatarCicloParaSelecao,
   type VeiculoResumo,
 } from "../utils/veiculo-selecao";
+import {
+  movimentoFormSchema,
+  type MovimentoFormData,
+} from "../utils/movimento-schema";
 import { buscarCiclosFinanceiro } from '../services/veiculos-ciclos-service';
 
 // Generate competencia options from 01/2019 to current month/year
@@ -91,20 +94,9 @@ const getCompetenciaAtual = () => {
 
 const opcoesCompetencia = gerarOpcoesCompetencia();
 
-const formSchema = z.object({
-  tipo_movimento: z.enum(["Pagar", "Receber"]),
-  descricao: z.string().min(1, "Descrição é obrigatória"),
-  valor_bruto: z.string().min(1, "Valor é obrigatório"),
-  data_vencimento: z.date({ required_error: "Data de vencimento é obrigatória" }),
-  competencia: z.string().optional(),
-  id_conta: z.string().min(1, "Conta é obrigatória"),
-  id_categoria: z.string().min(1, "Categoria é obrigatória"),
-  id_forma_pagamento: z.string().optional(),
-  observacoes: z.string().optional(),
-  status: z.string().default("Pendente"),
-});
-
-type FormData = z.infer<typeof formSchema>;
+// Valor sentinela do Select de conta: o Select do Radix não aceita value vazio,
+// então usamos esta chave para representar "Sem conta" e limpar o campo.
+const CONTA_SEM_CONTA = "__sem_conta__";
 
 interface Conta {
   id: string;
@@ -151,7 +143,7 @@ interface Movimento {
   data_vencimento: string;
   data_pagamento: string | null;
   data_compra: string | null;
-  id_conta: string;
+  id_conta: string | null;
   id_categoria: string;
   id_empresa: string;
   id_forma_pagamento: string | null;
@@ -214,8 +206,8 @@ export function MovimentoDialog({
   const [valorOcorrenciaDiaMes, setValorOcorrenciaDiaMes] = useState("");
   const [dataCompra, setDataCompra] = useState<Date | undefined>(new Date());
 
-  const form = useForm<FormData>({
-    resolver: zodResolver(formSchema),
+  const form = useForm<MovimentoFormData>({
+    resolver: zodResolver(movimentoFormSchema),
     defaultValues: {
       tipo_movimento: defaultTipo,
       descricao: "",
@@ -316,7 +308,7 @@ export function MovimentoDialog({
           valor_bruto: maskCurrency(movimento.valor_bruto),
           data_vencimento: new Date(movimento.data_vencimento + "T00:00:00"),
           competencia: movimento.competencia || getCompetenciaAtual(),
-          id_conta: movimento.id_conta,
+          id_conta: movimento.id_conta || "",
           id_categoria: movimento.id_categoria,
           id_forma_pagamento: movimento.id_forma_pagamento || "",
           observacoes: movimento.observacoes || "",
@@ -519,7 +511,7 @@ export function MovimentoDialog({
     return datas;
   };
 
-  const onSubmit = async (data: FormData) => {
+  const onSubmit = async (data: MovimentoFormData) => {
     // Validar data_compra obrigatória
     if (!dataCompra) {
       toast({
@@ -690,7 +682,7 @@ export function MovimentoDialog({
             valor_liquido: valorNumerico,
             data_vencimento: format(data.data_vencimento, "yyyy-MM-dd"),
             competencia: data.competencia || null,
-            id_conta: data.id_conta,
+            id_conta: data.id_conta || null,
             id_categoria: data.id_categoria,
             id_forma_pagamento: data.id_forma_pagamento || null,
             id_cartao: cartaoSelecionado || null,
@@ -751,7 +743,7 @@ export function MovimentoDialog({
               valor_liquido: valorNumerico,
               data_vencimento: format(dataOcorrencia, "yyyy-MM-dd"),
               competencia: competenciaParcela,
-              id_conta: data.id_conta,
+              id_conta: data.id_conta || null,
               id_categoria: data.id_categoria,
               id_forma_pagamento: data.id_forma_pagamento || null,
               id_cartao: cartaoSelecionado || null,
@@ -1118,14 +1110,20 @@ export function MovimentoDialog({
                 name="id_conta"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Conta *</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
+                    <FormLabel>Conta</FormLabel>
+                    <Select
+                      onValueChange={(valor) =>
+                        field.onChange(valor === CONTA_SEM_CONTA ? "" : valor)
+                      }
+                      value={field.value}
+                    >
                       <FormControl>
                         <SelectTrigger className="bg-background/50 border-border/50">
-                          <SelectValue placeholder="Selecione a conta" />
+                          <SelectValue placeholder="Selecione a conta (opcional)" />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
+                        <SelectItem value={CONTA_SEM_CONTA}>Sem conta</SelectItem>
                         {contas.map((conta) => (
                           <SelectItem key={conta.id} value={conta.id}>
                             {getContaDisplayName(conta)}
