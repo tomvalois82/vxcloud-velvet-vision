@@ -3098,16 +3098,20 @@ export type Database = {
           comprado_de: string | null
           data_compra: string | null
           data_entrada: string | null
+          data_troca: string | null
           data_venda: string | null
           descricao_ciclo: string | null
           id_compra: string | null
           id_empresa: string | null
           id_estoque: number | null
           id_venda: string | null
+          id_venda_troca: string | null
           modelo: string | null
           ordem_exibicao: number | null
+          origem: string | null
           placa: string | null
           placa_normalizada: string | null
+          recebido_de: string | null
           status: string | null
           sugerido: boolean | null
           titulo: string | null
@@ -3121,6 +3125,20 @@ export type Database = {
             columns: ["id_empresa"]
             isOneToOne: false
             referencedRelation: "empresa"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vx_vendas_troca_id_venda_fkey"
+            columns: ["id_venda_troca"]
+            isOneToOne: false
+            referencedRelation: "vw_estoque_ciclos"
+            referencedColumns: ["id_venda"]
+          },
+          {
+            foreignKeyName: "vx_vendas_troca_id_venda_fkey"
+            columns: ["id_venda_troca"]
+            isOneToOne: false
+            referencedRelation: "vx_vendas"
             referencedColumns: ["id"]
           },
         ]
