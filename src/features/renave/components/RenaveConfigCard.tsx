@@ -6,6 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { maskCNPJ } from '@/features/pessoas/utils/masks';
+import { RenaveDiagnosticoMtls } from './RenaveDiagnosticoMtls';
 import { emailValido, situacaoCertificado } from '../utils/pendencias';
 
 export interface ConfigRenave {
@@ -71,6 +72,8 @@ export function RenaveConfigCard({ valores, onChange }: Props) {
           <Alert className="border-amber-500/40 text-amber-500"><AlertTriangle className="h-4 w-4" /><AlertDescription>O certificado digital vence em menos de 30 dias.</AlertDescription></Alert>
         )}
         <p className="text-sm text-muted-foreground">O certificado digital (e-CNPJ A1) é instalado pelo administrador do sistema, não por esta tela.</p>
+        {/* TEMPORÁRIO: diagnóstico mTLS RENAVE — remover depois do teste */}
+        <RenaveDiagnosticoMtls />
       </CardContent>
     </Card>
   );
