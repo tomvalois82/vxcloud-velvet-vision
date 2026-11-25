@@ -14,13 +14,15 @@ import { toast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { maskCurrency, unmaskCurrency } from '@/features/estoque/utils/masks';
 import {
-  buscarPessoasRenave, buscarProcesso, buscarVeiculoRenave, buscarVendaDoCiclo, excluirProcesso,
+  buscarPessoasRenave, buscarProcesso, buscarProcessoOutroAmbiente, buscarVeiculoRenave, buscarVendaDoCiclo, excluirProcesso,
   iniciarProcesso, mensagemErroRenave, salvarEntrada, salvarSaida,
 } from '../services/renave-service';
 import { useRenaveConfig } from '../hooks/use-renave-habilitado';
 import { PASSOS_RENAVE, passoAtual } from '../utils/etapas';
 import { pendenciasEntrada, pendenciasSaida } from '../utils/pendencias';
 import { RenaveEtapaBadge } from './RenaveEtapaBadge';
+import { RenaveAmbienteBadge } from './RenaveAmbienteBadge';
+import { infoEtapa } from '../utils/etapas';
 import { PessoaRenaveSelect } from './PessoaRenaveSelect';
 import { formatarDocumento } from '../utils/documento';
 
@@ -82,6 +84,11 @@ export function RenaveProcessoDialog({ idEstoque, aberto, onFechar }: Props) {
     queryFn: () => buscarProcesso(idEstoque as number),
     enabled: habilitado,
   });
+  const outroAmbienteQuery = useQuery({
+    queryKey: ['renave-processo-outro', idEstoque],
+    queryFn: () => buscarProcessoOutroAmbiente(idEstoque as number),
+    enabled: habilitado,
+  });
   const veiculoQuery = useQuery({
     queryKey: ['renave-veiculo', idEstoque],
     queryFn: () => buscarVeiculoRenave(idEstoque as number),
@@ -141,6 +148,7 @@ export function RenaveProcessoDialog({ idEstoque, aberto, onFechar }: Props) {
 
   const recarregar = async () => {
     await queryClient.invalidateQueries({ queryKey: ['renave-processo', idEstoque] });
+    await queryClient.invalidateQueries({ queryKey: ['renave-processo-outro', idEstoque] });
     await queryClient.invalidateQueries({ queryKey: ['renave-etapas'] });
   };
 
@@ -222,6 +230,8 @@ export function RenaveProcessoDialog({ idEstoque, aberto, onFechar }: Props) {
   const erro = processo?.ultimo_erro as { mensagemParaUsuarioFinal?: string; detalhe?: string } | null | undefined;
   const mensagemErro = erro ? (erro.mensagemParaUsuarioFinal ?? erro.detalhe) : null;
   const passo = passoAtual(processo?.etapa);
+  const ambienteExibido = processo ? processo.ambiente : (config?.ambiente ?? 'homologacao');
+  const outroProcesso = outroAmbienteQuery.data ?? null;
   const carregando = processoQuery.isLoading || veiculoQuery.isLoading;
 
   return (
@@ -232,7 +242,11 @@ export function RenaveProcessoDialog({ idEstoque, aberto, onFechar }: Props) {
             <DialogTitle className="flex flex-wrap items-center gap-2">
               Processo RENAVE
               {processo && <RenaveEtapaBadge etapa={processo.etapa} mostrarFora />}
+              <RenaveAmbienteBadge ambiente={ambienteExibido} />
             </DialogTitle>
+            {!processo && !carregando && (
+              <p className="text-xs text-muted-foreground">O processo será iniciado neste ambiente.</p>
+            )}
             {veiculo && (
               <p className="text-sm text-muted-foreground">
                 {[veiculo.fabricante, veiculo.modelo].filter(Boolean).join(' ')} {veiculo.placa ? `| ${veiculo.placa}` : ''}
@@ -241,6 +255,12 @@ export function RenaveProcessoDialog({ idEstoque, aberto, onFechar }: Props) {
           </DialogHeader>
 
           <div className="-mx-6 flex-1 overflow-y-auto px-6">
+            {ambienteExibido === 'homologacao' && (
+              <Alert className="mb-2 border-amber-500/40 text-amber-500">
+                <AlertTriangle className="h-4 w-4" />
+                <AlertDescription>Ambiente de HOMOLOGAÇÃO: as operações são testes no Serpro e não têm validade junto ao Detran.</AlertDescription>
+              </Alert>
+            )}
             {carregando ? (
               <div className="flex justify-center py-10"><Loader2 className="h-6 w-6 animate-spin text-accent" /></div>
             ) : !processo ? (
@@ -255,6 +275,13 @@ export function RenaveProcessoDialog({ idEstoque, aberto, onFechar }: Props) {
                     <SelectContent>{MOTIVOS.map((m) => <SelectItem key={m} value={m}>{m}</SelectItem>)}</SelectContent>
                   </Select>
                 </div>
+                {outroProcesso && (
+                  <p className="rounded-md border border-border/50 bg-muted/20 p-3 text-sm text-muted-foreground">
+                    {outroProcesso.ambiente === 'homologacao'
+                      ? `Este veículo tem um processo de teste em homologação (etapa ${infoEtapa(outroProcesso.etapa).rotulo}). Ele não vale em produção.`
+                      : `Este veículo tem um processo real em produção (etapa ${infoEtapa(outroProcesso.etapa).rotulo}), que não aparece enquanto a empresa estiver em homologação.`}
+                  </p>
+                )}
                 <Button onClick={() => setConfirmarInicio(true)} disabled={processando}>
                   {processando && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   Iniciar RENAVE

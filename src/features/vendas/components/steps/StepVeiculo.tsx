@@ -1,6 +1,7 @@
 import { Car } from 'lucide-react';
 import { RenaveBotao } from '@/features/renave/components/RenaveBotao';
 import { RenaveEtapaBadge } from '@/features/renave/components/RenaveEtapaBadge';
+import { RenaveAmbienteBadge } from '@/features/renave/components/RenaveAmbienteBadge';
 import { useEtapaRenave } from '@/features/renave/hooks/use-renave-habilitado';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -64,6 +65,7 @@ export function StepVeiculo({ saleData, updateSaleData }: StepVeiculoProps) {
             {renave.habilitado && (
               <div className="flex flex-wrap items-center gap-2">
                 <RenaveEtapaBadge etapa={renave.etapa} mostrarFora />
+                {renave.etapa && renave.ambiente === 'homologacao' && <RenaveAmbienteBadge ambiente="homologacao" compacto />}
                 <RenaveBotao idEstoque={veiculo.id} />
               </div>
             )}

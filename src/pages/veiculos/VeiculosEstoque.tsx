@@ -23,7 +23,8 @@ import { maskCurrency } from '@/features/estoque/utils/masks';
 import { VehicleListPrint } from '@/features/estoque/components/VehicleListPrint';
 import { useQuery } from '@tanstack/react-query';
 import { useRenaveHabilitado } from '@/features/renave/hooks/use-renave-habilitado';
-import { buscarEtapasRenave } from '@/features/renave/services/renave-service';
+import { buscarEtapasRenave, type EtapaRenaveCiclo } from '@/features/renave/services/renave-service';
+import { RenaveAmbienteBadge } from '@/features/renave/components/RenaveAmbienteBadge';
 import { RenaveEtapaBadge } from '@/features/renave/components/RenaveEtapaBadge';
 import { RenaveBotao } from '@/features/renave/components/RenaveBotao';
 interface Vehicle {
@@ -60,7 +61,7 @@ function VehicleCard({
   onView: (id: number) => void;
   onDelete: (e: React.MouseEvent, vehicle: Vehicle) => void;
   onSell: (e: React.MouseEvent, vehicleId: number) => void;
-  etapaRenave?: string | null;
+  etapaRenave?: EtapaRenaveCiclo;
 }) {
   const {
     mainPhoto,
@@ -86,7 +87,10 @@ function VehicleCard({
               {(vehicle.total_ciclos ?? 0) > 1 && <Badge variant="outline">Ciclo {vehicle.ciclo ?? '—'}</Badge>}
               <OrigemCicloBadge origem={vehicle.origem} />
             </div>}
-          <RenaveEtapaBadge etapa={etapaRenave} />
+          {etapaRenave?.etapa && <div className="flex items-center gap-1">
+              <RenaveEtapaBadge etapa={etapaRenave.etapa} />
+              {etapaRenave.ambiente === 'homologacao' && <RenaveAmbienteBadge ambiente="homologacao" compacto />}
+            </div>}
           <div className="flex items-center justify-between text-sm text-muted-foreground">
             <span>Ano: {vehicle.ano}</span>
             {vehicle.km && <span>{vehicle.km} km</span>}

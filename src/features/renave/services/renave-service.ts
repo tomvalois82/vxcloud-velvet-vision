@@ -16,14 +16,16 @@ export function mensagemErroRenave(error: unknown, fallback: string): string {
   return fallback;
 }
 
-export async function buscarRenaveHabilitado(): Promise<{ habilitado: boolean; email: string | null }> {
+export interface ConfigRenaveEmpresa { habilitado: boolean; email: string | null; ambiente: string }
+
+export async function buscarRenaveHabilitado(): Promise<ConfigRenaveEmpresa> {
   const { data: idEmpresa, error: erroEmpresa } = await supabase.rpc('fn_empresa_usuario');
   if (erroEmpresa) throw erroEmpresa;
-  if (!idEmpresa) return { habilitado: false, email: null };
+  if (!idEmpresa) return { habilitado: false, email: null, ambiente: 'homologacao' };
   const { data, error } = await supabase.from('empresa')
-    .select('renave_habilitado, renave_email').eq('id', idEmpresa).maybeSingle();
+    .select('renave_habilitado, renave_email, renave_ambiente').eq('id', idEmpresa).maybeSingle();
   if (error) throw error;
-  return { habilitado: data?.renave_habilitado === true, email: data?.renave_email ?? null };
+  return { habilitado: data?.renave_habilitado === true, email: data?.renave_email ?? null, ambiente: data?.renave_ambiente ?? 'homologacao' };
 }
 
 export async function buscarProcesso(idEstoque: number): Promise<ProcessoRenave | null> {
@@ -31,6 +33,21 @@ export async function buscarProcesso(idEstoque: number): Promise<ProcessoRenave 
     .select('*')
     .eq('id_estoque', idEstoque)
     .or('estado.is.null,estado.neq.CANCELADO')
+    .eq('ambiente_atual', true)
+    .maybeSingle();
+  if (error) throw error;
+  return data;
+}
+
+// Processo do mesmo ciclo em outro ambiente (apenas para exibir aviso).
+export async function buscarProcessoOutroAmbiente(idEstoque: number): Promise<ProcessoRenave | null> {
+  const { data, error } = await supabase.from('vw_renave_estoque')
+    .select('*')
+    .eq('id_estoque', idEstoque)
+    .or('estado.is.null,estado.neq.CANCELADO')
+    .eq('ambiente_atual', false)
+    .order('created_at', { ascending: false })
+    .limit(1)
     .maybeSingle();
   if (error) throw error;
   return data;
@@ -87,14 +104,16 @@ export async function excluirProcesso(id: string): Promise<void> {
 }
 
 // Etapas RENAVE em lote para os veículos da página (uma única consulta).
-export async function buscarEtapasRenave(ids: number[]): Promise<Map<number, string | null>> {
+export interface EtapaRenaveCiclo { etapa: string | null; ambiente: string | null }
+
+export async function buscarEtapasRenave(ids: number[]): Promise<Map<number, EtapaRenaveCiclo>> {
   if (ids.length === 0) return new Map();
   const { data, error } = await supabase.from('vw_estoque_ciclos')
-    .select('id_estoque, renave_etapa').in('id_estoque', ids);
+    .select('id_estoque, renave_etapa, renave_ambiente').in('id_estoque', ids);
   if (error) throw error;
-  const mapa = new Map<number, string | null>();
+  const mapa = new Map<number, EtapaRenaveCiclo>();
   (data || []).forEach((linha) => {
-    if (linha.id_estoque !== null) mapa.set(linha.id_estoque, linha.renave_etapa);
+    if (linha.id_estoque !== null) mapa.set(linha.id_estoque, { etapa: linha.renave_etapa, ambiente: linha.renave_ambiente });
   });
   return mapa;
 }

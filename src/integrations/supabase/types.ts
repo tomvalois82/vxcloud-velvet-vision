@@ -1716,7 +1716,7 @@ export type Database = {
           valor_saida: number | null
         }
         Insert: {
-          ambiente: string
+          ambiente?: string
           aptidao_apto?: boolean | null
           aptidao_em?: string | null
           aptidao_json?: Json | null

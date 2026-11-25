@@ -1,4 +1,6 @@
 import { useState, useEffect, useRef } from "react";
+import { mensagemErroRenave } from '@/features/renave/services/renave-service';
+import { CHAVE_CERTIFICADO } from '@/features/renave/certificado-service';
 import { PageHeader } from "@/components/PageHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -133,10 +135,15 @@ const Empresa = () => {
 
       if (error) throw error;
       toast.success('Empresa atualizada com sucesso!');
-      await queryClient.invalidateQueries({ queryKey: CHAVE_RENAVE_HABILITADO });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: CHAVE_RENAVE_HABILITADO }),
+        queryClient.invalidateQueries({ queryKey: CHAVE_CERTIFICADO }),
+        queryClient.invalidateQueries({ queryKey: ['renave-processo'] }),
+        queryClient.invalidateQueries({ queryKey: ['renave-processo-outro'] }),
+        queryClient.invalidateQueries({ queryKey: ['renave-etapas'] }),
+      ]);
     } catch (error) {
-      console.error('Erro ao salvar:', error);
-      toast.error('Erro ao salvar dados da empresa');
+      toast.error(mensagemErroRenave(error, 'Erro ao salvar dados da empresa'));
     } finally {
       setSaving(false);
     }
