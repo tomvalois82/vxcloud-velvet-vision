@@ -242,3 +242,17 @@ export async function buscarSituacaoRenaveVenda(idEstoque: number, idVenda: stri
   if (financiamento.error) throw financiamento.error;
   return { noRenave: !!ciclo.data?.renave_id, financiada: (financiamento.count ?? 0) > 0 };
 }
+
+// Extrai o caminho do arquivo de um link assinado do bucket renave-docs.
+export function caminhoDoLinkRenave(url: string): string | null {
+  const m = url.match(/\/object\/sign\/renave-docs\/([^?]+)/);
+  return m ? decodeURIComponent(m[1]) : null;
+}
+
+// Baixa o documento com a sessão do usuário (policy renave_docs_select) e devolve um blob.
+export async function baixarDocumentoRenave(storagePath: string): Promise<Blob> {
+  const { data, error } = await supabase.storage.from('renave-docs').download(storagePath);
+  if (error) throw error;
+  if (!data) throw new Error('Documento não encontrado.');
+  return data;
+}

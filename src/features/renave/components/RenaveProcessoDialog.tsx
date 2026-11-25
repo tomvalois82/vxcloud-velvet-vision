@@ -15,7 +15,7 @@ import { maskCurrency, unmaskCurrency } from '@/features/estoque/utils/masks';
 import {
   buscarDocumentosRenave, buscarPessoasRenave, buscarProcesso, buscarProcessoOutroAmbiente,
   buscarUltimoCancelado, buscarVeiculoRenave, buscarVendaDoCiclo, excluirProcesso,
-  executarAcaoRenave, gerarUrlDocumentoRenave, iniciarProcesso, mensagemErroRenave,
+  caminhoDoLinkRenave, executarAcaoRenave, iniciarProcesso, mensagemErroRenave,
   salvarCrvSaida, salvarEntrada, salvarSaida, type RespostaAcaoRenave,
 } from '../services/renave-service';
 import { CHAVE_PODE_GERENCIAR, podeGerenciarCertificado } from '../certificado-service';
@@ -26,6 +26,7 @@ import { RenaveEtapaBadge } from './RenaveEtapaBadge';
 import { RenaveAmbienteBadge } from './RenaveAmbienteBadge';
 import { PessoaRenaveSelect } from './PessoaRenaveSelect';
 import { formatarDocumento } from '../utils/documento';
+import { abrirDocumentoRenave } from '../utils/abrir-documento';
 
 const MOTIVOS = ['Venda financiada', 'Exigência do comprador', 'Outro'];
 const TIPOS_CRV = [
@@ -212,10 +213,12 @@ export function RenaveProcessoDialog({ idEstoque, aberto, onFechar }: Props) {
     queryFn: () => buscarUltimoCancelado(idEstoque as number),
     enabled: habilitado && processoQuery.isSuccess && !processo,
   });
+  // Documentos do processo ativo ou, sem ele, do último processo cancelado (histórico)
+  const idProcessoDocumentos = idProcesso ?? canceladoQuery.data?.id ?? null;
   const documentosQuery = useQuery({
-    queryKey: ['renave-documentos', idProcesso],
-    queryFn: () => buscarDocumentosRenave(idProcesso as string),
-    enabled: aberto && !!idProcesso,
+    queryKey: ['renave-documentos', idProcessoDocumentos],
+    queryFn: () => buscarDocumentosRenave(idProcessoDocumentos as string),
+    enabled: aberto && !!idProcessoDocumentos,
   });
 
   const [motivo, setMotivo] = useState(MOTIVOS[0]);
@@ -322,7 +325,16 @@ export function RenaveProcessoDialog({ idEstoque, aberto, onFechar }: Props) {
       if (antes) await antes();
       const resposta = await executarAcaoRenave(acao, dados);
       toast({ title: resposta.mensagem ?? textoSucesso });
-      if (resposta.url) window.open(resposta.url, '_blank', 'noopener,noreferrer');
+      if (resposta.url) {
+        const caminho = caminhoDoLinkRenave(resposta.url);
+        if (caminho) {
+          try {
+            await abrirDocumentoRenave(caminho);
+          } catch {
+            toast({ title: 'Documento gerado, mas não foi possível abri-lo. Use a lista de Documentos abaixo.' });
+          }
+        }
+      }
       await recarregar();
       return resposta;
     } catch (error) {
@@ -419,11 +431,10 @@ export function RenaveProcessoDialog({ idEstoque, aberto, onFechar }: Props) {
     }
   };
 
-  const abrirDocumento = async (id: string, storagePath: string) => {
+  const abrirDocumento = async (id: string, storagePath: string, forcarDownload = false) => {
     setProcessando(`documento-${id}`);
     try {
-      const url = await gerarUrlDocumentoRenave(storagePath);
-      window.open(url, '_blank', 'noopener,noreferrer');
+      await abrirDocumentoRenave(storagePath, forcarDownload);
     } catch (error) {
       toast({ title: 'Não foi possível abrir o documento', description: mensagemErroRenave(error, 'Verifique sua permissão de leitura no bucket renave-docs.'), variant: 'destructive' });
     } finally {
@@ -466,6 +477,32 @@ export function RenaveProcessoDialog({ idEstoque, aberto, onFechar }: Props) {
   const podeGerenciar = permissaoQuery.data === true;
   const debitos = resultadoAptidao?.debitos ?? null;
   const documentos = documentosQuery.data ?? [];
+  const secaoDocumentos = (
+                <section className="space-y-3 rounded-md border border-border/50 p-3">
+                  <h3 className="flex items-center gap-2 text-sm font-medium"><FileText className="h-4 w-4" /> Documentos</h3>
+                  {documentosQuery.isLoading ? (
+                    <Loader2 className="h-4 w-4 animate-spin text-accent" />
+                  ) : documentosQuery.error ? (
+                    <Alert variant="destructive"><AlertTriangle className="h-4 w-4" /><AlertDescription>{mensagemErroRenave(documentosQuery.error, 'Não foi possível listar os documentos.')}</AlertDescription></Alert>
+                  ) : documentos.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">Nenhum documento gerado para este processo.</p>
+                  ) : (
+                    <ul className="divide-y divide-border/50">
+                      {documentos.map((documento) => (
+                        <li key={documento.id} className="flex flex-wrap items-center justify-between gap-2 py-2 text-sm">
+                          <div>
+                            <p className="font-medium">{documento.tipo.replace(/_/g, ' ')}{documento.numero ? ` · ${documento.numero}` : ''}</p>
+                            <p className="text-xs text-muted-foreground">{formatarDataHora(documento.created_at)}</p>
+                          </div>
+                          <BotaoAcao acao={`documento-${documento.id}`} processando={processando} onClick={() => { void abrirDocumento(documento.id, documento.storage_path, documento.tipo === 'XML_ATPVE'); }}>
+                            <ExternalLink className="mr-2 h-4 w-4" /> {documento.tipo === 'XML_ATPVE' ? 'Baixar' : 'Abrir'}
+                          </BotaoAcao>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </section>
+  );
 
   return (
     <>
@@ -523,6 +560,7 @@ export function RenaveProcessoDialog({ idEstoque, aberto, onFechar }: Props) {
                     </AlertDescription>
                   </Alert>
                 )}
+                {ultimoCancelado && secaoDocumentos}
                 <BotaoAcao acao="iniciar" processando={processando} onClick={() => setConfirmarInicio(true)} variant="default">
                   Iniciar RENAVE
                 </BotaoAcao>
@@ -875,30 +913,7 @@ export function RenaveProcessoDialog({ idEstoque, aberto, onFechar }: Props) {
                   </TabsContent>
                 </Tabs>
 
-                <section className="space-y-3 rounded-md border border-border/50 p-3">
-                  <h3 className="flex items-center gap-2 text-sm font-medium"><FileText className="h-4 w-4" /> Documentos</h3>
-                  {documentosQuery.isLoading ? (
-                    <Loader2 className="h-4 w-4 animate-spin text-accent" />
-                  ) : documentosQuery.error ? (
-                    <Alert variant="destructive"><AlertTriangle className="h-4 w-4" /><AlertDescription>{mensagemErroRenave(documentosQuery.error, 'Não foi possível listar os documentos.')}</AlertDescription></Alert>
-                  ) : documentos.length === 0 ? (
-                    <p className="text-sm text-muted-foreground">Nenhum documento gerado para este processo.</p>
-                  ) : (
-                    <ul className="divide-y divide-border/50">
-                      {documentos.map((documento) => (
-                        <li key={documento.id} className="flex flex-wrap items-center justify-between gap-2 py-2 text-sm">
-                          <div>
-                            <p className="font-medium">{documento.tipo.replace(/_/g, ' ')}{documento.numero ? ` · ${documento.numero}` : ''}</p>
-                            <p className="text-xs text-muted-foreground">{formatarDataHora(documento.created_at)}</p>
-                          </div>
-                          <BotaoAcao acao={`documento-${documento.id}`} processando={processando} onClick={() => { void abrirDocumento(documento.id, documento.storage_path); }}>
-                            <ExternalLink className="mr-2 h-4 w-4" /> Abrir
-                          </BotaoAcao>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </section>
+                {secaoDocumentos}
               </div>
             )}
           </div>
