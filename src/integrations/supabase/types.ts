@@ -1667,6 +1667,7 @@ export type Database = {
       }
       renave_estoque: {
         Row: {
+          ambiente: string
           aptidao_apto: boolean | null
           aptidao_em: string | null
           aptidao_json: Json | null
@@ -1715,6 +1716,7 @@ export type Database = {
           valor_saida: number | null
         }
         Insert: {
+          ambiente: string
           aptidao_apto?: boolean | null
           aptidao_em?: string | null
           aptidao_json?: Json | null
@@ -1763,6 +1765,7 @@ export type Database = {
           valor_saida?: number | null
         }
         Update: {
+          ambiente?: string
           aptidao_apto?: boolean | null
           aptidao_em?: string | null
           aptidao_json?: Json | null
@@ -3612,6 +3615,7 @@ export type Database = {
           placa: string | null
           placa_normalizada: string | null
           recebido_de: string | null
+          renave_ambiente: string | null
           renave_estado: string | null
           renave_etapa: string | null
           renave_id: string | null
@@ -3685,6 +3689,8 @@ export type Database = {
       }
       vw_renave_estoque: {
         Row: {
+          ambiente: string | null
+          ambiente_atual: boolean | null
           aptidao_apto: boolean | null
           aptidao_em: string | null
           aptidao_json: Json | null
