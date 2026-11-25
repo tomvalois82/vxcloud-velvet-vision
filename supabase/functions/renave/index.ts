@@ -271,14 +271,10 @@ Deno.serve(async (req) => {
     if (!proc) return falha("Informe id_processo.");
 
     if (ACOES_COM_TRAVA.has(acao)) {
-      const limite = new Date(Date.now() - TRAVA_MS).toISOString();
-      const { data: t, error } = await admin.from("renave_estoque")
-        .update({ em_processamento_desde: new Date().toISOString() })
-        .eq("id", proc.id)
-        .or(`em_processamento_desde.is.null,em_processamento_desde.lt.${limite}`)
-        .select("id");
+      // RPC: o PostgREST quebra em update + or() + select (reaplica o filtro numa coluna que não volta).
+      const { data: travado, error } = await admin.rpc("fn_renave_travar", { p_id: proc.id, p_segundos: TRAVA_MS / 1000 });
       if (error) throw error;
-      if (!t?.length) return falha("Já existe uma operação RENAVE em andamento para este veículo. Aguarde alguns segundos e atualize.");
+      if (travado !== true) return falha("Já existe uma operação RENAVE em andamento para este veículo. Aguarde alguns segundos e atualize.");
       travou = true;
     }
 
