@@ -26,17 +26,25 @@ test('etapa nula é Fora do RENAVE e etapas mapeiam rótulo e passo', () => {
 });
 
 test('pendências da entrada listam o que falta', () => {
-  const lista = pendenciasEntrada({ proprietario: { ...pessoa, cpf_cnpj: null }, renavam: null, chassi: 'X', tipoCrv: '', temCodigoSeguranca: false, km: '', dataMedicao: '', valor: null, data: '', emailEstabelecimento: null });
+  const lista = pendenciasEntrada({ proprietario: { ...pessoa, cpf_cnpj: null }, renavam: null, chassi: 'X', tipoCrv: '', numeroCrv: '123', temCodigoSeguranca: false, km: '', dataMedicao: '', valor: null, data: '', emailEstabelecimento: null });
   expect(lista).toContain('Proprietário no CRV sem CPF/CNPJ');
   expect(lista).toContain('RENAVAM do veículo faltando');
   expect(lista).toContain('Código de segurança do CRV não informado');
+  expect(lista).toContain('Número do CRV (12 dígitos)');
   expect(lista).not.toContain('Chassi do veículo faltando');
 });
 
 test('comprador completo não tem pendências; nome acima de 40 caracteres gera aviso', () => {
-  expect(pendenciasSaida(pessoa)).toEqual([]);
+  expect(pendenciasSaida(pessoa, { data: '2026-11-25', valor: 50000 })).toEqual([]);
   const longo = pendenciasSaida({ ...pessoa, nome: 'A'.repeat(41) });
   expect(longo.some((p) => p.includes('40 caracteres'))).toBe(true);
+});
+
+test('saída exige cidade e UF do comprador e dados da venda', () => {
+  const lista = pendenciasSaida({ ...pessoa, municipio: '', estado: '' }, { data: '', valor: null });
+  expect(lista).toContain('Endereço do comprador: UF e cidade');
+  expect(lista).toContain('Data da venda faltando');
+  expect(lista).toContain('Valor da venda faltando');
 });
 
 test('certificado vencido, a vencer em menos de 30 dias ou ok', () => {

@@ -18,6 +18,7 @@ export interface DadosEntradaPendencias {
   renavam: string | null;
   chassi: string | null;
   tipoCrv: string;
+  numeroCrv: string;
   temCodigoSeguranca: boolean;
   km: string;
   dataMedicao: string;
@@ -35,6 +36,7 @@ export function pendenciasEntrada(d: DadosEntradaPendencias): string[] {
   if (!d.renavam) lista.push('RENAVAM do veículo faltando');
   if (!d.chassi) lista.push('Chassi do veículo faltando');
   if (!d.tipoCrv) lista.push('Tipo de CRV faltando');
+  if (!/^\d{12}$/.test(d.numeroCrv.replace(/\D/g, ''))) lista.push('Número do CRV (12 dígitos)');
   if (!d.temCodigoSeguranca) lista.push('Código de segurança do CRV não informado');
   if (!d.km) lista.push('KM faltando');
   if (!d.dataMedicao) lista.push('Data/hora da medição do hodômetro faltando');
@@ -46,14 +48,22 @@ export function pendenciasEntrada(d: DadosEntradaPendencias): string[] {
 
 export const LIMITE_NOME_RENAVE = 40;
 
-export function pendenciasSaida(comprador: PessoaRenave | null): string[] {
+export interface DadosSaidaPendencias {
+  data: string;
+  valor: number | null;
+}
+
+export function pendenciasSaida(comprador: PessoaRenave | null, dados?: DadosSaidaPendencias): string[] {
   if (!comprador) return ['Comprador não informado'];
   const lista: string[] = [];
   if (!temDocumento(comprador)) lista.push('Comprador sem CPF/CNPJ');
   if (!comprador.email) lista.push('Comprador sem e-mail');
-  const enderecoCompleto = [comprador.cep, comprador.logradouro, comprador.numero, comprador.bairro, comprador.municipio, comprador.estado]
+  if (!comprador.municipio?.trim() || !comprador.estado?.trim()) lista.push('Endereço do comprador: UF e cidade');
+  const enderecoCompleto = [comprador.cep, comprador.logradouro, comprador.numero, comprador.bairro]
     .every((parte) => !!parte && parte.trim() !== '');
   if (!enderecoCompleto) lista.push('Endereço do comprador incompleto');
+  if (dados && !dados.data) lista.push('Data da venda faltando');
+  if (dados && !dados.valor) lista.push('Valor da venda faltando');
   if (comprador.nome.length > LIMITE_NOME_RENAVE) {
     lista.push(`Nome do comprador com mais de ${LIMITE_NOME_RENAVE} caracteres: o RENAVE aceita no máximo ${LIMITE_NOME_RENAVE} caracteres; será abreviado`);
   }

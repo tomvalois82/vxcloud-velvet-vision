@@ -15,11 +15,13 @@ import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { RenaveCertificadoSecao } from './RenaveCertificadoSecao';
 import { emailValido } from '../utils/pendencias';
+import { maskCPF } from '@/features/pessoas/utils/masks';
 
 export interface ConfigRenave {
   renave_habilitado: boolean;
   renave_ambiente: string;
   renave_email: string | null;
+  renave_cpf_operador: string | null;
   renave_cnpj_certificado: string | null;
   renave_certificado_validade: string | null;
 }
@@ -77,6 +79,18 @@ export function RenaveConfigCard({ valores, onChange }: Props) {
             <Label>E-mail do estabelecimento para o RENAVE</Label>
             <Input type="email" value={valores.renave_email || ''} onChange={(e) => alterar('renave_email', e.target.value)} placeholder="renave@empresa.com.br" />
             {emailInvalido && <p className="text-sm text-destructive">Informe um e-mail válido.</p>}
+          </div>
+          <div className="space-y-2 md:col-span-2">
+            <Label htmlFor="renave-cpf-operador">CPF do operador responsável</Label>
+            <Input
+              id="renave-cpf-operador"
+              inputMode="numeric"
+              maxLength={14}
+              value={maskCPF(valores.renave_cpf_operador || '')}
+              onChange={(e) => alterar('renave_cpf_operador', maskCPF(e.target.value))}
+              placeholder="000.000.000-00"
+            />
+            <p className="text-xs text-muted-foreground">Vai em todas as comunicações ao RENAVE como responsável pela operação.</p>
           </div>
         </div>
         <RenaveCertificadoSecao />

@@ -40,6 +40,7 @@ interface EmpresaData {
   renave_habilitado: boolean;
   renave_ambiente: string;
   renave_email: string | null;
+  renave_cpf_operador: string | null;
   renave_cnpj_certificado: string | null;
   renave_certificado_validade: string | null;
 }
@@ -130,6 +131,7 @@ const Empresa = () => {
           renave_habilitado: empresa.renave_habilitado,
           renave_ambiente: empresa.renave_ambiente,
           renave_email: empresa.renave_email?.trim() || null,
+          renave_cpf_operador: empresa.renave_cpf_operador?.replace(/\D/g, '') || null,
         })
         .eq('id', empresa.id);
 

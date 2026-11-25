@@ -48,3 +48,11 @@
 - [x] Mostrar badge de origem (Compra / Troca / Cadastro) no histórico e no card do estoque.
 - [x] Testes: 41 aprovados, tipos e linter limpos.
 - [ ] Validar na tela autenticada (nova compra, histórico, Reserva de placa) — bloqueado pela sessão externa indisponível; navegador redireciona para login.
+
+# RENAVE — Fase 3
+
+- [x] Publicar a Edge Function `renave` exatamente como fornecida, sem JWT automático.
+- [x] Criar o serviço front-end, corrigir tipos de CRV e pendências e incluir CPF do operador.
+- [x] Ligar entrada, assinatura, NF-e, sincronização, saída, termos, cancelamentos e documentos ao painel.
+- [x] Executar testes e checagens sem iniciar operações reais no RENAVE.
+- [ ] Validar o checklist de homologação com o veículo mock — aguardando o usuário executar e acompanhar pelos logs; sessão autenticada indisponível no sandbox.

@@ -2,6 +2,7 @@ import { supabase } from '@/integrations/supabase/client';
 import type { Database } from '@/integrations/supabase/types';
 import { mensagemErroBanco } from '@/lib/dbErrors';
 import type { PessoaRenave } from '../utils/pendencias';
+import { lerErroFuncao } from '../certificado-service';
 
 export type ProcessoRenave = Database['public']['Views']['vw_renave_estoque']['Row'];
 
@@ -96,6 +97,80 @@ export interface DadosSaidaRenave {
 export async function salvarSaida(id: string, dados: DadosSaidaRenave): Promise<void> {
   const { error } = await supabase.from('renave_estoque').update(dados).eq('id', id);
   if (error) throw error;
+}
+
+export interface DadosCrvSaidaRenave {
+  numero_crv_saida: string | null;
+  codigo_seguranca_crv_saida?: string;
+}
+
+// O código novo só é enviado quando digitado; o front nunca tenta lê-lo de volta.
+export function montarPayloadCrvSaida(dados: DadosCrvSaidaRenave) {
+  const { codigo_seguranca_crv_saida, ...resto } = dados;
+  const codigo = (codigo_seguranca_crv_saida || '').replace(/\D/g, '');
+  return codigo ? { ...resto, codigo_seguranca_crv_saida: codigo } : resto;
+}
+
+export async function salvarCrvSaida(id: string, dados: DadosCrvSaidaRenave): Promise<void> {
+  const { error } = await supabase.from('renave_estoque').update(montarPayloadCrvSaida(dados)).eq('id', id);
+  if (error) throw error;
+}
+
+export interface RespostaAcaoRenave {
+  ok: boolean;
+  erro?: string;
+  processo?: ProcessoRenave | null;
+  mensagem?: string;
+  url?: string;
+  apto?: boolean;
+  motivos?: unknown[];
+  debitos?: Record<string, unknown> | null;
+  assinado?: boolean;
+  numero_crv?: string | null;
+  numero_atpv?: string | null;
+  [campo: string]: unknown;
+}
+
+// Todas as operações reais passam pela Edge Function; erros de negócio viram Error.
+export async function executarAcaoRenave(acao: string, dados: Record<string, unknown>): Promise<RespostaAcaoRenave> {
+  const { data, error } = await supabase.functions.invoke('renave', { body: { acao, ...dados } });
+  if (error) throw new Error(await lerErroFuncao(error));
+  const resposta = data as RespostaAcaoRenave | null;
+  if (!resposta || resposta.ok !== true) {
+    throw new Error(resposta?.erro || 'Não foi possível concluir a operação RENAVE.');
+  }
+  return resposta;
+}
+
+export async function buscarUltimoCancelado(idEstoque: number): Promise<ProcessoRenave | null> {
+  const { data, error } = await supabase.from('vw_renave_estoque')
+    .select('*')
+    .eq('id_estoque', idEstoque)
+    .eq('ambiente_atual', true)
+    .eq('estado', 'CANCELADO')
+    .order('cancelada_em', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (error) throw error;
+  return data;
+}
+
+export type DocumentoRenave = Database['public']['Tables']['renave_documento']['Row'];
+
+export async function buscarDocumentosRenave(idProcesso: string): Promise<DocumentoRenave[]> {
+  const { data, error } = await supabase.from('renave_documento')
+    .select('id, tipo, numero, storage_path, created_at, id_empresa, id_renave_estoque')
+    .eq('id_renave_estoque', idProcesso)
+    .order('created_at', { ascending: false });
+  if (error) throw error;
+  return data || [];
+}
+
+export async function gerarUrlDocumentoRenave(storagePath: string): Promise<string> {
+  const { data, error } = await supabase.storage.from('renave-docs').createSignedUrl(storagePath, 600);
+  if (error) throw error;
+  if (!data?.signedUrl) throw new Error('Não foi possível gerar o link do documento.');
+  return data.signedUrl;
 }
 
 export async function excluirProcesso(id: string): Promise<void> {
