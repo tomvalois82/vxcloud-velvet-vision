@@ -387,6 +387,7 @@ export type Database = {
           renave_ambiente: string
           renave_certificado_validade: string | null
           renave_cnpj_certificado: string | null
+          renave_cpf_operador: string | null
           renave_email: string | null
           renave_habilitado: boolean
           site: string | null
@@ -415,6 +416,7 @@ export type Database = {
           renave_ambiente?: string
           renave_certificado_validade?: string | null
           renave_cnpj_certificado?: string | null
+          renave_cpf_operador?: string | null
           renave_email?: string | null
           renave_habilitado?: boolean
           site?: string | null
@@ -443,6 +445,7 @@ export type Database = {
           renave_ambiente?: string
           renave_certificado_validade?: string | null
           renave_cnpj_certificado?: string | null
+          renave_cpf_operador?: string | null
           renave_email?: string | null
           renave_habilitado?: boolean
           site?: string | null
@@ -1677,6 +1680,7 @@ export type Database = {
           chave_nfe_entrada: string | null
           chave_nfe_saida: string | null
           codigo_seguranca_crv: string | null
+          codigo_seguranca_crv_saida: string | null
           created_at: string
           data_entrada: string | null
           data_medicao_hodometro: string | null
@@ -1700,14 +1704,18 @@ export type Database = {
           motivo_cancelamento: string | null
           nfe_entrada_enviada_em: string | null
           nfe_saida_enviada_em: string | null
+          numero_atpv: string | null
           numero_crv: string | null
+          numero_crv_saida: string | null
           numero_termo_entrada: number | null
           numero_termo_saida: number | null
           origem: string | null
           renave_id_estoque: number | null
           renave_id_estoque_anterior: number | null
+          renave_json: Json | null
           saida_em: string | null
           tem_codigo_seguranca: boolean | null
+          tem_codigo_seguranca_saida: boolean | null
           tipo_crv: string | null
           ultimo_erro: Json | null
           ultimo_sync_em: string | null
@@ -1716,7 +1724,7 @@ export type Database = {
           valor_saida: number | null
         }
         Insert: {
-          ambiente?: string
+          ambiente: string
           aptidao_apto?: boolean | null
           aptidao_em?: string | null
           aptidao_json?: Json | null
@@ -1726,6 +1734,7 @@ export type Database = {
           chave_nfe_entrada?: string | null
           chave_nfe_saida?: string | null
           codigo_seguranca_crv?: string | null
+          codigo_seguranca_crv_saida?: string | null
           created_at?: string
           data_entrada?: string | null
           data_medicao_hodometro?: string | null
@@ -1749,14 +1758,18 @@ export type Database = {
           motivo_cancelamento?: string | null
           nfe_entrada_enviada_em?: string | null
           nfe_saida_enviada_em?: string | null
+          numero_atpv?: string | null
           numero_crv?: string | null
+          numero_crv_saida?: string | null
           numero_termo_entrada?: number | null
           numero_termo_saida?: number | null
           origem?: string | null
           renave_id_estoque?: number | null
           renave_id_estoque_anterior?: number | null
+          renave_json?: Json | null
           saida_em?: string | null
           tem_codigo_seguranca?: boolean | null
+          tem_codigo_seguranca_saida?: boolean | null
           tipo_crv?: string | null
           ultimo_erro?: Json | null
           ultimo_sync_em?: string | null
@@ -1775,6 +1788,7 @@ export type Database = {
           chave_nfe_entrada?: string | null
           chave_nfe_saida?: string | null
           codigo_seguranca_crv?: string | null
+          codigo_seguranca_crv_saida?: string | null
           created_at?: string
           data_entrada?: string | null
           data_medicao_hodometro?: string | null
@@ -1798,14 +1812,18 @@ export type Database = {
           motivo_cancelamento?: string | null
           nfe_entrada_enviada_em?: string | null
           nfe_saida_enviada_em?: string | null
+          numero_atpv?: string | null
           numero_crv?: string | null
+          numero_crv_saida?: string | null
           numero_termo_entrada?: number | null
           numero_termo_saida?: number | null
           origem?: string | null
           renave_id_estoque?: number | null
           renave_id_estoque_anterior?: number | null
+          renave_json?: Json | null
           saida_em?: string | null
           tem_codigo_seguranca?: boolean | null
+          tem_codigo_seguranca_saida?: boolean | null
           tipo_crv?: string | null
           ultimo_erro?: Json | null
           ultimo_sync_em?: string | null
@@ -2024,6 +2042,7 @@ export type Database = {
           cargo: Database["public"]["Enums"]["cargos"] | null
           codVoice: string | null
           config: number | null
+          cpf: string | null
           created_at: string
           credencialOlx: string | null
           email: string | null
@@ -2049,6 +2068,7 @@ export type Database = {
           cargo?: Database["public"]["Enums"]["cargos"] | null
           codVoice?: string | null
           config?: number | null
+          cpf?: string | null
           created_at?: string
           credencialOlx?: string | null
           email?: string | null
@@ -2074,6 +2094,7 @@ export type Database = {
           cargo?: Database["public"]["Enums"]["cargos"] | null
           codVoice?: string | null
           config?: number | null
+          cpf?: string | null
           created_at?: string
           credencialOlx?: string | null
           email?: string | null
@@ -3727,7 +3748,9 @@ export type Database = {
           motivo_cancelamento: string | null
           nfe_entrada_enviada_em: string | null
           nfe_saida_enviada_em: string | null
+          numero_atpv: string | null
           numero_crv: string | null
+          numero_crv_saida: string | null
           numero_termo_entrada: number | null
           numero_termo_saida: number | null
           origem: string | null
@@ -3739,6 +3762,7 @@ export type Database = {
           renave_id_estoque_anterior: number | null
           saida_em: string | null
           tem_codigo_seguranca: boolean | null
+          tem_codigo_seguranca_saida: boolean | null
           tipo_crv: string | null
           ultimo_erro: Json | null
           ultimo_sync_em: string | null
