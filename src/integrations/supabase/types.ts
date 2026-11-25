@@ -3949,6 +3949,10 @@ export type Database = {
         Returns: string
       }
       fn_renave_pode_gerenciar_certificado: { Args: never; Returns: boolean }
+      fn_renave_travar: {
+        Args: { p_id: string; p_segundos?: number }
+        Returns: boolean
+      }
       get_user_config_id: { Args: never; Returns: number }
       get_users_by_config: {
         Args: { p_config: number }
